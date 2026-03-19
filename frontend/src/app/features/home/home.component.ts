@@ -341,8 +341,8 @@ export class HomeComponent {
       title: 'HTML Viewer',
       description: 'Preview and render HTML code instantly with live editing and responsive viewport testing.',
       icon: '🌐',
-      route: null,
-      available: false,
+      route: '/html-viewer',
+      available: true,
       color: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(14,165,233,0.2))',
     },
     {
@@ -377,8 +377,8 @@ export class HomeComponent {
       title: 'Content to Video',
       description: 'Convert text, articles, or scripts into engaging video presentations with AI.',
       icon: '🎬',
-      route: null,
-      available: false,
+      route: '/content-video',
+      available: true,
       color: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(192,132,252,0.2))',
     },
     {

@@ -88,6 +88,9 @@
               "buildTarget": "U2App:build:development"
             }
           },
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          },
           "defaultConfiguration": "development"
         }
       }

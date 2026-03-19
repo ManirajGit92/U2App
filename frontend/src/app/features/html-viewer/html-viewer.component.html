@@ -1,0 +1,95 @@
+<div class="html-viewer-page" [class.fullscreen]="isFullscreen()">
+
+  <!-- Header -->
+  <div class="page-header container">
+    <div class="header-left">
+      <h1 class="page-title">
+        <span class="page-icon">🌐</span>
+        HTML Viewer
+      </h1>
+      <p class="page-desc">Write or paste HTML on the left — see the live render on the right.</p>
+    </div>
+    <div class="header-actions">
+      <div class="stats-bar">
+        <span class="stat-item">{{ lineCount() }} lines</span>
+        <span class="stat-sep">·</span>
+        <span class="stat-item">{{ wordCount() }} tokens</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" (click)="loadDefault()" title="Load sample HTML">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Load Sample
+      </button>
+      <button class="btn btn-ghost btn-sm" (click)="copyCode()" title="Copy HTML">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        {{ copied() ? 'Copied!' : 'Copy' }}
+      </button>
+      <button class="btn btn-ghost btn-sm" (click)="clearCode()" title="Clear code">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        Clear
+      </button>
+      <button class="btn btn-primary btn-sm" (click)="toggleFullscreen()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        {{ isFullscreen() ? 'Exit' : 'Fullscreen' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Split Pane -->
+  <div class="split-pane container">
+
+    <!-- Left: Code Editor -->
+    <div class="editor-panel glass-card">
+      <div class="panel-topbar">
+        <div class="topbar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="topbar-label">index.html</span>
+        <span class="topbar-lang">HTML</span>
+      </div>
+      <div class="editor-area">
+        <div class="line-numbers" aria-hidden="true">
+          @for (n of getLineNumbers(); track n) {
+            <span>{{ n }}</span>
+          }
+        </div>
+        <textarea
+          id="html-code-input"
+          class="code-textarea"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          [value]="htmlCode()"
+          (input)="onCodeChange($any($event.target).value)"
+          placeholder="<!-- Paste or write your HTML here -->"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Right: Live Preview -->
+    <div class="preview-panel glass-card">
+      <div class="panel-topbar preview-topbar">
+        <div class="topbar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <div class="preview-url-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span>Live Preview</span>
+        </div>
+      </div>
+      <div class="iframe-wrapper">
+        <iframe
+          #previewFrame
+          id="html-preview-frame"
+          title="HTML Preview"
+          sandbox="allow-scripts allow-same-origin"
+        ></iframe>
+      </div>
+    </div>
+
+  </div>
+</div>

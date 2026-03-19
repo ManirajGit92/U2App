@@ -13,5 +13,19 @@ export const routes: Routes = [
         (m) => m.CompareComponent
       ),
   },
+  {
+    path: 'content-video',
+    loadComponent: () =>
+      import('./features/content-video/content-video.component').then(
+        (m) => m.ContentVideoComponent
+      ),
+  },
+  {
+    path: 'html-viewer',
+    loadComponent: () =>
+      import('./features/html-viewer/html-viewer.component').then(
+        (m) => m.HtmlViewerComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];
