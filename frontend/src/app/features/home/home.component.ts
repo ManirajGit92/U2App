@@ -417,5 +417,14 @@ export class HomeComponent {
       available: true,
       color: 'linear-gradient(135deg, rgba(236,72,153,0.2), rgba(244,63,94,0.2))',
     },
+    {
+      id: 'real-life-steps',
+      title: 'Real Life Steps Game',
+      description: 'Play a live multiplayer board game with 100 configured positive/negative life events, tokens, investing and robust dice rolling.',
+      icon: '🎲',
+      route: '/real-life-steps',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
+    },
   ];
 }

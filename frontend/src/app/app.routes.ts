@@ -41,5 +41,12 @@ export const routes: Routes = [
         (m) => m.EstimatorComponent
       ),
   },
+  {
+    path: 'real-life-steps',
+    loadComponent: () =>
+      import('./features/real-life-steps/real-life-steps.component').then(
+        (m) => m.RealLifeStepsComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];
