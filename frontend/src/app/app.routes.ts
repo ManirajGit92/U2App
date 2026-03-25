@@ -34,5 +34,12 @@ export const routes: Routes = [
         (m) => m.WorkTrackerComponent
       ),
   },
+  {
+    path: 'estimator',
+    loadComponent: () =>
+      import('./features/estimator/estimator.component').then(
+        (m) => m.EstimatorComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -408,5 +408,14 @@ export class HomeComponent {
       available: true,
       color: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(52,211,153,0.2))',
     },
+    {
+      id: 'estimator',
+      title: 'Estimater App',
+      description: 'Automatically estimate project effort with formula-based inputs, feature breakdowns, and Excel report generation.',
+      icon: '⏱️',
+      route: '/estimator',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(236,72,153,0.2), rgba(244,63,94,0.2))',
+    },
   ];
 }
