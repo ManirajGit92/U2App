@@ -48,5 +48,12 @@ export const routes: Routes = [
         (m) => m.RealLifeStepsComponent
       ),
   },
+  {
+    path: 'controls-to-excel',
+    loadComponent: () =>
+      import('./features/controls-to-excel/controls-to-excel.component').then(
+        (m) => m.ControlsToExcelComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

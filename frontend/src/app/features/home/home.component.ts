@@ -426,5 +426,14 @@ export class HomeComponent {
       available: true,
       color: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
     },
+    {
+      id: 'controls-to-excel',
+      title: 'Controls to Excel',
+      description: 'Upload Excel files, dynamically generate form controls, search globally, alter cell data, and instantly visualize it into powerful dynamic charts.',
+      icon: '🗂️',
+      route: '/controls-to-excel',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(34,211,238,0.2), rgba(56,189,248,0.2))',
+    },
   ];
 }
