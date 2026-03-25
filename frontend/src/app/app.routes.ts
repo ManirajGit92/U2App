@@ -27,5 +27,12 @@ export const routes: Routes = [
         (m) => m.HtmlViewerComponent
       ),
   },
+  {
+    path: 'work-tracker',
+    loadComponent: () =>
+      import('./features/work-tracker/work-tracker.component').then(
+        (m) => m.WorkTrackerComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

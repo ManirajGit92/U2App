@@ -399,5 +399,14 @@ export class HomeComponent {
       available: false,
       color: 'linear-gradient(135deg, rgba(34,211,238,0.2), rgba(56,189,248,0.2))',
     },
+    {
+      id: 'work-tracker',
+      title: 'Work Tracker',
+      description: 'Track developer statuses, monitor product release tracking, and manage data via local Excel sheets.',
+      icon: '📈',
+      route: '/work-tracker',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(52,211,153,0.2))',
+    },
   ];
 }
