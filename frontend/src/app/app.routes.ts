@@ -69,5 +69,12 @@ export const routes: Routes = [
         (m) => m.StandupNoteComponent
       ),
   },
+  {
+    path: 'office-fun',
+    loadComponent: () =>
+      import('./features/office-fun/office-fun.component').then(
+        (m) => m.OfficeFunComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

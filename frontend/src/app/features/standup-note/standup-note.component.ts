@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { StandupNoteService } from './standup-note.service';
@@ -7,6 +7,7 @@ import { StandupNotesComponent } from './standup-notes/standup-notes.component';
 import { EmployeesComponent } from './employees/employees.component';
 import { ProjectsComponent } from './projects/projects.component';
 import { RemindersComponent } from './reminders/reminders.component';
+import { ThemeService } from '../../core/services/theme.service';
 
 type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
 
@@ -14,8 +15,9 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
   selector: 'app-standup-note',
   standalone: true,
   imports: [CommonModule, RouterModule, StandupDashboardComponent, StandupNotesComponent, EmployeesComponent, ProjectsComponent, RemindersComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
-    <div class="app-shell" [class.dark]="isDark">
+    <div class="app-shell">
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-logo">
@@ -47,8 +49,8 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
               <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" hidden>
             </label>
             <button class="btn btn-secondary" (click)="svc.exportExcel()" title="Export Excel">📤 Export</button>
-            <button class="btn btn-icon" (click)="isDark = !isDark" [title]="isDark ? 'Light Mode' : 'Dark Mode'">
-              {{ isDark ? '☀️' : '🌙' }}
+            <button class="btn btn-icon" (click)="themeSvc.toggle()" [title]="'Switch to ' + (themeSvc.theme() === 'dark' ? 'light' : 'dark') + ' mode'">
+              {{ themeSvc.theme() === 'dark' ? '☀️' : '🌙' }}
             </button>
           </div>
         </header>
@@ -70,35 +72,20 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
     .app-shell {
       display: flex;
       height: 100vh;
-      background: #f1f5f9;
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      font-family: var(--font-family);
       --sidebar-w: 220px;
-      --primary: #6366f1;
-      --primary-light: #ede9fe;
-      --text: #1e293b;
-      --text-muted: #64748b;
-      --surface: #ffffff;
-      --border: #e2e8f0;
+      --primary: var(--accent-primary);
+      --primary-light: var(--accent-surface);
+      --text: var(--text-primary);
+      --text-muted: var(--text-secondary);
+      --surface: var(--bg-secondary);
+      --border: var(--border-color);
       --header-h: 60px;
+      transition: background var(--transition-normal);
     }
 
-    /* ── Dark Mode ─────────────────────────── */
-    .app-shell.dark {
-      background: #0f172a;
-      --text: #e2e8f0;
-      --text-muted: #94a3b8;
-      --surface: #1e293b;
-      --border: #334155;
-      --primary-light: #312e81;
-    }
-    .dark .sidebar { background: #1e293b; border-color: #334155; }
-    .dark .app-header { background: #1e293b; border-color: #334155; }
-    .dark .nav-item { color: #94a3b8; }
-    .dark .nav-item:hover, .dark .nav-item.active { background: #312e81; color: #a5b4fc; }
-    .dark .btn-secondary { background: #334155; color: #e2e8f0; border-color: #475569; }
-    .dark .btn-secondary:hover { background: #475569; }
-
-    /* ── Sidebar ──────────────────────────── */
+    /* Sidebar */
     .sidebar {
       width: var(--sidebar-w);
       min-width: var(--sidebar-w);
@@ -163,8 +150,8 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
 })
 export class StandupNoteComponent {
   svc = inject(StandupNoteService);
+  themeSvc = inject(ThemeService);
   activeTab: Tab = 'dashboard';
-  isDark = false;
 
   navItems: { id: Tab; label: string; icon: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },

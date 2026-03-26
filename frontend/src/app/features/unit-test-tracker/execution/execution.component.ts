@@ -90,32 +90,32 @@ import { TestExecution, UnitTestService, Bug } from '../unit-test.service';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: white;
+      background: var(--bg-secondary);
       padding: 1rem 1.5rem;
       border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
       flex-wrap: wrap;
       gap: 1rem;
     }
-    .toolbar h2 { margin: 0; font-size: 1.25rem; color: #1f2937; }
+    .toolbar h2 { margin: 0; font-size: 1.25rem; color: var(--text-primary); }
     .search-filters { display: flex; gap: 1rem; }
     .input-modern {
       padding: 0.6rem 1rem;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--border-color);
       border-radius: 6px;
       font-size: 0.9rem;
-      color: #374151;
-      background: #f9fafb;
+      color: var(--text-primary);
+      background: var(--bg-input);
       outline: none;
     }
-    .input-modern:focus { border-color: #3b82f6; background: white; }
+    .input-modern:focus { border-color: var(--accent-primary); background: var(--bg-secondary); }
     
     .table-card {
-      background: white;
+      background: var(--bg-secondary);
       border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
       flex: 1;
       overflow: hidden;
       display: flex;
@@ -123,30 +123,30 @@ import { TestExecution, UnitTestService, Bug } from '../unit-test.service';
     }
     .table-responsive { flex: 1; overflow: auto; }
     .modern-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 800px; }
-    .modern-table thead { position: sticky; top: 0; background: #f8fafc; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .modern-table th { padding: 1rem; font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; cursor: pointer; }
-    .modern-table td { padding: 0.8rem 1rem; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; color: #1e293b; vertical-align: middle; }
-    .modern-table tbody tr:hover { background: #f8fafc; }
+    .modern-table thead { position: sticky; top: 0; background: var(--bg-tertiary); z-index: 2; box-shadow: 0 1px 2px var(--border-color); }
+    .modern-table th { padding: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; cursor: pointer; }
+    .modern-table td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; color: var(--text-primary); vertical-align: middle; }
+    .modern-table tbody tr:hover { background: var(--bg-tertiary); }
     
-    .id-col { font-weight: 600; font-family: monospace; color: #3b82f6 !important; width: 120px; }
+    .id-col { font-weight: 600; font-family: monospace; color: var(--accent-primary) !important; width: 120px; }
     .comments-col { max-width: 300px; }
-    .truncate-text { white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #64748b; font-size: 0.85rem; }
+    .truncate-text { white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-secondary); font-size: 0.85rem; }
     
     .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-    .badge-pass { background: #d1fae5; color: #065f46; }
-    .badge-fail { background: #fee2e2; color: #b91c1c; }
-    .badge-pending { background: #f3f4f6; color: #4b5563; }
+    .badge-pass { background: rgba(52,211,153,0.15); color: var(--success); }
+    .badge-fail { background: rgba(239,68,68,0.15); color: var(--danger); }
+    .badge-pending { background: var(--bg-tertiary); color: var(--text-tertiary); }
     
-    .input-inline { width: 100%; padding: 0.4rem; border: 1px solid #cbd5e1; border-radius: 4px; font-family: inherit; font-size: 0.85rem; }
+    .input-inline { width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-input); color: var(--text-primary); font-family: inherit; font-size: 0.85rem; }
     
     .actions-cell { white-space: nowrap; width: 120px; }
     .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; border-radius: 4px; border: 1px solid transparent; }
-    .btn-outline { background: white; border-color: #3b82f6; color: #3b82f6; }
-    .btn-outline:hover { background: #eff6ff; }
+    .btn-outline { background: transparent; border-color: var(--accent-primary); color: var(--accent-primary); }
+    .btn-outline:hover { background: var(--accent-surface); }
     
     .icon-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; opacity: 0.7; transition: opacity 0.2s, transform 0.2s; padding: 0 0.4rem; }
     .icon-btn:hover { opacity: 1; transform: scale(1.1); }
-    .empty-state { text-align: center; padding: 3rem !important; color: #64748b; font-style: italic; }
+    .empty-state { text-align: center; padding: 3rem !important; color: var(--text-tertiary); font-style: italic; }
   `]
 })
 export class ExecutionComponent implements OnInit {

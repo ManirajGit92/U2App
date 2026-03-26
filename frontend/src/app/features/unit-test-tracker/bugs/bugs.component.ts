@@ -105,31 +105,32 @@ import { Bug, UnitTestService } from '../unit-test.service';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: white;
+      background: var(--bg-secondary);
       padding: 1rem 1.5rem;
       border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
       flex-wrap: wrap;
       gap: 1rem;
     }
-    .toolbar h2 { margin: 0; font-size: 1.25rem; color: #1f2937; }
+    .toolbar h2 { margin: 0; font-size: 1.25rem; color: var(--text-primary); }
     .search-filters { display: flex; gap: 1rem; flex-wrap: wrap; }
     .input-modern {
       padding: 0.6rem 1rem;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--border-color);
       border-radius: 6px;
       font-size: 0.9rem;
-      background: #f9fafb;
+      color: var(--text-primary);
+      background: var(--bg-input);
       outline: none;
     }
-    .input-modern:focus { border-color: #3b82f6; background: white; }
+    .input-modern:focus { border-color: var(--accent-primary); background: var(--bg-secondary); }
     
     .table-card {
-      background: white;
+      background: var(--bg-secondary);
       border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
       flex: 1;
       overflow: hidden;
       display: flex;
@@ -137,10 +138,10 @@ import { Bug, UnitTestService } from '../unit-test.service';
     }
     .table-responsive { flex: 1; overflow: auto; }
     .modern-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 800px; }
-    .modern-table thead { position: sticky; top: 0; background: #f8fafc; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .modern-table th { padding: 1rem; font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; cursor: pointer; }
-    .modern-table td { padding: 0.8rem 1rem; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; color: #1e293b; vertical-align: middle; }
-    .modern-table tbody tr:hover { background: #f8fafc; }
+    .modern-table thead { position: sticky; top: 0; background: var(--bg-tertiary); z-index: 2; box-shadow: 0 1px 2px var(--border-color); }
+    .modern-table th { padding: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; cursor: pointer; }
+    .modern-table td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; color: var(--text-primary); vertical-align: middle; }
+    .modern-table tbody tr:hover { background: var(--bg-tertiary); }
     
     .id-col { font-weight: 700; color: #ef4444 !important; font-family: monospace; width: 120px; }
     .tc-col { font-weight: 600; color: #64748b !important; font-family: monospace; }
@@ -162,7 +163,7 @@ import { Bug, UnitTestService } from '../unit-test.service';
     .actions-cell { white-space: nowrap; width: 80px; }
     .icon-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; opacity: 0.7; transition: opacity 0.2s, transform 0.2s; padding: 0 0.4rem; }
     .icon-btn:hover { opacity: 1; transform: scale(1.1); }
-    .empty-state { text-align: center; padding: 3rem !important; color: #64748b; font-style: italic; }
+    .empty-state { text-align: center; padding: 3rem !important; color: var(--text-tertiary); font-style: italic; }
   `]
 })
 export class BugsComponent implements OnInit {

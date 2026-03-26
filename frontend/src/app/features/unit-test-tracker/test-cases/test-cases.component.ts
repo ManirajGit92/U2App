@@ -146,11 +146,11 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: white;
+      background: var(--bg-secondary);
       padding: 1rem 1.5rem;
       border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
       flex-wrap: wrap;
       gap: 1rem;
     }
@@ -161,17 +161,17 @@ import { TestCase, UnitTestService } from '../unit-test.service';
     }
     .input-modern {
       padding: 0.6rem 1rem;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--border-color);
       border-radius: 6px;
       font-size: 0.9rem;
-      color: #374151;
-      background: #f9fafb;
+      color: var(--text-primary);
+      background: var(--bg-input);
       transition: border-color 0.2s;
       outline: none;
     }
     .input-modern:focus {
-      border-color: #3b82f6;
-      background: white;
+      border-color: var(--accent-primary);
+      background: var(--bg-secondary);
     }
     .search-input {
       width: 250px;
@@ -189,10 +189,10 @@ import { TestCase, UnitTestService } from '../unit-test.service';
 
     /* Table */
     .table-card {
-      background: white;
+      background: var(--bg-secondary);
       border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -211,38 +211,38 @@ import { TestCase, UnitTestService } from '../unit-test.service';
     .modern-table thead {
       position: sticky;
       top: 0;
-      background: #f8fafc;
+      background: var(--bg-tertiary);
       z-index: 2;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      box-shadow: 0 1px 2px var(--border-color);
     }
     .modern-table th {
       padding: 1rem;
       font-size: 0.85rem;
       font-weight: 600;
-      color: #475569;
+      color: var(--text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.05em;
       cursor: pointer;
       user-select: none;
       white-space: nowrap;
     }
-    .modern-table th:hover { background: #f1f5f9; }
+    .modern-table th:hover { background: var(--bg-secondary); }
     .modern-table td {
       padding: 0.8rem 1rem;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid var(--border-color);
       font-size: 0.9rem;
-      color: #1e293b;
+      color: var(--text-primary);
       vertical-align: middle;
     }
     .modern-table tbody tr:hover {
-      background: #f8fafc;
+      background: var(--bg-tertiary);
     }
     .modern-table tbody tr.edit-row {
-      background: #eff6ff;
+      background: var(--accent-surface);
     }
 
     /* Cell Widths & Formatting */
-    .id-col { font-weight: 600; font-family: monospace; color: #3b82f6 !important; }
+    .id-col { font-weight: 600; font-family: monospace; color: var(--accent-primary) !important; }
     .title-col { font-weight: 500; }
     .steps-col { max-width: 250px; }
     .truncate-text {
@@ -252,7 +252,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       -webkit-box-orient: vertical;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: #64748b;
+      color: var(--text-secondary);
       font-size: 0.85rem;
     }
 
@@ -263,16 +263,18 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       font-size: 0.75rem;
       font-weight: 600;
     }
-    .badge-high { background: #fee2e2; color: #b91c1c; }
-    .badge-medium { background: #fef3c7; color: #b45309; }
-    .badge-low { background: #e0f2fe; color: #0369a1; }
+    .badge-high { background: rgba(239,68,68,0.15); color: var(--danger); }
+    .badge-medium { background: rgba(245,158,11,0.15); color: var(--warning); }
+    .badge-low { background: rgba(59,130,246,0.15); color: var(--info); }
 
     /* Inline Inputs */
     .input-inline {
       width: 100%;
       padding: 0.4rem;
-      border: 1px solid #cbd5e1;
+      border: 1px solid var(--border-color);
       border-radius: 4px;
+      background: var(--bg-input);
+      color: var(--text-primary);
       font-family: inherit;
       font-size: 0.85rem;
     }
@@ -301,7 +303,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
     .empty-state {
       text-align: center;
       padding: 3rem !important;
-      color: #64748b;
+      color: var(--text-tertiary);
       font-style: italic;
     }
 
@@ -311,10 +313,10 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       justify-content: space-between;
       align-items: center;
       padding: 1rem 1.5rem;
-      background: #f8fafc;
-      border-top: 1px solid #e2e8f0;
+      background: var(--bg-tertiary);
+      border-top: 1px solid var(--border-color);
       font-size: 0.9rem;
-      color: #475569;
+      color: var(--text-secondary);
     }
     .page-controls {
       display: flex;
@@ -322,7 +324,10 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       gap: 0.5rem;
     }
     .page-info { margin-right: 1rem; }
-    .page-size select { margin-left: 0.5rem; padding: 0.2rem; border-radius: 4px; border: 1px solid #cbd5e1; }
+    .page-size select { 
+      margin-left: 0.5rem; padding: 0.2rem; border-radius: 4px; 
+      border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-primary);
+    }
   `]
 })
 export class TestCasesComponent implements OnInit {

@@ -69,16 +69,17 @@ import { BugsComponent } from './bugs/bugs.component';
     .app-layout {
       display: flex;
       height: 100vh;
-      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      font-family: var(--font-family);
       overflow: hidden;
+      transition: background var(--transition-normal);
     }
 
     .glass-panel {
-      background: rgba(255, 255, 255, 0.7);
+      background: var(--card-glass);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.5);
+      border: 1px solid var(--card-glass-border);
     }
 
     /* ─── Sidebar ─── */
@@ -86,9 +87,10 @@ import { BugsComponent } from './bugs/bugs.component';
       width: 250px;
       display: flex;
       flex-direction: column;
-      border-right: 1px solid rgba(0,0,0,0.05);
+      border-right: 1px solid var(--border-color);
       z-index: 10;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.02);
+      box-shadow: var(--shadow-sm);
+      background: var(--bg-secondary);
     }
 
     .nav-branding {
@@ -96,7 +98,7 @@ import { BugsComponent } from './bugs/bugs.component';
       display: flex;
       align-items: center;
       gap: 0.8rem;
-      border-bottom: 1px solid rgba(0,0,0,0.05);
+      border-bottom: 1px solid var(--border-color);
     }
 
     .nav-branding .icon {
@@ -106,7 +108,7 @@ import { BugsComponent } from './bugs/bugs.component';
     .nav-branding h2 {
       margin: 0;
       font-size: 1.25rem;
-      color: #111827;
+      color: var(--text-primary);
       font-weight: 700;
     }
 
@@ -125,21 +127,21 @@ import { BugsComponent } from './bugs/bugs.component';
       border-radius: 8px;
       font-size: 0.95rem;
       font-weight: 500;
-      color: #4b5563;
+      color: var(--text-secondary);
       cursor: pointer;
       transition: all 0.2s ease;
     }
 
     .nav-links button:hover {
-      background: rgba(255,255,255,0.9);
-      color: #111827;
+      background: var(--accent-surface);
+      color: var(--accent-primary);
     }
 
     .nav-links button.active {
-      background: #3b82f6;
-      color: white;
+      background: var(--accent-primary);
+      color: #white;
       font-weight: 600;
-      box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
 
     /* ─── Main Content ─── */
@@ -156,14 +158,15 @@ import { BugsComponent } from './bugs/bugs.component';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(0,0,0,0.05);
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-secondary);
       z-index: 5;
     }
 
     .header-title h1 {
       margin: 0;
       font-size: 1.4rem;
-      color: #1f2937;
+      color: var(--text-primary);
     }
 
     .header-actions {

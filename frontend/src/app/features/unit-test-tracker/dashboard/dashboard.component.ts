@@ -92,11 +92,11 @@ import { Observable } from 'rxjs';
       gap: 1.5rem;
     }
     .card {
-      background: white;
+      background: var(--bg-secondary);
       border-radius: 12px;
       padding: 1.5rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
     }
     .summary-cards {
       display: grid;
@@ -108,14 +108,14 @@ import { Observable } from 'rxjs';
       align-items: center;
       gap: 1rem;
     }
-    .stat-card.blue { border-left: 4px solid #3b82f6; }
-    .stat-card.green { border-left: 4px solid #10b981; }
-    .stat-card.red { border-left: 4px solid #ef4444; }
-    .stat-card.orange { border-left: 4px solid #f59e0b; }
+    .stat-card.blue { border-left: 4px solid var(--info); }
+    .stat-card.green { border-left: 4px solid var(--success); }
+    .stat-card.red { border-left: 4px solid var(--danger); }
+    .stat-card.orange { border-left: 4px solid var(--warning); }
     
     .stat-icon {
       font-size: 2rem;
-      background: #f3f4f6;
+      background: var(--bg-tertiary);
       border-radius: 50%;
       width: 50px;
       height: 50px;
@@ -125,7 +125,7 @@ import { Observable } from 'rxjs';
     }
     .stat-data h3 {
       margin: 0;
-      color: #6b7280;
+      color: var(--text-secondary);
       font-size: 0.85rem;
       text-transform: uppercase;
       font-weight: 600;
@@ -135,7 +135,7 @@ import { Observable } from 'rxjs';
       margin: 0.2rem 0 0;
       font-size: 1.8rem;
       font-weight: 700;
-      color: #111827;
+      color: var(--text-primary);
     }
     .charts-area {
       display: grid;
@@ -144,9 +144,9 @@ import { Observable } from 'rxjs';
     }
     .chart-card h3 {
       margin: 0 0 1.5rem 0;
-      color: #1f2937;
+      color: var(--text-primary);
       font-size: 1.1rem;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid var(--border-color);
       padding-bottom: 0.75rem;
     }
     
@@ -173,7 +173,7 @@ import { Observable } from 'rxjs';
       align-items: center;
       gap: 0.5rem;
       font-size: 0.95rem;
-      color: #4b5563;
+      color: var(--text-secondary);
       font-weight: 500;
     }
     .dot {
@@ -181,9 +181,9 @@ import { Observable } from 'rxjs';
       height: 12px;
       border-radius: 50%;
     }
-    .dot.passed { background: #10b981; }
-    .dot.failed { background: #ef4444; }
-    .dot.pending { background: #d1d5db; }
+    .dot.passed { background: var(--success); }
+    .dot.failed { background: var(--danger); }
+    .dot.pending { background: var(--text-tertiary); }
 
     /* Bar Chart */
     .bar-chart-container {
@@ -199,13 +199,13 @@ import { Observable } from 'rxjs';
     .bar-label {
       width: 60px;
       font-size: 0.9rem;
-      color: #4b5563;
+      color: var(--text-secondary);
       font-weight: 500;
     }
     .bar-wrapper {
       flex: 1;
       height: 12px;
-      background: #f3f4f6;
+      background: var(--bg-tertiary);
       border-radius: 6px;
       overflow: hidden;
     }
@@ -218,13 +218,13 @@ import { Observable } from 'rxjs';
       width: 30px;
       text-align: right;
       font-weight: 600;
-      color: #111827;
+      color: var(--text-primary);
       font-size: 0.9rem;
     }
     .bg-critical { background: #991b1b; }
-    .bg-high { background: #ef4444; }
-    .bg-medium { background: #f59e0b; }
-    .bg-low { background: #3b82f6; }
+    .bg-high { background: var(--danger); }
+    .bg-medium { background: var(--warning); }
+    .bg-low { background: var(--info); }
   `]
 })
 export class DashboardComponent {
@@ -262,9 +262,9 @@ export class DashboardComponent {
     const failEnd = passEnd + failPct;
     
     return `conic-gradient(
-      #10b981 0% ${passEnd}%, 
-      #ef4444 ${passEnd}% ${failEnd}%, 
-      #d1d5db ${failEnd}% 100%
+      var(--success) 0% ${passEnd}%, 
+      var(--danger) ${passEnd}% ${failEnd}%, 
+      var(--text-tertiary) ${failEnd}% 100%
     )`;
   }
 
