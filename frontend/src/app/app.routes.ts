@@ -62,5 +62,12 @@ export const routes: Routes = [
         (m) => m.UnitTestTrackerComponent
       ),
   },
+  {
+    path: 'standup-note',
+    loadComponent: () =>
+      import('./features/standup-note/standup-note.component').then(
+        (m) => m.StandupNoteComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];
