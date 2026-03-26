@@ -55,5 +55,12 @@ export const routes: Routes = [
         (m) => m.ControlsToExcelComponent
       ),
   },
+  {
+    path: 'unit-test-tracker',
+    loadComponent: () =>
+      import('./features/unit-test-tracker/unit-test-tracker.component').then(
+        (m) => m.UnitTestTrackerComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

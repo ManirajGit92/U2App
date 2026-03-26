@@ -435,5 +435,14 @@ export class HomeComponent {
       available: true,
       color: 'linear-gradient(135deg, rgba(34,211,238,0.2), rgba(56,189,248,0.2))',
     },
+    {
+      id: 'unit-test-tracker',
+      title: 'Unit Test Tracker',
+      description: 'Excel-driven test tracking system with full CRUD, execution logging, and bug management.',
+      icon: '🧪',
+      route: '/unit-test-tracker',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(249,115,22,0.2))',
+    },
   ];
 }
