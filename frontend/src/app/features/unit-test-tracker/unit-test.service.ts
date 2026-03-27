@@ -31,6 +31,7 @@ export interface UnitTestState {
   testCases: TestCase[];
   executions: TestExecution[];
   bugs: Bug[];
+  tableHeight: number; // in pixels
 }
 
 @Injectable({
@@ -50,7 +51,8 @@ export class UnitTestService {
     ],
     bugs: [
       { id: 'BUG-001', testCaseId: 'TC-002', severity: 'High', status: 'Open', assignedTo: 'DevTeam Alpha' }
-    ]
+    ],
+    tableHeight: 450
   };
 
   private stateSubject = new BehaviorSubject<UnitTestState>(this.initialState);
@@ -62,6 +64,10 @@ export class UnitTestService {
 
   updateState(partial: Partial<UnitTestState>) {
     this.stateSubject.next({ ...this.stateSubject.value, ...partial });
+  }
+
+  updateTableHeight(height: number) {
+    this.updateState({ tableHeight: height });
   }
 
   // --- Test Cases ---

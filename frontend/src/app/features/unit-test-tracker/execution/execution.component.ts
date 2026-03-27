@@ -19,10 +19,15 @@ import { TestExecution, UnitTestService, Bug } from '../unit-test.service';
             <option value="Fail">Fail</option>
             <option value="Pending">Pending</option>
           </select>
+          <div class="height-controls">
+            <button class="icon-btn" (click)="adjustHeight(-50)" title="Decrease Table Height">➖</button>
+            <span class="height-label">Height</span>
+            <button class="icon-btn" (click)="adjustHeight(50)" title="Increase Table Height">➕</button>
+          </div>
         </div>
       </div>
 
-      <div class="table-card">
+      <div class="table-card" [style.height.px]="tableHeight">
         <div class="table-responsive">
           <table class="modern-table">
             <thead>
@@ -111,15 +116,32 @@ import { TestExecution, UnitTestService, Bug } from '../unit-test.service';
     }
     .input-modern:focus { border-color: var(--accent-primary); background: var(--bg-secondary); }
     
+    .height-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-tertiary);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+    .height-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    
     .table-card {
       background: var(--bg-secondary);
       border-radius: 12px;
       box-shadow: var(--shadow-sm);
       border: 1px solid var(--border-color);
-      flex: 1;
-      overflow: hidden;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+      min-height: 200px;
+      transition: height 0.3s ease;
     }
     .table-responsive { flex: 1; overflow: auto; }
     .modern-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 800px; }
@@ -164,10 +186,12 @@ export class ExecutionComponent implements OnInit {
   editingId: string | null = null;
   editData!: TestExecution;
   originalStatus: string = '';
+  tableHeight = 450;
 
   ngOnInit() {
     this.unitTestService.state$.subscribe(state => {
       this.allData = state.executions;
+      this.tableHeight = state.tableHeight;
       this.applyFilters();
     });
   }
@@ -236,5 +260,10 @@ export class ExecutionComponent implements OnInit {
 
   cancelEdit() {
     this.editingId = null;
+  }
+
+  adjustHeight(delta: number) {
+    const newHeight = Math.max(200, this.tableHeight + delta);
+    this.unitTestService.updateTableHeight(newHeight);
   }
 }

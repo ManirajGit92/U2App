@@ -25,13 +25,19 @@ import { TestCase, UnitTestService } from '../unit-test.service';
             <option value="Medium">Medium</option>
             <option value="Low">Low</option>
           </select>
+
+          <div class="height-controls">
+            <button class="icon-btn" (click)="adjustHeight(-50)" title="Decrease Table Height">➖</button>
+            <span class="height-label">Height</span>
+            <button class="icon-btn" (click)="adjustHeight(50)" title="Increase Table Height">➕</button>
+          </div>
         </div>
 
         <button class="btn btn-primary" (click)="startAdd()">+ New Test Case</button>
       </div>
 
       <!-- Table Section -->
-      <div class="table-card">
+      <div class="table-card" [style.height.px]="tableHeight">
         <div class="table-responsive">
           <table class="modern-table">
             <thead>
@@ -177,6 +183,22 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       width: 250px;
     }
 
+    .height-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-tertiary);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+    .height-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
     .btn {
       padding: 0.6rem 1.2rem;
       border: none;
@@ -196,7 +218,8 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      flex: 1; /* take remaining height */
+      min-height: 200px;
+      transition: height 0.3s ease;
     }
     .table-responsive {
       flex: 1;
@@ -351,6 +374,8 @@ export class TestCasesComponent implements OnInit {
   pageSize = 10;
   currentPage = 1;
 
+  tableHeight = 450;
+
   // Editing logic
   editingId: string | null = null;
   editTestCaseData!: TestCase;
@@ -362,6 +387,7 @@ export class TestCasesComponent implements OnInit {
   ngOnInit() {
     this.unitTestService.state$.subscribe(state => {
       this.allData = state.testCases;
+      this.tableHeight = state.tableHeight;
       // Extract unique modules
       this.uniqueModules = Array.from(new Set(this.allData.map(tc => tc.module))).filter(m => m);
       this.applyFilters();
@@ -435,6 +461,11 @@ export class TestCasesComponent implements OnInit {
 
   updatePagination() {
     this.paginatedData = this.filteredData.slice(this.startIndex, this.endIndex);
+  }
+
+  adjustHeight(delta: number) {
+    const newHeight = Math.max(200, this.tableHeight + delta);
+    this.unitTestService.updateTableHeight(newHeight);
   }
 
   // --- CRUD ---

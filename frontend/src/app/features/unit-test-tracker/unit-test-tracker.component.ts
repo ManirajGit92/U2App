@@ -11,26 +11,30 @@ import { BugsComponent } from './bugs/bugs.component';
   standalone: true,
   imports: [CommonModule, DashboardComponent, TestCasesComponent, ExecutionComponent, BugsComponent],
   template: `
-    <div class="app-layout">
+    <div class="app-layout" [class.sidebar-hidden]="!isSidebarVisible">
       <!-- Sidebar Navigation -->
       <aside class="sidebar glass-panel">
         <div class="nav-branding">
           <span class="icon">🧪</span>
-          <h2>QA Tracker</h2>
+          <h2 *ngIf="isSidebarVisible">QA Tracker</h2>
         </div>
         
         <nav class="nav-links">
-          <button [class.active]="activeTab === 'dashboard'" (click)="activeTab = 'dashboard'">
-            Dashboard
+          <button [class.active]="activeTab === 'dashboard'" (click)="activeTab = 'dashboard'" [title]="'Dashboard'">
+            <span class="btn-icon">📊</span>
+            <span class="btn-text" *ngIf="isSidebarVisible">Dashboard</span>
           </button>
-          <button [class.active]="activeTab === 'testcases'" (click)="activeTab = 'testcases'">
-            Test Cases
+          <button [class.active]="activeTab === 'testcases'" (click)="activeTab = 'testcases'" [title]="'Test Cases'">
+            <span class="btn-icon">📝</span>
+            <span class="btn-text" *ngIf="isSidebarVisible">Test Cases</span>
           </button>
-          <button [class.active]="activeTab === 'execution'" (click)="activeTab = 'execution'">
-            Execution
+          <button [class.active]="activeTab === 'execution'" (click)="activeTab = 'execution'" [title]="'Execution'">
+            <span class="btn-icon">⚙️</span>
+            <span class="btn-text" *ngIf="isSidebarVisible">Execution</span>
           </button>
-          <button [class.active]="activeTab === 'bugs'" (click)="activeTab = 'bugs'">
-            Bugs
+          <button [class.active]="activeTab === 'bugs'" (click)="activeTab = 'bugs'" [title]="'Bugs'">
+            <span class="btn-icon">🐜</span>
+            <span class="btn-text" *ngIf="isSidebarVisible">Bugs</span>
           </button>
         </nav>
       </aside>
@@ -39,7 +43,10 @@ import { BugsComponent } from './bugs/bugs.component';
       <main class="main-content">
         <!-- Header -->
         <header class="top-header glass-panel">
-          <div class="header-title">
+          <div class="header-left">
+            <button class="sidebar-toggle" (click)="toggleSidebar()" [title]="isSidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'">
+              {{ isSidebarVisible ? '◀' : '▶' }}
+            </button>
             <h1>{{ getTitle() }}</h1>
           </div>
           <div class="header-actions">
@@ -91,6 +98,12 @@ import { BugsComponent } from './bugs/bugs.component';
       z-index: 10;
       box-shadow: var(--shadow-sm);
       background: var(--bg-secondary);
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+
+    .sidebar-hidden .sidebar {
+      width: 70px;
     }
 
     .nav-branding {
@@ -99,10 +112,14 @@ import { BugsComponent } from './bugs/bugs.component';
       align-items: center;
       gap: 0.8rem;
       border-bottom: 1px solid var(--border-color);
+      height: 70px;
+      box-sizing: border-box;
     }
 
     .nav-branding .icon {
       font-size: 1.8rem;
+      min-width: 30px;
+      text-align: center;
     }
 
     .nav-branding h2 {
@@ -110,17 +127,18 @@ import { BugsComponent } from './bugs/bugs.component';
       font-size: 1.25rem;
       color: var(--text-primary);
       font-weight: 700;
+      white-space: nowrap;
     }
 
     .nav-links {
       display: flex;
       flex-direction: column;
-      padding: 1rem;
+      padding: 0.75rem;
       gap: 0.5rem;
     }
 
     .nav-links button {
-      padding: 0.85rem 1rem;
+      padding: 0.85rem;
       border: none;
       background: transparent;
       text-align: left;
@@ -130,6 +148,27 @@ import { BugsComponent } from './bugs/bugs.component';
       color: var(--text-secondary);
       cursor: pointer;
       transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .sidebar-hidden .nav-links button {
+      justify-content: center;
+      padding: 0.85rem 0;
+    }
+
+    .btn-icon {
+      font-size: 1.2rem;
+      min-width: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .btn-text {
+      white-space: nowrap;
     }
 
     .nav-links button:hover {
@@ -139,7 +178,7 @@ import { BugsComponent } from './bugs/bugs.component';
 
     .nav-links button.active {
       background: var(--accent-primary);
-      color: #white;
+      color: white;
       font-weight: 600;
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
@@ -151,19 +190,49 @@ import { BugsComponent } from './bugs/bugs.component';
       flex-direction: column;
       height: 100vh;
       overflow: hidden;
+      transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .top-header {
-      padding: 1rem 2rem;
+      padding: 0.75rem 2rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid var(--border-color);
       background: var(--bg-secondary);
       z-index: 5;
+      height: 70px;
+      box-sizing: border-box;
     }
 
-    .header-title h1 {
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .sidebar-toggle {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+      font-size: 0.8rem;
+    }
+
+    .sidebar-toggle:hover {
+      background: var(--accent-surface);
+      color: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
+
+    .header-left h1 {
       margin: 0;
       font-size: 1.4rem;
       color: var(--text-primary);
@@ -228,7 +297,12 @@ import { BugsComponent } from './bugs/bugs.component';
 export class UnitTestTrackerComponent {
   activeTab: 'dashboard' | 'testcases' | 'execution' | 'bugs' = 'dashboard';
   isLoading = false;
+  isSidebarVisible = true;
   unitTestService = inject(UnitTestService);
+
+  toggleSidebar() {
+    this.isSidebarVisible = !this.isSidebarVisible;
+  }
 
   getTitle(): string {
     switch (this.activeTab) {
