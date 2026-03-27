@@ -93,9 +93,9 @@ export class ContentCreatorService {
 
           const entries: ContentEntry[] = jsonData.map(row => ({
             imageUrl: row['Image URL'] || row['imageUrl'] || '',
-            voiceContent: row['Voice Content'] || row['voiceContent'] || '',
-            duration: Number(row['Duration'] || row['duration'] || 5000),
-            animation: row['Animation'] || row['animation'] || 'fade'
+            voiceContent: row['Voice Content (text-to-speech)'] || row['Voice Content'] || row['voiceContent'] || '',
+            duration: Number(row['Display Duration'] || row['Duration'] || row['duration'] || 5000),
+            animation: row['Animation Type'] || row['Animation'] || row['animation'] || 'fade'
           }));
 
           this.setEntries(entries);
@@ -112,9 +112,9 @@ export class ContentCreatorService {
   exportToExcel() {
     const data = this.entriesSubject.value.map(e => ({
       'Image URL': e.imageUrl,
-      'Voice Content': e.voiceContent,
-      'Duration': e.duration,
-      'Animation': e.animation
+      'Voice Content (text-to-speech)': e.voiceContent,
+      'Display Duration': e.duration,
+      'Animation Type': e.animation
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);

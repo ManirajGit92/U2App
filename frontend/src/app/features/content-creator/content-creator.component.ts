@@ -590,15 +590,25 @@ export class ContentCreatorComponent implements OnInit, OnDestroy {
           const blob = new Blob(chunks, { type: mimeType });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
+          a.style.display = 'none';
           a.href = url;
           a.download = `Content_Creation.${extension}`;
+          document.body.appendChild(a);
           a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          }, 100);
           this.isExporting.set(false);
           alert(`Video export complete! Saved as ${extension.toUpperCase()}`);
         };
 
         recorder.start();
         
+        // Use a fixed frame rate for export to avoid background throttling
+        const fps = 30;
+        const frameTime = 1000 / fps;
+
         // Play through each slide and render to canvas
         for (let i = 0; i < this.entries().length; i++) {
             if (!this.isExporting()) break;
@@ -614,16 +624,14 @@ export class ContentCreatorComponent implements OnInit, OnDestroy {
                 await new Promise((resolve, reject) => {
                     img.onload = resolve;
                     img.onerror = () => reject(new Error(`Failed to load image: ${entry.imageUrl}`));
-                    // Timeout for image loading
                     setTimeout(() => reject(new Error('Image load timeout')), 10000);
                 });
             } catch (err) {
                 console.error(err);
-                // Continue with next slide or blank
             }
 
-            const startTime = Date.now();
-            while (Date.now() - startTime < entry.duration) {
+            const totalFrames = Math.ceil(entry.duration / frameTime);
+            for (let f = 0; f < totalFrames; f++) {
                 if (!this.isExporting()) break;
                 
                 // Render frame
@@ -645,12 +653,12 @@ export class ContentCreatorComponent implements OnInit, OnDestroy {
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     
-                    // Simple word wrap or truncated text
                     const maxWidth = canvas.width * 0.8;
                     ctx.fillText(entry.voiceContent, canvas.width / 2, canvas.height - 90, maxWidth);
                 }
                 
-                await new Promise(r => requestAnimationFrame(r));
+                // Wait for a fixed frame time instead of requestAnimationFrame
+                await new Promise(r => setTimeout(r, frameTime));
             }
         }
 
