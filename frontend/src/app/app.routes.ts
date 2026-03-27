@@ -90,5 +90,12 @@ export const routes: Routes = [
         (m) => m.ImageNavigatorComponent
       ),
   },
+  {
+    path: 'life-tracker',
+    loadChildren: () =>
+      import('./features/life-tracker/life-tracker.routes').then(
+        (m) => m.LIFE_TRACKER_ROUTES
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

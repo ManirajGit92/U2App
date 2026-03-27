@@ -471,5 +471,14 @@ export class HomeComponent {
       available: true,
       color: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2))',
     },
+    {
+      id: 'life-tracker',
+      title: 'Life Tracker',
+      description: 'Modern dashboard to track routines, expenses, diet, fitness, mental health, and future investments — all syncable with Excel.',
+      icon: '🌱',
+      route: '/life-tracker',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(99,102,241,0.2))',
+    },
   ];
 }
