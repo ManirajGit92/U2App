@@ -462,5 +462,14 @@ export class HomeComponent {
       available: true,
       color: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(245,158,11,0.2))',
     },
+    {
+      id: 'image-navigator',
+      title: 'Image Navigator',
+      description: 'Navigate through images using Excel-driven data, select areas for OCR text extraction, and get voice descriptions.',
+      icon: '🗺️',
+      route: '/image-navigator',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2))',
+    },
   ];
 }

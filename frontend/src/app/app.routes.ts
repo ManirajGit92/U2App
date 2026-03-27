@@ -76,5 +76,12 @@ export const routes: Routes = [
         (m) => m.OfficeFunComponent
       ),
   },
+  {
+    path: 'image-navigator',
+    loadComponent: () =>
+      import('./features/image-navigator/image-navigator.component').then(
+        (m) => m.ImageNavigatorComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];
