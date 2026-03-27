@@ -21,6 +21,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'content-creator',
+    loadComponent: () =>
+      import('./features/content-creator/content-creator.component').then(
+        (m) => m.ContentCreatorComponent
+      ),
+  },
+  {
     path: 'html-viewer',
     loadComponent: () =>
       import('./features/html-viewer/html-viewer.component').then(
