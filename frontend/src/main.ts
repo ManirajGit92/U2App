@@ -1,3 +1,6 @@
+import { Buffer } from 'buffer';
+(window as any).Buffer = Buffer;
+
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';

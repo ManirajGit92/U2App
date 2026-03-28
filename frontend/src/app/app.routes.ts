@@ -97,5 +97,12 @@ export const routes: Routes = [
         (m) => m.LIFE_TRACKER_ROUTES
       ),
   },
+  {
+    path: 'easy-documents',
+    loadComponent: () =>
+      import('./features/easy-documents/easy-documents.component').then(
+        (m) => m.EasyDocumentsComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

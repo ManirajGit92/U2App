@@ -480,5 +480,14 @@ export class HomeComponent {
       available: true,
       color: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(99,102,241,0.2))',
     },
+    {
+      id: 'easy-documents',
+      title: 'Easy Documents',
+      description: 'Transform Excel files into interactive, multilingual, multimedia-rich documentation with navigation and search.',
+      icon: '📄',
+      route: '/easy-documents',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.2))',
+    },
   ];
 }
