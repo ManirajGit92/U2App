@@ -104,8 +104,27 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
     }
 
     @media (max-width: 768px) {
+      .upload-card {
+        padding: 28px 20px;
+      }
+
+      .upload-actions {
+        flex-direction: column;
+      }
+
+      .upload-actions .btn {
+        width: 100%;
+      }
+
       .docs-layout {
         flex-direction: column;
+        height: auto;
+        min-height: calc(100vh - 64px);
+        overflow: visible;
+      }
+
+      .docs-main {
+        min-height: calc(100vh - 128px);
       }
     }
   `]

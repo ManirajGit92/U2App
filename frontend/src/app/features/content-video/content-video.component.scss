@@ -276,3 +276,32 @@
 .mt-3 {
   margin-top: 12px;
 }
+
+@media (max-width: 768px) {
+  .content-video-page {
+    padding: 20px 16px 60px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page-title {
+    font-size: 1.35rem;
+  }
+
+  .controls-grid,
+  .controls-row {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .panel-header,
+  .video-preview-panel {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

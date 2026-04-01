@@ -629,6 +629,11 @@ import { SupabaseService } from '../../core/services/supabase.service';
         padding: 20px 16px 60px;
       }
 
+      .page-header {
+        flex-direction: column;
+        gap: 10px;
+      }
+
       .page-title {
         font-size: 1.3rem;
       }
@@ -640,6 +645,20 @@ import { SupabaseService } from '../../core/services/supabase.service';
 
       .controls-right {
         flex-wrap: wrap;
+      }
+
+      .panel-header {
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+
+      .panel-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .panel-action-btn {
+        flex: 1 1 auto;
       }
 
       .input-grid {

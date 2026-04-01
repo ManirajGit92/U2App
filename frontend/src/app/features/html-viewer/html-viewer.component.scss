@@ -324,6 +324,10 @@ iframe {
     padding: 20px 16px 16px;
   }
 
+  .page-title {
+    font-size: 1.35rem;
+  }
+
   .split-pane {
     padding: 0 16px;
   }
@@ -335,5 +339,26 @@ iframe {
   .stats-bar {
     width: 100%;
     padding: 0;
+  }
+
+  .editor-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .editor-tab {
+    flex: 0 0 auto;
+  }
+
+  .panel-topbar,
+  .section-header,
+  .preview-meta {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .code-textarea {
+    padding: 12px;
+    font-size: 0.8rem;
   }
 }

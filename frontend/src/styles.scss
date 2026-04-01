@@ -125,6 +125,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+img,
+svg,
+canvas,
+video,
+iframe {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
 a {
   text-decoration: none;
   color: var(--accent-primary);
@@ -282,6 +297,47 @@ a:hover {
 
 .textarea-styled::placeholder {
   color: var(--text-tertiary);
+}
+
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+
+  .btn-lg {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+  }
+
+  .glass-card:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 15px;
+  }
+
+  .btn {
+    padding: 10px 16px;
+  }
+
+  .btn-sm {
+    padding: 7px 12px;
+  }
+
+  .textarea-styled {
+    min-height: 160px;
+    padding: 14px;
+    font-size: 0.84rem;
+  }
 }
 
 /* ───── Animations ───── */

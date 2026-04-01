@@ -380,6 +380,71 @@ import { Subscription } from 'rxjs';
     .btn-accent:hover { opacity: 0.9; transform: translateY(-1px); }
 
     .full-width { width: 100%; }
+
+    @media (max-width: 1024px) {
+      .creator-container {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+      }
+
+      .main-layout {
+        flex-direction: column;
+        overflow: visible;
+      }
+
+      .sidebar {
+        width: 100%;
+      }
+
+      .preview-area {
+        min-height: 420px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .creator-header {
+        height: auto;
+        padding: 1rem;
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .header-actions .btn {
+        flex: 1 1 180px;
+      }
+
+      .main-layout {
+        padding: 0.75rem;
+      }
+
+      .field-row {
+        grid-template-columns: 1fr;
+      }
+
+      .subtitle-controls {
+        flex-wrap: wrap;
+      }
+
+      .player-controls {
+        width: calc(100% - 1rem);
+        bottom: 0.75rem;
+        padding: 0.6rem 0.9rem;
+      }
+
+      .subtitles {
+        width: calc(100% - 1rem);
+        bottom: 72px;
+        padding: 0.75rem;
+      }
+    }
   `]
 })
 export class ContentCreatorComponent implements OnInit, OnDestroy {

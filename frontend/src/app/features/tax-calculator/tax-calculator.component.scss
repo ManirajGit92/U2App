@@ -361,4 +361,21 @@ h1 {
   .hero-metric {
     align-items: flex-start;
   }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn,
+  .upload-btn {
+    width: 100%;
+  }
+
+  .tax-page {
+    padding: 20px 16px 60px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
 }

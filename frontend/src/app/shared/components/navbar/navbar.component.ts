@@ -255,12 +255,39 @@ import { SupabaseService } from '../../../core/services/supabase.service';
       color: var(--accent-primary);
     }
 
-    @media (max-width: 640px) {
+    @media (max-width: 768px) {
+      .navbar-inner {
+        height: auto;
+        min-height: 64px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
       .navbar-links {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+      }
+
+      .navbar-links::-webkit-scrollbar {
         display: none;
       }
+
+      .nav-link {
+        flex: 0 0 auto;
+      }
+    }
+
+    @media (max-width: 640px) {
       .logo-text {
         font-size: 1.1rem;
+      }
+
+      .navbar-actions {
+        gap: 8px;
       }
     }
   `],
