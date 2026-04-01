@@ -101,11 +101,18 @@ import { SupabaseService } from '../../core/services/supabase.service';
           <div class="input-panel glass-card" [style.animation-delay]="i * 0.08 + 's'" style="animation: fadeInUp 0.4s ease-out both;">
             <div class="panel-header">
               <span class="panel-label">Content {{ i + 1 }}</span>
-              @if (i >= 2) {
-                <button class="btn-remove" (click)="removeContentBox(box.id)" title="Remove">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              }
+              <div class="panel-actions">
+                @if (mode() === 'json') {
+                  <button class="btn btn-secondary btn-sm panel-action-btn" (click)="beautifyJson(box.id)">
+                    Beautify JSON
+                  </button>
+                }
+                @if (i >= 2) {
+                  <button class="btn-remove" (click)="removeContentBox(box.id)" title="Remove">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                }
+              </div>
             </div>
             <textarea
               class="textarea-styled"
@@ -114,6 +121,19 @@ import { SupabaseService } from '../../core/services/supabase.service';
               [attr.aria-label]="'Content ' + (i + 1)"
               spellcheck="false"
             ></textarea>
+            @if (mode() === 'text') {
+              <div class="text-metrics">
+                <span>{{ getCharacterCount(box.content) }} characters</span>
+                <span>{{ getWordCount(box.content) }} words</span>
+                <span>{{ getSentenceCount(box.content) }} sentences</span>
+                <span>{{ getParagraphCount(box.content) }} paragraphs</span>
+              </div>
+            }
+            @if (mode() === 'json' && jsonStatus()[box.id]) {
+              <div class="json-status" [class.error]="jsonStatus()[box.id]?.type === 'error'">
+                {{ jsonStatus()[box.id]?.message }}
+              </div>
+            }
           </div>
         }
       </div>
@@ -330,6 +350,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
       justify-content: space-between;
       padding: 14px 20px;
       border-bottom: 1px solid var(--border-color);
+      gap: 12px;
     }
 
     .panel-label {
@@ -338,6 +359,17 @@ import { SupabaseService } from '../../core/services/supabase.service';
       color: var(--text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.8px;
+    }
+
+    .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .panel-action-btn {
+      white-space: nowrap;
     }
 
     .btn-remove {
@@ -371,6 +403,34 @@ import { SupabaseService } from '../../core/services/supabase.service';
     }
 
     /* ───── Results ───── */
+    .json-status {
+      padding: 10px 20px 14px;
+      font-size: 0.83rem;
+      color: var(--success);
+      border-top: 1px solid var(--border-color);
+      background: rgba(16,185,129,0.08);
+    }
+
+    .json-status.error {
+      color: var(--danger);
+      background: rgba(239,68,68,0.08);
+    }
+
+    .text-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      padding: 12px 20px 14px;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      background: rgba(148,163,184,0.06);
+    }
+
+    .text-metrics span {
+      white-space: nowrap;
+    }
+
     .results-section {
       margin-top: 16px;
     }
@@ -601,6 +661,7 @@ export class CompareComponent {
   mode = signal<'text' | 'json'>('text');
   showHistory = signal(false);
   results = signal<CompareResult[]>([]);
+  jsonStatus = signal<Record<number, { type: 'success' | 'error'; message: string }>>({});
 
   private nextId = 3;
   contentBoxes = signal([
@@ -617,6 +678,11 @@ export class CompareComponent {
 
   removeContentBox(id: number): void {
     this.contentBoxes.update((boxes) => boxes.filter((b) => b.id !== id));
+    this.jsonStatus.update((status) => {
+      const nextStatus = { ...status };
+      delete nextStatus[id];
+      return nextStatus;
+    });
   }
 
   canCompare(): boolean {
@@ -637,7 +703,64 @@ export class CompareComponent {
     this.results.set(all);
   }
 
+  beautifyJson(id: number): void {
+    const box = this.contentBoxes().find((item) => item.id === id);
+
+    if (!box) {
+      return;
+    }
+
+    const result = this.compareService.beautifyJSON(box.content);
+
+    if (result.error) {
+      this.setJsonStatus(id, 'error', result.error);
+      return;
+    }
+
+    this.contentBoxes.update((boxes) =>
+      boxes.map((item) =>
+        item.id === id
+          ? { ...item, content: result.formatted ?? item.content }
+          : item
+      )
+    );
+
+    this.setJsonStatus(
+      id,
+      'success',
+      box.content.trim()
+        ? 'JSON formatted successfully.'
+        : 'Box is empty and ready for JSON input.'
+    );
+  }
+
   toggleHistory(): void {
     this.showHistory.update((v) => !v);
+  }
+
+  private setJsonStatus(id: number, type: 'success' | 'error', message: string): void {
+    this.jsonStatus.update((status) => ({
+      ...status,
+      [id]: { type, message },
+    }));
+  }
+
+  getCharacterCount(content: string): number {
+    return content.length;
+  }
+
+  getWordCount(content: string): number {
+    return content.trim() ? content.trim().split(/\s+/).length : 0;
+  }
+
+  getSentenceCount(content: string): number {
+    const matches = content.match(/[^.!?]+[.!?]+|[^.!?]+$/g);
+    return matches?.map((sentence) => sentence.trim()).filter(Boolean).length ?? 0;
+  }
+
+  getParagraphCount(content: string): number {
+    return content.trim()
+      ? content.split(/\n\s*\n/).map((paragraph) => paragraph.trim()).filter(Boolean).length
+      : 0;
   }
 }

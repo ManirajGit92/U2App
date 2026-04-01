@@ -14,6 +14,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'tax-calculator',
+    loadComponent: () =>
+      import('./features/tax-calculator/tax-calculator.component').then(
+        (m) => m.TaxCalculatorComponent
+      ),
+  },
+  {
     path: 'content-video',
     loadComponent: () =>
       import('./features/content-video/content-video.component').then(

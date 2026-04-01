@@ -337,6 +337,15 @@ export class HomeComponent {
       color: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
     },
     {
+      id: 'tax-calculator',
+      title: 'Tax Calculator',
+      description: 'Estimate old vs new tax regimes, import Form 16 Excel data, and get deduction ideas with real-time calculations.',
+      icon: 'ðŸ§¾',
+      route: '/tax-calculator',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(59,130,246,0.2))',
+    },
+    {
       id: 'html-viewer',
       title: 'HTML Viewer',
       description: 'Preview and render HTML code instantly with live editing and responsive viewport testing.',

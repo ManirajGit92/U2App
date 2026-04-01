@@ -12,8 +12,66 @@ export interface CompareResult {
   mismatches: string[];
 }
 
+export interface BeautifyJsonResult {
+  formatted: string | null;
+  error: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CompareService {
+
+  beautifyJSON(content: string): BeautifyJsonResult {
+    const trimmedContent = content.trim();
+
+    if (!trimmedContent) {
+      return {
+        formatted: '',
+        error: null,
+      };
+    }
+
+    try {
+      return {
+        formatted: JSON.stringify(JSON.parse(trimmedContent), null, 2),
+        error: null,
+      };
+    } catch {
+      const repairedContent = this.repairMalformedJson(trimmedContent);
+
+      try {
+        return {
+          formatted: JSON.stringify(JSON.parse(repairedContent), null, 2),
+          error: null,
+        };
+      } catch {
+        return {
+          formatted: null,
+          error: 'Unable to auto-correct this JSON. Please fix the structure and try again.',
+        };
+      }
+    }
+  }
+
+  private repairMalformedJson(content: string): string {
+    let repaired = content;
+
+    repaired = repaired.replace(/([{,]\s*)([A-Za-z_$][\w$-]*)(\s*:)/g, '$1"$2"$3');
+    repaired = repaired.replace(/:\s*([A-Za-z_$][\w$-]*)(\s*[,}])/g, (_match, value: string, suffix: string) => {
+      if (this.isJsonKeyword(value)) {
+        return `: ${value}${suffix}`;
+      }
+
+      return `: "${value}"${suffix}`;
+    });
+
+    repaired = repaired.replace(/,\s*([}\]])/g, '$1');
+
+    return repaired;
+  }
+
+  private isJsonKeyword(value: string): boolean {
+    return value === 'true' || value === 'false' || value === 'null';
+  }
 
   compareText(content1: string, content2: string): CompareResult {
     const changes = Diff.diffLines(content1, content2);

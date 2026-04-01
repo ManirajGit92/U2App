@@ -1,0 +1,343 @@
+<div class="tax-page container">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">Tax Planning</span>
+      <h1>Tax Calculator</h1>
+      <p>
+        Estimate tax under old and new regimes, import Form 16 data, and review optimization suggestions in real time.
+      </p>
+    </div>
+    <div class="header-actions">
+      <label class="btn btn-secondary btn-sm upload-btn">
+        <input type="file" accept=".xlsx,.xls" hidden (change)="onForm16Upload($event)" />
+        Upload Form 16
+      </label>
+      <span class="badge badge-active">{{ model.assessmentLabel }}</span>
+    </div>
+  </header>
+
+  <section class="hero-strip glass-card">
+    <div>
+      <h2>Current recommendation</h2>
+      <p>
+        {{ result.recommendedRegime === 'old' ? 'Old regime' : 'New regime' }}
+        is currently more tax-efficient for the provided data.
+      </p>
+    </div>
+    <div class="hero-metric">
+      <span class="hero-value">{{ getCurrency(result.taxSaving) }}</span>
+      <span class="hero-label">Potential tax difference</span>
+    </div>
+  </section>
+
+  <div class="content-grid">
+    <div class="form-column">
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <h3>Profile & regime</h3>
+            <p>Choose taxpayer profile and how you want the calculator to compare regimes.</p>
+          </div>
+        </div>
+        <div class="form-grid three-col">
+          <label class="field">
+            <span>Residency status</span>
+            <select [(ngModel)]="model.residencyStatus" (ngModelChange)="onModelChange()">
+              <option value="resident">Resident</option>
+              <option value="nonResident">Non-resident</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Age category</span>
+            <select [(ngModel)]="model.ageCategory" (ngModelChange)="onModelChange()">
+              @for (option of ageOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>Employment type</span>
+            <select [(ngModel)]="model.employmentType" (ngModelChange)="onModelChange()">
+              @for (option of employmentOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="field full-span">
+            <span>View mode</span>
+            <select [(ngModel)]="model.regimePreference" (ngModelChange)="onModelChange()">
+              @for (option of regimeOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <h3>Income details</h3>
+            <p>Enter annual income heads used in the tax computation.</p>
+          </div>
+        </div>
+        <div class="form-grid three-col">
+          <label class="field">
+            <span>Gross salary</span>
+            <input type="number" [ngModel]="model.grossSalary" (ngModelChange)="setNumericField('grossSalary', $event)" />
+          </label>
+          <label class="field">
+            <span>Bonus / variable pay</span>
+            <input type="number" [ngModel]="model.bonusIncome" (ngModelChange)="setNumericField('bonusIncome', $event)" />
+          </label>
+          <label class="field">
+            <span>Perquisites</span>
+            <input type="number" [ngModel]="model.perquisites" (ngModelChange)="setNumericField('perquisites', $event)" />
+          </label>
+          <label class="field">
+            <span>Net house property income / loss</span>
+            <input type="number" [ngModel]="model.netHousePropertyIncome" (ngModelChange)="setNumericField('netHousePropertyIncome', $event)" />
+          </label>
+          <label class="field">
+            <span>Self-occupied home loan interest</span>
+            <input type="number" [ngModel]="model.selfOccupiedHomeLoanInterest" (ngModelChange)="setNumericField('selfOccupiedHomeLoanInterest', $event)" />
+          </label>
+          <label class="field">
+            <span>Business / professional income</span>
+            <input type="number" [ngModel]="model.businessIncome" (ngModelChange)="setNumericField('businessIncome', $event)" />
+          </label>
+          <label class="field">
+            <span>Capital gains</span>
+            <input type="number" [ngModel]="model.capitalGains" (ngModelChange)="setNumericField('capitalGains', $event)" />
+          </label>
+          <label class="field">
+            <span>Total interest income</span>
+            <input type="number" [ngModel]="model.interestIncome" (ngModelChange)="setNumericField('interestIncome', $event)" />
+          </label>
+          <label class="field">
+            <span>Savings interest eligible for 80TTA/TTB</span>
+            <input type="number" [ngModel]="model.savingsInterest" (ngModelChange)="setNumericField('savingsInterest', $event)" />
+          </label>
+          <label class="field">
+            <span>Dividend income</span>
+            <input type="number" [ngModel]="model.dividendIncome" (ngModelChange)="setNumericField('dividendIncome', $event)" />
+          </label>
+          <label class="field">
+            <span>Family pension</span>
+            <input type="number" [ngModel]="model.familyPension" (ngModelChange)="setNumericField('familyPension', $event)" />
+          </label>
+          <label class="field">
+            <span>Other income</span>
+            <input type="number" [ngModel]="model.otherIncome" (ngModelChange)="setNumericField('otherIncome', $event)" />
+          </label>
+        </div>
+      </section>
+
+      <section class="glass-card section-card" *ngIf="model.employmentType === 'salaried'">
+        <div class="section-head">
+          <div>
+            <h3>Exemptions & payroll adjustments</h3>
+            <p>These values mainly improve the old regime computation for salaried taxpayers.</p>
+          </div>
+        </div>
+        <div class="form-grid three-col">
+          <label class="field">
+            <span>HRA exemption</span>
+            <input type="number" [ngModel]="model.hraExemption" (ngModelChange)="setNumericField('hraExemption', $event)" />
+          </label>
+          <label class="field">
+            <span>LTA exemption</span>
+            <input type="number" [ngModel]="model.ltaExemption" (ngModelChange)="setNumericField('ltaExemption', $event)" />
+          </label>
+          <label class="field">
+            <span>Other Section 10 exemptions</span>
+            <input type="number" [ngModel]="model.otherExemptions" (ngModelChange)="setNumericField('otherExemptions', $event)" />
+          </label>
+          <label class="field">
+            <span>Professional tax</span>
+            <input type="number" [ngModel]="model.professionalTax" (ngModelChange)="setNumericField('professionalTax', $event)" />
+          </label>
+        </div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <h3>Investments under Section 80C</h3>
+            <p>Enter eligible investments. The calculator automatically caps the combined claim at INR 1,50,000.</p>
+          </div>
+        </div>
+        <div class="form-grid three-col">
+          @for (field of eightyCFields; track field.key) {
+            <label class="field">
+              <span>{{ field.label }}</span>
+              <input type="number" [ngModel]="getNumericField(field.key)" (ngModelChange)="setNumericField(field.key, $event)" />
+            </label>
+          }
+        </div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <h3>Deductions & tax credits</h3>
+            <p>Cover NPS, insurance, donation, rent, disability, and paid-tax inputs.</p>
+          </div>
+        </div>
+        <div class="form-grid three-col">
+          @for (field of trackedDeductions; track field.key) {
+            <label class="field">
+              <span>{{ field.label }}</span>
+              <input type="number" [ngModel]="getNumericField(field.key)" (ngModelChange)="setNumericField(field.key, $event)" />
+            </label>
+          }
+          <label class="field">
+            <span>Donation eligibility</span>
+            <select [(ngModel)]="model.donationEligibility" (ngModelChange)="onModelChange()">
+              <option value="50">50% eligible</option>
+              <option value="100">100% eligible</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Donation amount</span>
+            <input type="number" [ngModel]="model.donationAmount" (ngModelChange)="setNumericField('donationAmount', $event)" />
+          </label>
+          <label class="field toggle-field">
+            <span>Parents are senior citizens</span>
+            <input type="checkbox" [(ngModel)]="model.parentsAreSenior" (ngModelChange)="onModelChange()" />
+          </label>
+          <label class="field">
+            <span>Disability deduction</span>
+            <select [(ngModel)]="model.disabilityType" (ngModelChange)="onModelChange()">
+              <option value="none">None</option>
+              <option value="disability">Disability</option>
+              <option value="severe">Severe disability</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>TDS already deducted</span>
+            <input type="number" [ngModel]="model.tdsDeducted" (ngModelChange)="setNumericField('tdsDeducted', $event)" />
+          </label>
+          <label class="field">
+            <span>Advance tax / self-assessment tax</span>
+            <input type="number" [ngModel]="model.advanceTaxPaid" (ngModelChange)="setNumericField('advanceTaxPaid', $event)" />
+          </label>
+        </div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <h3>Form 16 import insights</h3>
+            <p>Upload an Excel version of Form 16 to auto-fill recognizable values.</p>
+          </div>
+        </div>
+        @if (uploadError) {
+          <div class="message error">{{ uploadError }}</div>
+        } @else if (uploadSummary.length) {
+          <div class="message success">
+            @for (line of uploadSummary; track line) {
+              <div>{{ line }}</div>
+            }
+          </div>
+        } @else {
+          <div class="message neutral">
+            Upload support reads common Form 16 labels such as gross salary, exemptions, deductions, and TDS. Review imported values before relying on the result.
+          </div>
+        }
+
+        @if (uploadMatches.length) {
+          <div class="match-grid">
+            @for (item of uploadMatches; track item.label + item.value) {
+              <div class="match-chip">
+                <span>{{ item.label }}</span>
+                <strong>{{ getCurrency(item.value) }}</strong>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    </div>
+
+    <aside class="summary-column">
+      <section class="glass-card summary-card">
+        <h3>Tax comparison</h3>
+        <p class="summary-copy">Review detailed tax computation under each regime with payable or refund position.</p>
+
+        <div class="regime-list">
+          @for (breakdown of getVisibleBreakdowns(); track breakdown.regime) {
+            <article class="regime-card" [class.highlight]="breakdown.regime === result.recommendedRegime">
+              <div class="regime-head">
+                <div>
+                  <h4>{{ breakdown.label }}</h4>
+                  <span class="mini-tag" *ngIf="breakdown.regime === result.recommendedRegime">Recommended</span>
+                </div>
+                <strong>{{ getCurrency(breakdown.totalTax) }}</strong>
+              </div>
+
+              <div class="stat-grid">
+                <div>
+                  <span>Gross total income</span>
+                  <strong>{{ getCurrency(breakdown.grossTotalIncome) }}</strong>
+                </div>
+                <div>
+                  <span>Taxable income</span>
+                  <strong>{{ getCurrency(breakdown.taxableIncome) }}</strong>
+                </div>
+                <div>
+                  <span>Deductions</span>
+                  <strong>{{ getCurrency(breakdown.chapterViaDeductions + breakdown.employerNpsDeduction) }}</strong>
+                </div>
+                <div>
+                  <span>Rebate</span>
+                  <strong>{{ getCurrency(breakdown.rebate) }}</strong>
+                </div>
+                <div>
+                  <span>Cess + surcharge</span>
+                  <strong>{{ getCurrency(breakdown.cess + breakdown.surcharge) }}</strong>
+                </div>
+                <div>
+                  <span>Taxes paid</span>
+                  <strong>{{ getCurrency(breakdown.taxesAlreadyPaid) }}</strong>
+                </div>
+              </div>
+
+              <div class="payable-row" [class.refund]="breakdown.refundDue > 0">
+                <span>{{ breakdown.refundDue > 0 ? 'Estimated refund' : 'Estimated payable' }}</span>
+                <strong>{{ getCurrency(breakdown.refundDue > 0 ? breakdown.refundDue : breakdown.netPayable) }}</strong>
+              </div>
+
+              @if (breakdown.deductionBreakdown.length) {
+                <div class="detail-list">
+                  <h5>Deduction breakdown</h5>
+                  @for (item of breakdown.deductionBreakdown; track item.label) {
+                    <div class="detail-row">
+                      <span>{{ item.label }}</span>
+                      <strong>{{ getCurrency(item.amount) }}</strong>
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="detail-list">
+                <h5>Calculation notes</h5>
+                @for (note of breakdown.notes; track note) {
+                  <div class="note-row">{{ note }}</div>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+
+      <section class="glass-card summary-card">
+        <h3>Optimization suggestions</h3>
+        <div class="suggestion-list">
+          @for (item of result.suggestions; track item) {
+            <div class="suggestion-item">{{ item }}</div>
+          }
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>

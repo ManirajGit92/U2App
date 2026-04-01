@@ -1,13 +1,12 @@
 <div class="html-viewer-page" [class.fullscreen]="isFullscreen()">
 
-  <!-- Header -->
   <div class="page-header container">
     <div class="header-left">
       <h1 class="page-title">
         <span class="page-icon">🌐</span>
         HTML Viewer
       </h1>
-      <p class="page-desc">Write or paste HTML on the left — see the live render on the right.</p>
+      <p class="page-desc">Compose HTML, optional CSS and JavaScript, then preview the combined result live.</p>
     </div>
     <div class="header-actions">
       <div class="stats-bar">
@@ -15,15 +14,19 @@
         <span class="stat-sep">·</span>
         <span class="stat-item">{{ wordCount() }} tokens</span>
       </div>
-      <button class="btn btn-ghost btn-sm" (click)="loadDefault()" title="Load sample HTML">
+      <button class="btn btn-ghost btn-sm" (click)="loadDefault()" title="Load sample code">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Load Sample
       </button>
-      <button class="btn btn-ghost btn-sm" (click)="copyCode()" title="Copy HTML">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        {{ copied() ? 'Copied!' : 'Copy' }}
+      <button class="btn btn-ghost btn-sm" (click)="beautifyHtml()" title="Beautify HTML">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>
+        Beautify HTML
       </button>
-      <button class="btn btn-ghost btn-sm" (click)="clearCode()" title="Clear code">
+      <button class="btn btn-ghost btn-sm" (click)="copyCode()" title="Copy all code">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        {{ copied() ? 'Copied!' : 'Copy All' }}
+      </button>
+      <button class="btn btn-ghost btn-sm" (click)="clearCode()" title="Clear all code">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         Clear
       </button>
@@ -34,10 +37,7 @@
     </div>
   </div>
 
-  <!-- Split Pane -->
   <div class="split-pane container">
-
-    <!-- Left: Code Editor -->
     <div class="editor-panel glass-card">
       <div class="panel-topbar">
         <div class="topbar-dots">
@@ -45,30 +45,97 @@
           <span class="dot yellow"></span>
           <span class="dot green"></span>
         </div>
-        <span class="topbar-label">index.html</span>
-        <span class="topbar-lang">HTML</span>
+        <span class="topbar-label">Code Workspace</span>
+        <span class="topbar-lang">{{ activePanel() | uppercase }}</span>
       </div>
-      <div class="editor-area">
-        <div class="line-numbers" aria-hidden="true">
-          @for (n of getLineNumbers(); track n) {
-            <span>{{ n }}</span>
-          }
-        </div>
-        <textarea
-          id="html-code-input"
-          class="code-textarea"
-          spellcheck="false"
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          [value]="htmlCode()"
-          (input)="onCodeChange($any($event.target).value)"
-          placeholder="<!-- Paste or write your HTML here -->"
-        ></textarea>
+
+      <div class="editor-tabs">
+        <button class="editor-tab" [class.active]="activePanel() === 'html'" (click)="setActivePanel('html')">HTML</button>
+        <button class="editor-tab" [class.active]="activePanel() === 'css'" (click)="setActivePanel('css')">CSS</button>
+        <button class="editor-tab" [class.active]="activePanel() === 'js'" (click)="setActivePanel('js')">JavaScript</button>
+      </div>
+
+      <div class="editors-stack">
+        <section class="editor-section" [class.active]="activePanel() === 'html'">
+          <div class="section-header">
+            <div>
+              <h3>HTML</h3>
+              <p>Main document structure for the preview.</p>
+            </div>
+          </div>
+          <div class="editor-area">
+            <div class="line-numbers" aria-hidden="true">
+              @for (n of getLineNumbers(htmlCode()); track n) {
+                <span>{{ n }}</span>
+              }
+            </div>
+            <textarea
+              class="code-textarea"
+              spellcheck="false"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              [value]="htmlCode()"
+              (input)="onCodeChange('html', $any($event.target).value)"
+              placeholder="<!-- Paste or write your HTML here -->"
+            ></textarea>
+          </div>
+        </section>
+
+        <section class="editor-section" [class.active]="activePanel() === 'css'">
+          <div class="section-header">
+            <div>
+              <h3>CSS</h3>
+              <p>Optional styles injected into the preview.</p>
+            </div>
+          </div>
+          <div class="editor-area">
+            <div class="line-numbers" aria-hidden="true">
+              @for (n of getLineNumbers(cssCode()); track n) {
+                <span>{{ n }}</span>
+              }
+            </div>
+            <textarea
+              class="code-textarea"
+              spellcheck="false"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              [value]="cssCode()"
+              (input)="onCodeChange('css', $any($event.target).value)"
+              placeholder="/* Optional CSS */"
+            ></textarea>
+          </div>
+        </section>
+
+        <section class="editor-section" [class.active]="activePanel() === 'js'">
+          <div class="section-header">
+            <div>
+              <h3>JavaScript</h3>
+              <p>Optional behavior that runs inside the preview iframe.</p>
+            </div>
+          </div>
+          <div class="editor-area">
+            <div class="line-numbers" aria-hidden="true">
+              @for (n of getLineNumbers(jsCode()); track n) {
+                <span>{{ n }}</span>
+              }
+            </div>
+            <textarea
+              class="code-textarea"
+              spellcheck="false"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              [value]="jsCode()"
+              (input)="onCodeChange('js', $any($event.target).value)"
+              placeholder="// Optional JavaScript"
+            ></textarea>
+          </div>
+        </section>
       </div>
     </div>
 
-    <!-- Right: Live Preview -->
     <div class="preview-panel glass-card">
       <div class="panel-topbar preview-topbar">
         <div class="topbar-dots">
@@ -81,6 +148,11 @@
           <span>Live Preview</span>
         </div>
       </div>
+      <div class="preview-meta">
+        <span [class.active]="!!htmlCode().trim()">HTML</span>
+        <span [class.active]="!!cssCode().trim()">CSS</span>
+        <span [class.active]="!!jsCode().trim()">JavaScript</span>
+      </div>
       <div class="iframe-wrapper">
         <iframe
           #previewFrame
@@ -90,6 +162,5 @@
         ></iframe>
       </div>
     </div>
-
   </div>
 </div>
