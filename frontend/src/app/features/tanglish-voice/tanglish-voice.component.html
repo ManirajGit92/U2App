@@ -1,0 +1,148 @@
+<div class="tanglish-page container">
+  <section class="page-header">
+    <div class="header-copy">
+      <span class="page-kicker">Speech + Transliteration</span>
+      <h1 class="page-title">Tanglish Voice Studio</h1>
+      <p class="page-desc">
+        Convert English text into Tanglish with a modular rule engine, then generate
+        natural AI voice playback with selectable voices and speed.
+      </p>
+    </div>
+
+    <div class="header-meta glass-card">
+      <span class="meta-label">Engine</span>
+      <strong>Rule-based now</strong>
+      <span class="meta-subtext">Python AI transliterator ready later</span>
+    </div>
+  </section>
+
+  <section class="workspace-grid">
+    <div class="glass-card panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Input</h2>
+          <p class="panel-subtitle">Paste English text or short scripts to convert.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" (click)="clearAll()">Clear</button>
+      </div>
+
+      <textarea
+        class="textarea-styled source-input"
+        [ngModel]="inputText()"
+        (ngModelChange)="inputText.set($event)"
+        placeholder="Type English text here..."
+      ></textarea>
+
+      <div class="action-row">
+        <button
+          class="btn btn-primary"
+          (click)="convert()"
+          [disabled]="isConverting() || !inputText().trim()"
+        >
+          {{ isConverting() ? 'Converting...' : 'Convert To Tanglish' }}
+        </button>
+        <span class="hint-text">Best for UI copy, conversational lines, and script drafts.</span>
+      </div>
+    </div>
+
+    <div class="glass-card panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Voice Controls</h2>
+          <p class="panel-subtitle">Choose how the generated playback should sound.</p>
+        </div>
+      </div>
+
+      <div class="settings-stack">
+        <label class="field-label" for="voiceSelect">Voice</label>
+        <select
+          id="voiceSelect"
+          class="styled-select"
+          [ngModel]="selectedVoice()"
+          (ngModelChange)="selectedVoice.set($event)"
+        >
+          @for (voice of voices; track voice.id) {
+            <option [value]="voice.id">{{ voice.name }} - {{ voice.tone }}</option>
+          }
+        </select>
+
+        <label class="field-label" for="speedRange">
+          Speed <span class="value-pill">{{ speechSpeed() }}x</span>
+        </label>
+        <input
+          id="speedRange"
+          type="range"
+          min="0.75"
+          max="1.5"
+          step="0.05"
+          [ngModel]="speechSpeed()"
+          (ngModelChange)="speechSpeed.set(+$event)"
+        />
+
+        <button
+          class="btn btn-primary btn-full"
+          (click)="generateSpeech()"
+          [disabled]="isGeneratingAudio() || !outputText().trim()"
+        >
+          {{ isGeneratingAudio() ? 'Generating Audio...' : 'Generate Voice Playback' }}
+        </button>
+
+        <p class="disclaimer">
+          AI-generated speech should be disclosed to end users when played in production.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  @if (errorMessage()) {
+    <section class="feedback-box error-box">
+      {{ errorMessage() }}
+    </section>
+  }
+
+  <section class="result-grid">
+    <div class="glass-card panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Tanglish Output</h2>
+          <p class="panel-subtitle">Rule-based output with reusable backend contracts.</p>
+        </div>
+        <button
+          class="btn btn-secondary btn-sm"
+          (click)="copyOutput()"
+          [disabled]="!outputText().trim()"
+        >
+          Copy
+        </button>
+      </div>
+
+      <div class="output-body" [class.placeholder]="!outputText().trim()">
+        {{ outputText().trim() || 'Converted Tanglish text will appear here.' }}
+      </div>
+
+      <div class="meta-row">
+        <span class="badge badge-active">{{ appliedRuleCount() }} rules applied</span>
+        @if (engineNote()) {
+          <span class="meta-note">{{ engineNote() }}</span>
+        }
+      </div>
+    </div>
+
+    <div class="glass-card panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Audio Preview</h2>
+          <p class="panel-subtitle">Native browser controls for playback and scrubbing.</p>
+        </div>
+      </div>
+
+      @if (audioUrl()) {
+        <audio class="audio-player" controls [src]="audioUrl()"></audio>
+      } @else {
+        <div class="audio-placeholder">
+          Generate voice playback to preview the Tanglish audio here.
+        </div>
+      }
+    </div>
+  </section>
+</div>

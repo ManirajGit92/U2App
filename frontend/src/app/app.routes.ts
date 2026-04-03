@@ -35,6 +35,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'tanglish-voice',
+    loadComponent: () =>
+      import('./features/tanglish-voice').then(
+        (m) => m.TanglishVoiceComponent
+      ),
+  },
+  {
     path: 'html-viewer',
     loadComponent: () =>
       import('./features/html-viewer/html-viewer.component').then(

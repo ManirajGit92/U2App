@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-with-tanglish.ps1",
+    "start:frontend": "ng serve",
+    "start:tanglish-api": "dotnet run --project ../backend/tanglish-api --urls http://127.0.0.1:5199",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"

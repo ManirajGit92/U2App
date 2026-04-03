@@ -40,7 +40,7 @@ interface Tool {
         </div>
         <div class="hero-stats">
           <div class="stat">
-            <span class="stat-number">8+</span>
+            <span class="stat-number">9+</span>
             <span class="stat-label">Tools</span>
           </div>
           <div class="stat-divider"></div>
@@ -335,6 +335,15 @@ export class HomeComponent {
       route: '/compare',
       available: true,
       color: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
+    },
+    {
+      id: 'tanglish-voice',
+      title: 'Tanglish Voice Studio',
+      description: 'Convert English text into Tanglish with a reusable rule engine and generate natural AI voice playback with selectable voices and speed.',
+      icon: 'TV',
+      route: '/tanglish-voice',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(14,165,233,0.2))',
     },
     {
       id: 'tax-calculator',
