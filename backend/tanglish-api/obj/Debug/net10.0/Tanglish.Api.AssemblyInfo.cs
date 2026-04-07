@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Tanglish.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ab3da7ca54777b6621fab7a7f590f4a78fc400c1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6fb5eb3a04a4468ee88de2f31bb756e4e3ebf6ee")]
 [assembly: System.Reflection.AssemblyProductAttribute("Tanglish.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Tanglish.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

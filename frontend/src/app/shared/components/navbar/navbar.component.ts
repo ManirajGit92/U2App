@@ -19,6 +19,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
         <!-- Nav Links -->
         <div class="navbar-links">
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-link">Home</a>
+          <a routerLink="/excel-mapper" routerLinkActive="active" class="nav-link">Excel Mapper</a>
           <a routerLink="/compare" routerLinkActive="active" class="nav-link">Compare</a>
           <a routerLink="/tanglish-voice" routerLinkActive="active" class="nav-link">Tanglish</a>
           <a routerLink="/tax-calculator" routerLinkActive="active" class="nav-link">Tax</a>

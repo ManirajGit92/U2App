@@ -1,0 +1,581 @@
+<div class="mapper-shell">
+  <section class="hero-card">
+    <div>
+      <p class="eyebrow">Excel-to-Excel Mapping Tool</p>
+      <h1>Transform source workbooks into a target format with reusable rules.</h1>
+      <p class="hero-copy">
+        Upload a source sheet, map columns into a target structure, apply transformation rules,
+        preview the result, and export a clean workbook with downloadable issue logs.
+      </p>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <strong>{{ sourceSheet?.rows?.length ?? 0 }}</strong>
+        <span>Source Rows</span>
+      </div>
+      <div class="stat">
+        <strong>{{ mappingRules.length }}</strong>
+        <span>Target Columns</span>
+      </div>
+      <div class="stat">
+        <strong>{{ result?.summary?.errorCount ?? 0 }}</strong>
+        <span>Validation Errors</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="stepper-card">
+    <button
+      *ngFor="let step of steps; let i = index"
+      type="button"
+      class="step"
+      [class.active]="i === currentStep"
+      [class.complete]="i < currentStep"
+      (click)="goToStep(i)"
+    >
+      <span class="step-index">{{ i + 1 }}</span>
+      <span>{{ step.label }}</span>
+    </button>
+  </section>
+
+  <section class="status-card" *ngIf="processing">
+    <div class="status-row">
+      <span>{{ processingLabel }}</span>
+      <strong>{{ processingProgress }}%</strong>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" [style.width.%]="processingProgress"></div>
+    </div>
+  </section>
+
+  <section class="content-grid">
+    <div class="main-panel">
+      <ng-container [ngSwitch]="steps[currentStep].key">
+        <section class="panel-card" *ngSwitchCase="'upload'">
+          <div class="panel-head">
+            <div>
+              <h2>Upload workbooks</h2>
+              <p>Source file is required. Target template is optional and drives the target column list.</p>
+            </div>
+          </div>
+
+          <div class="upload-grid">
+            <label class="upload-tile">
+              <input type="file" accept=".xlsx,.xls" (change)="onSourceSelected($event)" hidden />
+              <span class="upload-tag">Required</span>
+              <h3>Source Excel</h3>
+              <p>Upload the workbook that contains the raw source data.</p>
+              <strong>{{ sourceSheet?.fileName ?? 'Choose source file' }}</strong>
+            </label>
+
+            <label class="upload-tile secondary">
+              <input type="file" accept=".xlsx,.xls" (change)="onTemplateSelected($event)" hidden />
+              <span class="upload-tag">Optional</span>
+              <h3>Target Template</h3>
+              <p>Upload a template workbook to predefine output column names.</p>
+              <strong>{{ templateSheet?.fileName ?? 'Choose template file' }}</strong>
+            </label>
+          </div>
+
+          <div class="issue-strip error" *ngFor="let issue of sourceFileIssues">{{ issue }}</div>
+          <div class="issue-strip error" *ngFor="let issue of templateFileIssues">{{ issue }}</div>
+
+          <div class="file-summary-grid" *ngIf="sourceSheet || templateSheet">
+            <article class="summary-card" *ngIf="sourceSheet">
+              <h3>Source Summary</h3>
+              <p>{{ sourceSheet.fileName }}</p>
+              <p>{{ sourceSheet.rows.length }} row(s), {{ sourceSheet.columns.length }} column(s)</p>
+              <div class="chip-list">
+                <span class="chip" *ngFor="let column of sourceSheet.columns">
+                  {{ column.name }} · {{ column.detectedType }}
+                </span>
+              </div>
+            </article>
+
+            <article class="summary-card" *ngIf="templateSheet">
+              <h3>Target Summary</h3>
+              <p>{{ templateSheet.fileName }}</p>
+              <p>{{ templateSheet.columns.length }} target column(s)</p>
+              <div class="chip-list">
+                <span class="chip" *ngFor="let column of templateSheet.columns">
+                  {{ column.name }}
+                </span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel-card" *ngSwitchCase="'mapping'">
+          <div class="panel-head">
+            <div>
+              <h2>Map source columns to target columns</h2>
+              <p>
+                Use the primary dropdown for one-to-one mapping, then include extra source columns
+                when you want many-to-one output.
+              </p>
+            </div>
+            <div class="inline-form" *ngIf="sourceSheet">
+              <input
+                type="text"
+                [(ngModel)]="newTargetColumn"
+                placeholder="Add target column manually"
+              />
+              <button type="button" class="btn secondary" (click)="addTargetColumn()">Add Column</button>
+            </div>
+          </div>
+
+          <div class="mapping-table-wrap" *ngIf="sourceSheet; else noSource">
+            <table class="mapping-table">
+              <thead>
+                <tr>
+                  <th>Target Column</th>
+                  <th>Primary Source</th>
+                  <th>Additional Sources</th>
+                  <th>Type</th>
+                  <th>Required</th>
+                  <th>Sample Preview</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let rule of mappingRules; trackBy: trackById">
+                  <td>
+                    <input type="text" [(ngModel)]="rule.targetColumn" (ngModelChange)="result = null" />
+                  </td>
+                  <td>
+                    <select
+                      [ngModel]="rule.sourceColumns[0]"
+                      (ngModelChange)="setPrimarySource(rule, $event)"
+                    >
+                      <option value="">Not mapped</option>
+                      <option *ngFor="let column of sourceSheet.columns" [value]="column.name">
+                        {{ column.name }}
+                      </option>
+                    </select>
+                  </td>
+                  <td>
+                    <div class="checkbox-stack">
+                      <label *ngFor="let column of sourceSheet.columns">
+                        <input
+                          type="checkbox"
+                          [checked]="rule.sourceColumns.includes(column.name)"
+                          [disabled]="rule.sourceColumns[0] === column.name"
+                          (change)="toggleAdditionalSource(rule, column.name, $any($event.target).checked)"
+                        />
+                        <span>{{ column.name }}</span>
+                      </label>
+                    </div>
+                  </td>
+                  <td>
+                    <select [(ngModel)]="rule.targetType" (ngModelChange)="result = null">
+                      <option *ngFor="let type of dataTypes" [value]="type">{{ type }}</option>
+                    </select>
+                  </td>
+                  <td>
+                    <label class="toggle">
+                      <input type="checkbox" [(ngModel)]="rule.required" (ngModelChange)="result = null" />
+                      <span>{{ rule.required ? 'Yes' : 'No' }}</span>
+                    </label>
+                  </td>
+                  <td>
+                    <span class="preview-pill">{{ getRulePreview(rule) || 'No preview yet' }}</span>
+                  </td>
+                  <td>
+                    <button type="button" class="icon-btn danger" (click)="removeTargetColumn(rule.id)">
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel-card" *ngSwitchCase="'transformations'">
+          <div class="panel-head">
+            <div>
+              <h2>Apply transformations and validations</h2>
+              <p>
+                Stack operations per target column and attach optional rule-based validations before preview.
+              </p>
+            </div>
+          </div>
+
+          <div class="rule-stack" *ngIf="sourceSheet">
+            <article class="rule-card" *ngFor="let rule of mappingRules; trackBy: trackById">
+              <div class="rule-head">
+                <div>
+                  <h3>{{ rule.targetColumn }}</h3>
+                  <p>Source: {{ rule.sourceColumns.length ? rule.sourceColumns.join(', ') : 'Not mapped' }}</p>
+                </div>
+                <div class="rule-actions">
+                  <button type="button" class="btn secondary" (click)="addOperation(rule)">Add Operation</button>
+                  <button type="button" class="btn secondary" (click)="addValidation(rule)">Add Validation</button>
+                </div>
+              </div>
+
+              <div class="mini-section">
+                <h4>Operations</h4>
+                <div class="empty-note" *ngIf="!rule.operations.length">
+                  No operations yet. Use trim, string casing, math, date formatting, conditionals, or a safe template expression.
+                </div>
+
+                <div class="operation-card" *ngFor="let operation of rule.operations; let opIndex = index; trackBy: trackById">
+                  <div class="operation-grid">
+                    <label>
+                      <span>Operation</span>
+                      <select
+                        [ngModel]="operation.type"
+                        (ngModelChange)="onOperationTypeChange(rule, opIndex, $event)"
+                      >
+                        <option *ngFor="let operationType of operationTypes" [value]="operationType.value">
+                          {{ operationType.label }}
+                        </option>
+                      </select>
+                    </label>
+
+                    <label *ngIf="operation.type === 'concat'">
+                      <span>Separator</span>
+                      <input
+                        type="text"
+                        [(ngModel)]="operation.config['separator']"
+                        (ngModelChange)="result = null"
+                        placeholder=" "
+                      />
+                    </label>
+
+                    <label *ngIf="operation.type === 'concat'">
+                      <span>Prefix</span>
+                      <input type="text" [(ngModel)]="operation.config['prefix']" (ngModelChange)="result = null" />
+                    </label>
+
+                    <label *ngIf="operation.type === 'concat'">
+                      <span>Suffix</span>
+                      <input type="text" [(ngModel)]="operation.config['suffix']" (ngModelChange)="result = null" />
+                    </label>
+
+                    <label *ngIf="operation.type === 'math'">
+                      <span>Math Op</span>
+                      <select [(ngModel)]="operation.config['operator']" (ngModelChange)="result = null">
+                        <option value="add">Add</option>
+                        <option value="subtract">Subtract</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="divide">Divide</option>
+                      </select>
+                    </label>
+
+                    <label *ngIf="operation.type === 'math'">
+                      <span>Operand</span>
+                      <input type="number" [(ngModel)]="operation.config['operand']" (ngModelChange)="result = null" />
+                    </label>
+
+                    <label *ngIf="operation.type === 'dateFormat'">
+                      <span>Output Format</span>
+                      <select [(ngModel)]="operation.config['format']" (ngModelChange)="result = null">
+                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                        <option value="DD-MMM-YYYY">DD-MMM-YYYY</option>
+                      </select>
+                    </label>
+
+                    <label *ngIf="operation.type === 'ifElse'">
+                      <span>Compare Column</span>
+                      <select [(ngModel)]="operation.config['compareColumn']" (ngModelChange)="result = null">
+                        <option value="">Current Value</option>
+                        <option *ngFor="let column of sourceSheet.columns" [value]="column.name">
+                          {{ column.name }}
+                        </option>
+                      </select>
+                    </label>
+
+                    <label *ngIf="operation.type === 'ifElse'">
+                      <span>Condition</span>
+                      <select [(ngModel)]="operation.config['operator']" (ngModelChange)="result = null">
+                        <option value="equals">Equals</option>
+                        <option value="notEquals">Not Equals</option>
+                        <option value="contains">Contains</option>
+                        <option value="greaterThan">Greater Than</option>
+                        <option value="lessThan">Less Than</option>
+                        <option value="isEmpty">Is Empty</option>
+                      </select>
+                    </label>
+
+                    <label *ngIf="operation.type === 'ifElse'">
+                      <span>Comparison</span>
+                      <input
+                        type="text"
+                        [(ngModel)]="operation.config['comparisonValue']"
+                        (ngModelChange)="result = null"
+                      />
+                    </label>
+
+                    <label *ngIf="operation.type === 'ifElse'">
+                      <span>True Value</span>
+                      <input type="text" [(ngModel)]="operation.config['trueValue']" (ngModelChange)="result = null" />
+                    </label>
+
+                    <label *ngIf="operation.type === 'ifElse'">
+                      <span>False Value</span>
+                      <input type="text" [(ngModel)]="operation.config['falseValue']" (ngModelChange)="result = null" />
+                    </label>
+
+                    <label class="full-span" *ngIf="operation.type === 'customTemplate'">
+                      <span>Custom Expression</span>
+                      <textarea
+                        rows="3"
+                        [(ngModel)]="operation.config['template']"
+                        (ngModelChange)="result = null"
+                        placeholder="Use placeholder tokens like value or column names"
+                      ></textarea>
+                    </label>
+                  </div>
+
+                  <div class="operation-footer">
+                    <span class="tooltip-note">
+                      Tip: custom expressions support placeholders like {{ '{{value}}' }} and {{ '{{City}}' }}.
+                    </span>
+                    <button type="button" class="icon-btn danger" (click)="removeOperation(rule, operation.id)">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mini-section">
+                <h4>Validation Rules</h4>
+                <div class="empty-note" *ngIf="!rule.validations.length">
+                  Add regex, minimum, or maximum checks for user-defined validation behavior.
+                </div>
+
+                <div class="validation-card" *ngFor="let validation of rule.validations; let validationIndex = index; trackBy: trackById">
+                  <div class="operation-grid">
+                    <label>
+                      <span>Rule</span>
+                      <select
+                        [ngModel]="validation.type"
+                        (ngModelChange)="onValidationTypeChange(rule, validationIndex, $event)"
+                      >
+                        <option *ngFor="let validationType of validationTypes" [value]="validationType.value">
+                          {{ validationType.label }}
+                        </option>
+                      </select>
+                    </label>
+
+                    <label>
+                      <span>Value</span>
+                      <input type="text" [(ngModel)]="validation.value" (ngModelChange)="result = null" />
+                    </label>
+
+                    <label class="full-span">
+                      <span>Message</span>
+                      <input type="text" [(ngModel)]="validation.message" (ngModelChange)="result = null" />
+                    </label>
+                  </div>
+
+                  <div class="operation-footer">
+                    <span class="tooltip-note">Validation runs after transformations and type coercion.</span>
+                    <button type="button" class="icon-btn danger" (click)="removeValidation(rule, validation.id)">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel-card" *ngSwitchCase="'preview'">
+          <div class="panel-head">
+            <div>
+              <h2>Preview transformed output</h2>
+              <p>Run the mapping pipeline, inspect transformed rows, and review warnings before export.</p>
+            </div>
+            <button type="button" class="btn primary" [disabled]="!canPreview || processing" (click)="generatePreview()">
+              Refresh Preview
+            </button>
+          </div>
+
+          <div class="issue-strip warning" *ngFor="let warning of globalWarnings">{{ warning }}</div>
+
+          <div class="summary-banner" *ngIf="result">
+            <div>
+              <strong>{{ result.summary.successfulRows }}</strong>
+              <span>successful rows</span>
+            </div>
+            <div>
+              <strong>{{ result.summary.errorCount }}</strong>
+              <span>errors</span>
+            </div>
+            <div>
+              <strong>{{ result.summary.warningCount }}</strong>
+              <span>warnings</span>
+            </div>
+          </div>
+
+          <div class="preview-table-wrap" *ngIf="previewRows.length">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th *ngFor="let column of targetColumns">{{ column }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of previewRows">
+                  <td *ngFor="let column of targetColumns">{{ row[column] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="empty-note" *ngIf="!previewRows.length">
+            No preview rows yet. Generate a preview after setting mappings.
+          </div>
+
+          <div class="issue-table-wrap" *ngIf="previewIssues.length">
+            <h3>Top row-level issues</h3>
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th>Row</th>
+                  <th>Column</th>
+                  <th>Severity</th>
+                  <th>Message</th>
+                  <th>Raw Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let issue of previewIssues">
+                  <td>{{ issue.rowNumber }}</td>
+                  <td>{{ issue.column }}</td>
+                  <td>
+                    <span class="severity" [class.error]="issue.severity === 'error'">
+                      {{ issue.severity }}
+                    </span>
+                  </td>
+                  <td>{{ issue.message }}</td>
+                  <td>{{ issue.rawValue || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel-card" *ngSwitchCase="'export'">
+          <div class="panel-head">
+            <div>
+              <h2>Export and reuse</h2>
+              <p>Download the processed workbook, save reusable templates, and review the audit trail.</p>
+            </div>
+          </div>
+
+          <div class="export-actions">
+            <button type="button" class="btn primary" [disabled]="!result?.rows?.length" (click)="exportWorkbook()">
+              Download Processed Excel
+            </button>
+            <button type="button" class="btn secondary" [disabled]="!result?.issues?.length" (click)="exportIssues()">
+              Download Issue Report
+            </button>
+          </div>
+
+          <div class="template-toolbar">
+            <input type="text" [(ngModel)]="templateName" placeholder="Save this mapping as a template" />
+            <button type="button" class="btn secondary" [disabled]="!templateName.trim()" (click)="saveTemplate()">
+              Save Template
+            </button>
+          </div>
+
+          <div class="template-grid">
+            <article class="summary-card" *ngFor="let template of savedTemplates">
+              <div class="template-head">
+                <div>
+                  <h3>{{ template.name }}</h3>
+                  <p>Updated {{ template.updatedAt | date: 'medium' }}</p>
+                </div>
+                <button type="button" class="icon-btn danger" (click)="deleteTemplate(template.id)">Delete</button>
+              </div>
+              <p>{{ template.targetColumns.length }} target column(s)</p>
+              <div class="chip-list">
+                <span class="chip" *ngFor="let column of template.targetColumns.slice(0, 6)">{{ column }}</span>
+              </div>
+              <button type="button" class="btn secondary" (click)="loadTemplate(template)">Load Template</button>
+            </article>
+          </div>
+
+          <div class="audit-card">
+            <h3>Audit Trail</h3>
+            <table class="preview-table" *ngIf="auditEntries.length; else noAudit">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>User</th>
+                  <th>Action</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let entry of auditEntries">
+                  <td>{{ entry.timestamp | date: 'medium' }}</td>
+                  <td>{{ entry.user }}</td>
+                  <td>{{ entry.action }}</td>
+                  <td>{{ entry.details }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </ng-container>
+
+      <ng-template #noSource>
+        <div class="empty-note">Upload a source workbook first to configure mappings.</div>
+      </ng-template>
+
+      <ng-template #noAudit>
+        <div class="empty-note">Audit entries appear here after upload, preview, save, or export actions.</div>
+      </ng-template>
+    </div>
+
+    <aside class="side-panel">
+      <article class="side-card">
+        <h3>Workflow Notes</h3>
+        <ul>
+          <li>Upload only `.xlsx` or `.xls` files under 10 MB.</li>
+          <li>Target template is optional. Without it, source columns become the starting target model.</li>
+          <li>Custom expressions are token-based and avoid raw code execution.</li>
+          <li>Excel export sanitizes risky formulas that begin with `=`, `+`, `-`, or `@`.</li>
+        </ul>
+      </article>
+
+      <article class="side-card" *ngIf="sourceSheet">
+        <h3>Detected Source Types</h3>
+        <div class="chip-list">
+          <span class="chip" *ngFor="let column of sourceSheet.columns">
+            {{ column.name }} · {{ column.detectedType }}
+          </span>
+        </div>
+      </article>
+
+      <article class="side-card" *ngIf="result">
+        <h3>Result Snapshot</h3>
+        <p>{{ result.summary.processedRows }} source row(s) processed.</p>
+        <p>{{ result.summary.successfulRows }} row(s) are ready for export.</p>
+        <p>{{ result.summary.errorCount }} blocking issue(s) found.</p>
+      </article>
+    </aside>
+  </section>
+
+  <section class="footer-actions">
+    <button type="button" class="btn secondary" [disabled]="currentStep === 0" (click)="previousStep()">
+      Back
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="currentStep === steps.length - 1 || (currentStep > 0 && !sourceSheet)"
+      (click)="nextStep()"
+    >
+      Next
+    </button>
+  </section>
+</div>

@@ -77,6 +77,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'excel-mapper',
+    loadComponent: () =>
+      import('./features/excel-mapper/excel-mapper.component').then(
+        (m) => m.ExcelMapperComponent
+      ),
+  },
+  {
     path: 'unit-test-tracker',
     loadComponent: () =>
       import('./features/unit-test-tracker/unit-test-tracker.component').then(

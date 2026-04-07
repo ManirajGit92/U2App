@@ -30,7 +30,7 @@ interface Tool {
           designed for developers and creators.
         </p>
         <div class="hero-actions">
-          <a routerLink="/compare" class="btn btn-primary btn-lg">
+          <a routerLink="/excel-mapper" class="btn btn-primary btn-lg">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18m-7-7l7 7 7-7"/></svg>
             Get Started
           </a>
@@ -327,6 +327,15 @@ interface Tool {
 })
 export class HomeComponent {
   tools: Tool[] = [
+    {
+      id: 'excel-mapper',
+      title: 'Excel-to-Excel Mapping Tool',
+      description: 'Upload a source workbook, map it into a target format, apply transformations and validations, preview results, and export a processed Excel file with reusable templates.',
+      icon: '🧭',
+      route: '/excel-mapper',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(15,118,110,0.18), rgba(2,132,199,0.18))',
+    },
     {
       id: 'compare',
       title: 'Text / JSON Compare',
