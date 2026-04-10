@@ -136,6 +136,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'free-billing',
+    data: { navLabel: 'Free Billing System', showInNav: true },
+    loadComponent: () =>
+      import('./features/free-billing/free-billing.component').then(
+        (m) => m.FreeBillingComponent
+      ),
+  },
+  {
     path: 'easy-documents',
     data: { navLabel: 'Easy Documents', showInNav: true },
     loadComponent: () =>

@@ -533,6 +533,16 @@ export class HomeComponent {
       color: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(99,102,241,0.2))',
     },
     {
+      id: 'free-billing',
+      title: 'Free Billing System',
+      description:
+        'Manage your products, customers, invoices, offline via an Excel-based database with a rich interactive dashboard.',
+      icon: '💳',
+      route: '/free-billing',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(52,211,153,0.2), rgba(16,185,129,0.2))',
+    },
+    {
       id: 'easy-documents',
       title: 'Easy Documents',
       description:

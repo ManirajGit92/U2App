@@ -21,6 +21,7 @@
     "@angular/router": "^21.2.0",
     "@supabase/supabase-js": "^2.99.1",
     "buffer": "^6.0.3",
+    "chart.js": "^4.5.1",
     "diff": "^8.0.3",
     "docx": "^8.5.0",
     "jspdf": "^4.2.1",
