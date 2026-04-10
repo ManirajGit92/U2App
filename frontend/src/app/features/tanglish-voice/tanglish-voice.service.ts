@@ -96,7 +96,7 @@ export class TanglishVoiceService {
         error.error.includes('ECONNREFUSED') ||
         error.error.toLowerCase().includes('proxy error')
       ) {
-        return 'Tanglish API is unreachable on http://127.0.0.1:5199. Start the .NET service or use npm start so the frontend launches it automatically.';
+        return 'Tanglish API is unreachable on http://127.0.0.1:8000. Start the Python backend or use npm start so the frontend launches it automatically.';
       }
 
       return error.error;
@@ -111,7 +111,7 @@ export class TanglishVoiceService {
     }
 
     if (error.status === 0) {
-      return 'Tanglish API is unreachable on http://127.0.0.1:5199. Start the .NET service or use npm start so the frontend launches it automatically.';
+      return 'Tanglish API is unreachable on http://127.0.0.1:8000. Start the Python backend or use npm start so the frontend launches it automatically.';
     }
 
     return `${fallback} (HTTP ${error.status})`;

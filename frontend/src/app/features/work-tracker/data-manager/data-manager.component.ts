@@ -1,8 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { WorkTrackerService } from '../work-tracker.service';
+import { Component, inject, OnInit } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+
+import { WorkTrackerService } from '../work-tracker.service';
 
 @Component({
   selector: 'app-data-manager',
@@ -13,47 +14,33 @@ import { map } from 'rxjs/operators';
       <div class="glass-card settings-panel">
         <h2>Storage Settings</h2>
         <div class="toggle-container">
-          <button 
-            [class.active]="(storageMode$ | async) === 'local'" 
+          <button
+            [class.active]="(storageMode$ | async) === 'local'"
             (click)="setStorageMode('local')">
-            <span class="icon">📁</span> Local Worksheet
+            <span class="icon">Folder</span> Local Worksheet
           </button>
-          <button 
-            [class.active]="(storageMode$ | async) === 'google-sheets'" 
+          <button
+            [class.active]="(storageMode$ | async) === 'google-sheets'"
             (click)="setStorageMode('google-sheets')">
-            <span class="icon">📊</span> Google Sheets
+            <span class="icon">Sheets</span> Google Sheets
           </button>
         </div>
         <p class="helper-text" *ngIf="(storageMode$ | async) === 'local'">
           Data is stored and managed via local .xlsx files. Download the template, fill it out, and upload to update the dashboard.
         </p>
         <p class="helper-text" *ngIf="(storageMode$ | async) === 'google-sheets'">
-          Google Sheets integration is currently in mock mode. You can view the dashboard with mock data, but fully sync requires OAuth setup which is coming soon.
+          Google Sheets integration is currently in mock mode. You can view the dashboard with mock data, but full sync requires OAuth setup.
         </p>
       </div>
 
       <div class="glass-card action-panel" *ngIf="(storageMode$ | async) === 'local'">
         <h2>Worksheet Operations</h2>
         <div class="action-buttons">
-          <button class="btn-primary" (click)="downloadTemplate()">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Download Template (.xlsx)
-          </button>
+          <button class="btn-primary" (click)="downloadTemplate()">Download Template (.xlsx)</button>
 
           <div class="upload-wrapper">
             <input type="file" id="fileUpload" accept=".xlsx, .xls" (change)="onFileChange($event)" #fileInput hidden>
-            <button class="btn-secondary" (click)="fileInput.click()">
-              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              Upload Filled Template
-            </button>
+            <button class="btn-secondary" (click)="fileInput.click()">Upload Filled Template</button>
           </div>
         </div>
         <div class="upload-status" *ngIf="uploadMessage" [ngClass]="uploadStatus">
@@ -65,7 +52,6 @@ import { map } from 'rxjs/operators';
   styles: [`
     .manager-container {
       display: grid;
-      grid-template-columns: 1fr;
       gap: 2rem;
       max-width: 800px;
       margin: 0 auto;
@@ -142,7 +128,6 @@ import { map } from 'rxjs/operators';
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.8rem;
       width: 100%;
       padding: 1.2rem;
       border: none;
@@ -159,18 +144,12 @@ import { map } from 'rxjs/operators';
       box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
     }
 
-    .btn-primary:hover {
-      box-shadow: 0 6px 20px rgba(118, 75, 162, 0.6);
-      transform: translateY(-2px);
-    }
-
     .btn-secondary {
       background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
       box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4);
     }
 
-    .btn-secondary:hover {
-      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.6);
+    .btn-primary:hover, .btn-secondary:hover {
       transform: translateY(-2px);
     }
 
@@ -180,7 +159,6 @@ import { map } from 'rxjs/operators';
       border-radius: 8px;
       text-align: center;
       font-weight: 500;
-      animation: fadeIn 0.3s ease;
     }
 
     .upload-status.success {
@@ -193,17 +171,21 @@ import { map } from 'rxjs/operators';
       color: #822727;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-5px); }
-      to { opacity: 1; transform: translateY(0); }
+    @media (max-width: 720px) {
+      .glass-card {
+        padding: 1.25rem;
+      }
+
+      .toggle-container {
+        flex-direction: column;
+      }
     }
   `]
 })
 export class DataManagerComponent implements OnInit {
-  workTrackerService = inject(WorkTrackerService);
-  
+  private workTrackerService = inject(WorkTrackerService);
+
   storageMode$!: Observable<'local' | 'google-sheets'>;
-  
   uploadMessage = '';
   uploadStatus: 'success' | 'error' = 'success';
 
@@ -222,24 +204,26 @@ export class DataManagerComponent implements OnInit {
     this.workTrackerService.downloadTemplate();
   }
 
-  async onFileChange(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      try {
-        await this.workTrackerService.processLocalUpload(file);
-        this.uploadStatus = 'success';
-        this.uploadMessage = 'Worksheet processed successfully! Dashboard has been updated.';
-        // Reset file input
-        event.target.value = '';
-      } catch (error) {
-        this.uploadStatus = 'error';
-        this.uploadMessage = 'Error parsing the worksheet. Please ensure you are using the downloaded template structure.';
-        console.error(error);
-      }
-      
-      setTimeout(() => {
-        this.uploadMessage = '';
-      }, 5000);
+  async onFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
     }
+
+    try {
+      await this.workTrackerService.processLocalUpload(file);
+      this.uploadStatus = 'success';
+      this.uploadMessage = 'Worksheet processed successfully. Dashboard has been updated.';
+      input.value = '';
+    } catch (error) {
+      this.uploadStatus = 'error';
+      this.uploadMessage = 'Error parsing the worksheet. Please ensure you are using the downloaded template structure.';
+      console.error(error);
+    }
+
+    setTimeout(() => {
+      this.uploadMessage = '';
+    }, 5000);
   }
 }

@@ -1,15 +1,12 @@
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
-$backendProject = Join-Path $repoRoot '..\backend\tanglish-api'
-$backendUrl = 'http://127.0.0.1:5199/'
-$dotnetCliHome = Join-Path $repoRoot '.dotnet'
+$backendProject = Resolve-Path (Join-Path $repoRoot '..\backend\python-service')
+$backendUrl = 'http://127.0.0.1:8000/api/health'
+$venvPython = Join-Path $backendProject '.venv\Scripts\python.exe'
+$pythonExe = if (Test-Path $venvPython) { $venvPython } else { 'python' }
 
-if (-not (Test-Path $dotnetCliHome)) {
-  New-Item -ItemType Directory -Path $dotnetCliHome | Out-Null
-}
-
-function Test-TanglishApi {
+function Test-PythonBackend {
   try {
     $response = Invoke-WebRequest -Uri $backendUrl -UseBasicParsing -TimeoutSec 2
     return $response.StatusCode -ge 200 -and $response.StatusCode -lt 500
@@ -18,30 +15,28 @@ function Test-TanglishApi {
   }
 }
 
-if (-not (Test-TanglishApi)) {
-  Write-Host 'Starting Tanglish API on http://127.0.0.1:5199 ...'
-
-  $backendCommand = '$env:DOTNET_CLI_HOME="' + $dotnetCliHome + '"; dotnet run --project "' + $backendProject + '" --urls http://127.0.0.1:5199'
+if (-not (Test-PythonBackend)) {
+  Write-Host 'Starting Python backend on http://127.0.0.1:8000 ...'
 
   Start-Process `
-    -FilePath 'powershell' `
-    -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $backendCommand) `
+    -FilePath $pythonExe `
+    -ArgumentList @('-m', 'uvicorn', 'app.main:socket_app', '--host', '127.0.0.1', '--port', '8000') `
     -WorkingDirectory $backendProject `
     -WindowStyle Hidden | Out-Null
 
   $started = $false
   for ($attempt = 0; $attempt -lt 20; $attempt++) {
     Start-Sleep -Milliseconds 750
-    if (Test-TanglishApi) {
+    if (Test-PythonBackend) {
       $started = $true
       break
     }
   }
 
   if (-not $started) {
-    throw 'Tanglish API did not start on http://127.0.0.1:5199 within the expected time.'
+    throw 'Python backend did not start on http://127.0.0.1:8000 within the expected time.'
   }
 }
 
-Write-Host 'Tanglish API is ready. Starting Angular dev server...'
+Write-Host 'Python backend is ready. Starting Angular dev server...'
 & (Join-Path $repoRoot 'node_modules\.bin\ng.cmd') serve

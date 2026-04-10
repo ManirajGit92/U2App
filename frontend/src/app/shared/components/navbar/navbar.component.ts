@@ -1,7 +1,13 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ThemeService } from '../../../core/services/theme.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
+
+interface NavItem {
+  label: string;
+  path: string;
+  exact: boolean;
+}
 
 @Component({
   selector: 'app-navbar',
@@ -18,11 +24,15 @@ import { SupabaseService } from '../../../core/services/supabase.service';
 
         <!-- Nav Links -->
         <div class="navbar-links">
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-link">Home</a>
-          <a routerLink="/excel-mapper" routerLinkActive="active" class="nav-link">Excel Mapper</a>
-          <a routerLink="/compare" routerLinkActive="active" class="nav-link">Compare</a>
-          <a routerLink="/tanglish-voice" routerLinkActive="active" class="nav-link">Tanglish</a>
-          <a routerLink="/tax-calculator" routerLinkActive="active" class="nav-link">Tax</a>
+          @for (item of navItems; track item.path) {
+            <a
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: item.exact }"
+              class="nav-link">
+              {{ item.label }}
+            </a>
+          }
         </div>
 
         <!-- Actions -->
@@ -124,9 +134,17 @@ import { SupabaseService } from '../../../core/services/supabase.service';
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .navbar-links::-webkit-scrollbar {
+      display: none;
     }
 
     .nav-link {
+      flex: 0 0 auto;
       padding: 8px 16px;
       font-size: 0.9rem;
       font-weight: 500;
@@ -297,7 +315,15 @@ import { SupabaseService } from '../../../core/services/supabase.service';
 export class NavbarComponent {
   themeService = inject(ThemeService);
   supabaseService = inject(SupabaseService);
+  private router = inject(Router);
   showUserMenu = false;
+  navItems: NavItem[] = this.router.config
+    .filter(route => route.data?.['showInNav'] && route.data?.['navLabel'])
+    .map(route => ({
+      label: String(route.data?.['navLabel']),
+      path: route.path ? `/${route.path}` : '/',
+      exact: route.path === ''
+    }));
 
   toggleUserMenu(): void {
     this.showUserMenu = !this.showUserMenu;

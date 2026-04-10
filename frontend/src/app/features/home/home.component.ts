@@ -26,17 +26,24 @@ interface Tool {
           In One Place
         </h1>
         <p class="hero-subtitle">
-          Compare text, process images, create content, and more — powerful utilities
-          designed for developers and creators.
+          Compare text, process images, create content, and more — powerful utilities designed for
+          developers and creators.
         </p>
         <div class="hero-actions">
           <a routerLink="/excel-mapper" class="btn btn-primary btn-lg">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18m-7-7l7 7 7-7"/></svg>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M12 3v18m-7-7l7 7 7-7" />
+            </svg>
             Get Started
           </a>
-          <a href="#tools" class="btn btn-secondary btn-lg">
-            Explore Tools
-          </a>
+          <a href="#tools" class="btn btn-secondary btn-lg"> Explore Tools </a>
         </div>
         <div class="hero-stats">
           <div class="stat">
@@ -89,248 +96,252 @@ interface Tool {
     <!-- Footer -->
     <footer class="footer">
       <div class="container footer-inner">
-        <span class="footer-logo">⚡ U2 Tools</span>
+        <span class="footer-logo">⚡ U2 Tools - Developed By Maniraj</span>
         <span class="footer-copy">© 2026 U2 Tools. All rights reserved.</span>
       </div>
     </footer>
   `,
-  styles: [`
-    /* ───── Hero ───── */
-    .hero {
-      position: relative;
-      padding: 100px 0 80px;
-      overflow: hidden;
-      min-height: 75vh;
-      display: flex;
-      align-items: center;
-    }
-
-    .hero-bg {
-      position: absolute;
-      inset: 0;
-      background: var(--hero-gradient);
-      opacity: 0.12;
-      z-index: 0;
-    }
-
-    .hero-bg::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 30% 50%, rgba(99,102,241,0.15) 0%, transparent 60%),
-                  radial-gradient(circle at 70% 80%, rgba(168,85,247,0.1) 0%, transparent 50%);
-    }
-
-    .hero-content {
-      position: relative;
-      z-index: 1;
-      text-align: center;
-      max-width: 800px;
-    }
-
-    .hero-badge {
-      display: inline-block;
-      padding: 8px 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--accent-primary);
-      background: var(--accent-surface);
-      border: 1px solid var(--accent-primary);
-      border-radius: 50px;
-      margin-bottom: 28px;
-      animation: fadeInUp 0.5s ease-out;
-    }
-
-    .hero-title {
-      font-size: 3.5rem;
-      font-weight: 900;
-      line-height: 1.1;
-      letter-spacing: -1.5px;
-      margin-bottom: 24px;
-      animation: fadeInUp 0.5s ease-out 0.1s both;
-    }
-
-    .gradient-text {
-      background: var(--accent-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero-subtitle {
-      font-size: 1.15rem;
-      color: var(--text-secondary);
-      max-width: 560px;
-      margin: 0 auto 36px;
-      line-height: 1.7;
-      animation: fadeInUp 0.5s ease-out 0.2s both;
-    }
-
-    .hero-actions {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      margin-bottom: 56px;
-      animation: fadeInUp 0.5s ease-out 0.3s both;
-    }
-
-    .hero-stats {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 32px;
-      animation: fadeInUp 0.5s ease-out 0.4s both;
-    }
-
-    .stat {
-      text-align: center;
-    }
-
-    .stat-number {
-      display: block;
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--accent-primary);
-    }
-
-    .stat-label {
-      font-size: 0.8rem;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .stat-divider {
-      width: 1px;
-      height: 32px;
-      background: var(--border-color-strong);
-    }
-
-    /* ───── Tools Section ───── */
-    .tools-section {
-      padding: 80px 24px 100px;
-    }
-
-    .section-header {
-      text-align: center;
-      margin-bottom: 56px;
-    }
-
-    .section-title {
-      font-size: 2.2rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      margin-bottom: 12px;
-    }
-
-    .section-subtitle {
-      font-size: 1.05rem;
-      color: var(--text-secondary);
-    }
-
-    .tools-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 24px;
-    }
-
-    .tool-card {
-      padding: 32px 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      animation: fadeInUp 0.5s ease-out both;
-      cursor: default;
-    }
-
-    .tool-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.6rem;
-      flex-shrink: 0;
-    }
-
-    .tool-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-    }
-
-    .tool-desc {
-      font-size: 0.88rem;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      flex-grow: 1;
-    }
-
-    .tool-footer {
-      padding-top: 8px;
-    }
-
-    .tool-btn {
-      text-decoration: none;
-    }
-
-    /* ───── Footer ───── */
-    .footer {
-      border-top: 1px solid var(--border-color);
-      padding: 32px 0;
-    }
-
-    .footer-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .footer-logo {
-      font-weight: 700;
-      font-size: 1rem;
-      color: var(--text-primary);
-    }
-
-    .footer-copy {
-      font-size: 0.82rem;
-      color: var(--text-tertiary);
-    }
-
-    /* ───── Responsive ───── */
-    @media (max-width: 768px) {
+  styles: [
+    `
+      /* ───── Hero ───── */
       .hero {
-        padding: 60px 0;
-        min-height: auto;
+        position: relative;
+        padding: 100px 0 80px;
+        overflow: hidden;
+        min-height: 75vh;
+        display: flex;
+        align-items: center;
       }
+
+      .hero-bg {
+        position: absolute;
+        inset: 0;
+        background: var(--hero-gradient);
+        opacity: 0.12;
+        z-index: 0;
+      }
+
+      .hero-bg::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 30% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+          radial-gradient(circle at 70% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
+      }
+
+      .hero-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        max-width: 800px;
+      }
+
+      .hero-badge {
+        display: inline-block;
+        padding: 8px 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--accent-primary);
+        background: var(--accent-surface);
+        border: 1px solid var(--accent-primary);
+        border-radius: 50px;
+        margin-bottom: 28px;
+        animation: fadeInUp 0.5s ease-out;
+      }
+
       .hero-title {
-        font-size: 2.2rem;
+        font-size: 3.5rem;
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -1.5px;
+        margin-bottom: 24px;
+        animation: fadeInUp 0.5s ease-out 0.1s both;
       }
+
+      .gradient-text {
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
       .hero-subtitle {
-        font-size: 1rem;
+        font-size: 1.15rem;
+        color: var(--text-secondary);
+        max-width: 560px;
+        margin: 0 auto 36px;
+        line-height: 1.7;
+        animation: fadeInUp 0.5s ease-out 0.2s both;
       }
+
       .hero-actions {
-        flex-direction: column;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 56px;
+        animation: fadeInUp 0.5s ease-out 0.3s both;
       }
-      .tools-grid {
-        grid-template-columns: 1fr;
+
+      .hero-stats {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        animation: fadeInUp 0.5s ease-out 0.4s both;
       }
-      .footer-inner {
-        flex-direction: column;
-        gap: 12px;
+
+      .stat {
         text-align: center;
       }
-    }
-  `],
+
+      .stat-number {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--accent-primary);
+      }
+
+      .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .stat-divider {
+        width: 1px;
+        height: 32px;
+        background: var(--border-color-strong);
+      }
+
+      /* ───── Tools Section ───── */
+      .tools-section {
+        padding: 80px 24px 100px;
+      }
+
+      .section-header {
+        text-align: center;
+        margin-bottom: 56px;
+      }
+
+      .section-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 12px;
+      }
+
+      .section-subtitle {
+        font-size: 1.05rem;
+        color: var(--text-secondary);
+      }
+
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 24px;
+      }
+
+      .tool-card {
+        padding: 32px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        animation: fadeInUp 0.5s ease-out both;
+        cursor: default;
+      }
+
+      .tool-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        flex-shrink: 0;
+      }
+
+      .tool-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+      }
+
+      .tool-desc {
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        flex-grow: 1;
+      }
+
+      .tool-footer {
+        padding-top: 8px;
+      }
+
+      .tool-btn {
+        text-decoration: none;
+      }
+
+      /* ───── Footer ───── */
+      .footer {
+        border-top: 1px solid var(--border-color);
+        padding: 32px 0;
+      }
+
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .footer-logo {
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--text-primary);
+      }
+
+      .footer-copy {
+        font-size: 0.82rem;
+        color: var(--text-tertiary);
+      }
+
+      /* ───── Responsive ───── */
+      @media (max-width: 768px) {
+        .hero {
+          padding: 60px 0;
+          min-height: auto;
+        }
+        .hero-title {
+          font-size: 2.2rem;
+        }
+        .hero-subtitle {
+          font-size: 1rem;
+        }
+        .hero-actions {
+          flex-direction: column;
+        }
+        .tools-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-inner {
+          flex-direction: column;
+          gap: 12px;
+          text-align: center;
+        }
+      }
+    `,
+  ],
 })
 export class HomeComponent {
   tools: Tool[] = [
     {
       id: 'excel-mapper',
       title: 'Excel-to-Excel Mapping Tool',
-      description: 'Upload a source workbook, map it into a target format, apply transformations and validations, preview results, and export a processed Excel file with reusable templates.',
+      description:
+        'Upload a source workbook, map it into a target format, apply transformations and validations, preview results, and export a processed Excel file with reusable templates.',
       icon: '🧭',
       route: '/excel-mapper',
       available: true,
@@ -339,7 +350,8 @@ export class HomeComponent {
     {
       id: 'compare',
       title: 'Text / JSON Compare',
-      description: 'Compare text or JSON side by side with highlighted differences, match percentage, and mismatch extraction.',
+      description:
+        'Compare text or JSON side by side with highlighted differences, match percentage, and mismatch extraction.',
       icon: '🔍',
       route: '/compare',
       available: true,
@@ -348,7 +360,8 @@ export class HomeComponent {
     {
       id: 'tanglish-voice',
       title: 'Tanglish Voice Studio',
-      description: 'Convert English text into Tanglish with a reusable rule engine and generate natural AI voice playback with selectable voices and speed.',
+      description:
+        'Convert English text into Tanglish with a reusable rule engine and generate natural AI voice playback with selectable voices and speed.',
       icon: 'TV',
       route: '/tanglish-voice',
       available: true,
@@ -357,7 +370,8 @@ export class HomeComponent {
     {
       id: 'tax-calculator',
       title: 'Tax Calculator',
-      description: 'Estimate old vs new tax regimes, import Form 16 Excel data, and get deduction ideas with real-time calculations.',
+      description:
+        'Estimate old vs new tax regimes, import Form 16 Excel data, and get deduction ideas with real-time calculations.',
       icon: 'ðŸ§¾',
       route: '/tax-calculator',
       available: true,
@@ -366,7 +380,8 @@ export class HomeComponent {
     {
       id: 'html-viewer',
       title: 'HTML Viewer',
-      description: 'Preview and render HTML code instantly with live editing and responsive viewport testing.',
+      description:
+        'Preview and render HTML code instantly with live editing and responsive viewport testing.',
       icon: '🌐',
       route: '/html-viewer',
       available: true,
@@ -402,7 +417,8 @@ export class HomeComponent {
     {
       id: 'content-creator',
       title: 'Content Creator',
-      description: 'Transform Excel data into engaging video slideshows with AI voice-over and smooth animations.',
+      description:
+        'Transform Excel data into engaging video slideshows with AI voice-over and smooth animations.',
       icon: '🎬',
       route: '/content-creator',
       available: true,
@@ -429,7 +445,8 @@ export class HomeComponent {
     {
       id: 'work-tracker',
       title: 'Work Tracker',
-      description: 'Track developer statuses, monitor product release tracking, and manage data via local Excel sheets.',
+      description:
+        'Track developer statuses, monitor product release tracking, and manage data via local Excel sheets.',
       icon: '📈',
       route: '/work-tracker',
       available: true,
@@ -438,7 +455,8 @@ export class HomeComponent {
     {
       id: 'estimator',
       title: 'Estimater App',
-      description: 'Automatically estimate project effort with formula-based inputs, feature breakdowns, and Excel report generation.',
+      description:
+        'Automatically estimate project effort with formula-based inputs, feature breakdowns, and Excel report generation.',
       icon: '⏱️',
       route: '/estimator',
       available: true,
@@ -447,7 +465,8 @@ export class HomeComponent {
     {
       id: 'real-life-steps',
       title: 'Real Life Steps Game',
-      description: 'Play a live multiplayer board game with 100 configured positive/negative life events, tokens, investing and robust dice rolling.',
+      description:
+        'Play a live multiplayer board game with 100 configured positive/negative life events, tokens, investing and robust dice rolling.',
       icon: '🎲',
       route: '/real-life-steps',
       available: true,
@@ -456,7 +475,8 @@ export class HomeComponent {
     {
       id: 'controls-to-excel',
       title: 'Controls to Excel',
-      description: 'Upload Excel files, dynamically generate form controls, search globally, alter cell data, and instantly visualize it into powerful dynamic charts.',
+      description:
+        'Upload Excel files, dynamically generate form controls, search globally, alter cell data, and instantly visualize it into powerful dynamic charts.',
       icon: '🗂️',
       route: '/controls-to-excel',
       available: true,
@@ -465,7 +485,8 @@ export class HomeComponent {
     {
       id: 'unit-test-tracker',
       title: 'Unit Test Tracker',
-      description: 'Excel-driven test tracking system with full CRUD, execution logging, and bug management.',
+      description:
+        'Excel-driven test tracking system with full CRUD, execution logging, and bug management.',
       icon: '🧪',
       route: '/unit-test-tracker',
       available: true,
@@ -474,7 +495,8 @@ export class HomeComponent {
     {
       id: 'standup-note',
       title: 'Standup Note',
-      description: 'Manage daily standups, track employee work, project status, team reminders and timeline — powered by Excel.',
+      description:
+        'Manage daily standups, track employee work, project status, team reminders and timeline — powered by Excel.',
       icon: '📋',
       route: '/standup-note',
       available: true,
@@ -483,7 +505,8 @@ export class HomeComponent {
     {
       id: 'office-fun',
       title: 'Office Fun Activity',
-      description: 'Real-time SMS Pictionary game for the office! Show images, receive SMS answers, and crown a winner with a live leaderboard.',
+      description:
+        'Real-time SMS Pictionary game for the office! Show images, receive SMS answers, and crown a winner with a live leaderboard.',
       icon: '🎮',
       route: '/office-fun',
       available: true,
@@ -492,7 +515,8 @@ export class HomeComponent {
     {
       id: 'image-navigator',
       title: 'Image Navigator',
-      description: 'Navigate through images using Excel-driven data, select areas for OCR text extraction, and get voice descriptions.',
+      description:
+        'Navigate through images using Excel-driven data, select areas for OCR text extraction, and get voice descriptions.',
       icon: '🗺️',
       route: '/image-navigator',
       available: true,
@@ -501,7 +525,8 @@ export class HomeComponent {
     {
       id: 'life-tracker',
       title: 'Life Tracker',
-      description: 'Modern dashboard to track routines, expenses, diet, fitness, mental health, and future investments — all syncable with Excel.',
+      description:
+        'Modern dashboard to track routines, expenses, diet, fitness, mental health, and future investments — all syncable with Excel.',
       icon: '🌱',
       route: '/life-tracker',
       available: true,
@@ -510,7 +535,8 @@ export class HomeComponent {
     {
       id: 'easy-documents',
       title: 'Easy Documents',
-      description: 'Transform Excel files into interactive, multilingual, multimedia-rich documentation with navigation and search.',
+      description:
+        'Transform Excel files into interactive, multilingual, multimedia-rich documentation with navigation and search.',
       icon: '📄',
       route: '/easy-documents',
       available: true,
