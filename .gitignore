@@ -14,6 +14,22 @@ coverage/
 npm-debug.log
 yarn-error.log
 
+# Python
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+.env
+.env.*
+!.env.example
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+
 # IDEs and editors
 .idea/
 .project
