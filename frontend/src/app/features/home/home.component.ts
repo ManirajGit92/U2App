@@ -543,6 +543,16 @@ export class HomeComponent {
       color: 'linear-gradient(135deg, rgba(52,211,153,0.2), rgba(16,185,129,0.2))',
     },
     {
+      id: 'youtube-manager',
+      title: 'YouTube Video Manager',
+      description:
+        'Offline Excel-driven YouTube manager with custom playlists, timed slice segments, and lyrics text editors.',
+      icon: '▶️',
+      route: '/youtube-manager',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(220,38,38,0.2))',
+    },
+    {
       id: 'easy-documents',
       title: 'Easy Documents',
       description:
