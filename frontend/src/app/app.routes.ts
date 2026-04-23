@@ -74,9 +74,9 @@ export const routes: Routes = [
   {
     path: 'real-life-steps',
     data: { navLabel: 'Real Life Steps', showInNav: true },
-    loadComponent: () =>
-      import('./features/real-life-steps/real-life-steps.component').then(
-        (m) => m.RealLifeStepsComponent
+    loadChildren: () =>
+      import('./features/real-life-steps/real-life-steps.routes').then(
+        (m) => m.REAL_LIFE_STEPS_ROUTES
       ),
   },
   {

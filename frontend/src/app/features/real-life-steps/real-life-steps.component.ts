@@ -1,13 +1,14 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { RealLifeStepsService, GameState, CellConfig, Player, Token } from './real-life-steps.service';
 import { Observable, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-real-life-steps',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
     <div class="game-container">
       <div class="header-section">
@@ -17,6 +18,7 @@ import { Observable, Subscription } from 'rxjs';
         </div>
         
         <div class="header-actions" *ngIf="!(state$ | async)?.isStarted">
+          <a class="btn-outline" routerLink="/real-life-steps/custom-board-creator">Custom Board Creator</a>
           <button class="btn-outline" (click)="downloadRules()">Download Board Rules (Excel)</button>
           <div class="upload-wrapper">
             <input type="file" id="rulesUpload" accept=".xlsx, .xls" (change)="uploadRules($event)" #fileInput hidden>
@@ -30,6 +32,10 @@ import { Observable, Subscription } from 'rxjs';
             <span class="zoom-level">{{ (zoomLevel * 100) | number:'1.0-0' }}%</span>
             <button class="btn-icon" (click)="zoomIn()" title="Zoom In">➕</button>
           </div>
+          <button class="btn-outline" (click)="toggleBoardFullscreen()">
+            {{ isBoardFullscreen ? 'Exit Full Screen' : 'Full Screen Board' }}
+          </button>
+          <a class="btn-outline" routerLink="/real-life-steps/custom-board-creator">Custom Board Creator</a>
           <button class="btn-outline" (click)="resetGame()">End & Reset Game</button>
         </div>
       </div>
@@ -73,7 +79,7 @@ import { Observable, Subscription } from 'rxjs';
         <ng-container *ngIf="state.isStarted">
           
           <!-- Left: Board -->
-          <div class="board-column">
+          <div class="board-column" #boardColumn>
             <!-- The board grid itself with scaling applied -->
             <div class="board-wrapper" [style.transform]="'scale(' + zoomLevel + ')'">
               <div class="board-grid">
@@ -257,11 +263,23 @@ import { Observable, Subscription } from 'rxjs';
 
     /* Board */
     .board-column { width: 100%; overflow-x: auto; padding-bottom: 2rem; }
+    .board-column:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      padding: 1rem;
+      background: #f7fafc;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
     
     .board-wrapper {
       transform-origin: top left;
       transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
+
+    .board-column:fullscreen .board-wrapper { margin: 0 auto; }
 
     .board-grid {
       display: grid;
@@ -409,6 +427,15 @@ export class RealLifeStepsComponent implements OnInit, OnDestroy {
   pendingRoll: number | null = null;
   isRolling = false;
   zoomLevel = 1;
+  isBoardFullscreen = false;
+
+  @ViewChild('boardColumn', { static: false })
+  private readonly boardColumnRef?: ElementRef<HTMLElement>;
+
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    this.syncFullscreenState();
+  }
 
   // Web Audio Context for synthesizer sounds
   private audioCtx: AudioContext | null = null;
@@ -431,10 +458,32 @@ export class RealLifeStepsComponent implements OnInit, OnDestroy {
         this.detectSoundTriggers(state);
       }
     });
+
+    this.syncFullscreenState();
   }
 
   ngOnDestroy() {
     if (this.sub) this.sub.unsubscribe();
+  }
+
+  toggleBoardFullscreen(): void {
+    const el = this.boardColumnRef?.nativeElement;
+    if (!el) return;
+
+    const isSelfFullscreen = document.fullscreenElement === el;
+    if (isSelfFullscreen) {
+      document.exitFullscreen?.();
+      return;
+    }
+
+    el.requestFullscreen?.().catch(() => {
+      // ignore
+    });
+  }
+
+  private syncFullscreenState(): void {
+    const el = this.boardColumnRef?.nativeElement;
+    this.isBoardFullscreen = !!el && document.fullscreenElement === el;
   }
 
   updatePlayerNames() {
