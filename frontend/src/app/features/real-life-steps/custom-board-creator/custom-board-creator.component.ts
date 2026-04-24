@@ -17,6 +17,7 @@ type SavedStateV1 = {
   boardSrc: string | null;
   library: TokenLibraryItem[];
   tokens: BoardToken[];
+  dice?: BoardDice[];
 };
 
 type TokenLibraryItem = {
@@ -35,6 +36,17 @@ type BoardToken = {
   sizeRel: number; // relative to board width (e.g. 0.08)
   rotationDeg: number;
   z: number;
+};
+
+type BoardDice = {
+  id: string;
+  value: number;
+  x: number; // 0..1 (relative to board)
+  y: number; // 0..1 (relative to board)
+  sizeRel: number; // relative to board width
+  rotationDeg: number;
+  z: number;
+  rolling: boolean;
 };
 
 @Component({
@@ -77,6 +89,23 @@ type BoardToken = {
             <label>Token Images</label>
             <input type="file" accept="image/*" multiple (change)="onTokenLibraryUpload($event)" />
             <p class="hint">Tip: Upload multiple icons (coins, cars, people). Click a token below to add it to the board.</p>
+          </div>
+
+          <div class="form-group mt-4">
+            <label>Dice</label>
+            <button class="btn-primary full" type="button" [disabled]="dice.length > 0" (click)="addDice()">
+              Add Dice
+            </button>
+            <div class="row mt-2">
+              <button
+                class="btn-outline danger"
+                type="button"
+                [disabled]="dice.length === 0"
+                (click)="clearDice()"
+              >
+                Remove Dice
+              </button>
+            </div>
           </div>
 
           <div class="library" *ngIf="tokenLibrary.length > 0; else noLibrary">
@@ -128,7 +157,9 @@ type BoardToken = {
           <div class="board-toolbar">
             <div class="toolbar-left">
               <span class="pill" *ngIf="!boardSrc">Upload a board image to start</span>
-              <span class="pill" *ngIf="boardSrc && tokens.length === 0">Add tokens from the left panel</span>
+              <span class="pill" *ngIf="boardSrc && tokens.length === 0 && dice.length === 0">
+                Add tokens or dice from the left panel
+              </span>
             </div>
             <div class="toolbar-right">
               <button class="btn-outline" type="button" (click)="toggleBoardFullscreen()">
@@ -136,6 +167,9 @@ type BoardToken = {
               </button>
               <button class="btn-outline" type="button" [disabled]="tokens.length === 0" (click)="clearTokens()">
                 Clear Tokens
+              </button>
+              <button class="btn-outline" type="button" [disabled]="dice.length === 0" (click)="clearDice()">
+                Clear Dice
               </button>
             </div>
           </div>
@@ -172,15 +206,41 @@ type BoardToken = {
                   [style.transform]="'translate(-50%, -50%) rotate(' + token.rotationDeg + 'deg)'"
                 />
               </ng-container>
+
+              <ng-container *ngFor="let die of diceSorted; trackBy: trackById">
+                <button
+                  class="board-die"
+                  type="button"
+                  [class.selected]="die.id === selectedDiceId"
+                  [class.rolling]="die.rolling"
+                  (pointerdown)="onDicePointerDown($event, die)"
+                  [style.left.%]="die.x * 100"
+                  [style.top.%]="die.y * 100"
+                  [style.width.px]="getDiceWidthPx(die)"
+                  [style.height.px]="getDiceWidthPx(die)"
+                  [style.zIndex]="die.z"
+                  [style.transform]="'translate(-50%, -50%) rotate(' + die.rotationDeg + 'deg)'"
+                  [title]="'Roll dice: ' + die.value"
+                  [attr.aria-label]="'Dice showing ' + die.value"
+                >
+                  <span
+                    class="die-pip"
+                    *ngFor="let pip of getDicePips(die.value)"
+                    [style.gridColumn]="pip.col"
+                    [style.gridRow]="pip.row"
+                  ></span>
+                  <span class="die-value">{{ die.value }}</span>
+                </button>
+              </ng-container>
             </div>
           </div>
         </div>
 
         <!-- Right Panel -->
         <div class="glass-card panel right-panel">
-          <h2>Selected Token</h2>
+          <h2>{{ selectedDice ? 'Selected Dice' : 'Selected Token' }}</h2>
 
-          <ng-container *ngIf="selectedToken as t; else nothingSelected">
+          <ng-container *ngIf="selectedToken as t">
             <div class="selected-preview">
               <img [src]="t.src" [alt]="t.name" />
               <div class="selected-meta">
@@ -232,9 +292,52 @@ type BoardToken = {
             </div>
           </ng-container>
 
-          <ng-template #nothingSelected>
-            <div class="empty-note">Tap/click a token on the board to edit it.</div>
-          </ng-template>
+          <ng-container *ngIf="selectedDice as d">
+            <div class="selected-preview dice-selected-preview">
+              <button
+                class="board-die preview-die"
+                type="button"
+                (click)="rollDice(d.id)"
+                [attr.aria-label]="'Roll selected dice showing ' + d.value"
+              >
+                <span
+                  class="die-pip"
+                  *ngFor="let pip of getDicePips(d.value)"
+                  [style.gridColumn]="pip.col"
+                  [style.gridRow]="pip.row"
+                ></span>
+                <span class="die-value">{{ d.value }}</span>
+              </button>
+              <div class="selected-meta">
+                <div class="name">Dice {{ d.value }}</div>
+                <div class="sub">ID: {{ d.id }}</div>
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <label>Size</label>
+              <input
+                type="range"
+                min="0.02"
+                max="0.20"
+                step="0.005"
+                [(ngModel)]="d.sizeRel"
+                (ngModelChange)="touchDice(d.id)"
+              />
+              <div class="hint">{{ (d.sizeRel * 100) | number:'1.0-1' }}% of board width</div>
+            </div>
+
+            <div class="form-group mt-4">
+              <div class="row">
+                <button class="btn-primary" type="button" (click)="rollDice(d.id)">Roll Dice</button>
+                <button class="btn-outline danger" type="button" (click)="deleteDice(d.id)">Delete Dice</button>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="!selectedToken && !selectedDice">
+            <div class="empty-note">Tap/click a token or dice on the board to edit it.</div>
+          </ng-container>
         </div>
       </div>
     </div>
@@ -352,12 +455,14 @@ type BoardToken = {
       }
 
       .form-group input[type='text'],
+      .form-group input[type='number'],
       .form-group select,
       .form-group input[type='file'] {
         width: 100%;
       }
 
       input[type='text'],
+      input[type='number'],
       select {
         padding: 10px 12px;
         border-radius: var(--radius-md);
@@ -368,6 +473,7 @@ type BoardToken = {
       }
 
       input[type='text']:focus,
+      input[type='number']:focus,
       select:focus {
         border-color: rgba(99, 102, 241, 0.6);
         box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
@@ -577,6 +683,126 @@ type BoardToken = {
         outline-offset: 2px;
       }
 
+      .board-die {
+        position: absolute;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        gap: 12%;
+        align-items: center;
+        justify-items: center;
+        padding: 14%;
+        border: 1px solid rgba(15, 23, 42, 0.18);
+        border-radius: 14%;
+        background:
+          radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.16) 34%, transparent 35%),
+          linear-gradient(145deg, #ffffff 0%, #eef3f8 45%, #c7d2df 100%);
+        box-shadow:
+          0 14px 24px rgba(15, 23, 42, 0.28),
+          8px 10px 0 rgba(100, 116, 139, 0.18),
+          inset 5px 5px 10px rgba(255, 255, 255, 0.92),
+          inset -7px -8px 12px rgba(100, 116, 139, 0.3);
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        transform-origin: center center;
+        transform-style: preserve-3d;
+        perspective: 1200px;
+        transition:
+          box-shadow 160ms ease,
+          border-color 160ms ease,
+          filter 160ms ease;
+      }
+
+      .board-die:active {
+        cursor: grabbing;
+      }
+
+      .board-die.selected {
+        border-color: rgba(99, 102, 241, 0.85);
+        box-shadow:
+          0 12px 28px rgba(0, 0, 0, 0.24),
+          8px 10px 0 rgba(100, 116, 139, 0.18),
+          inset 5px 5px 10px rgba(255, 255, 255, 0.92),
+          inset -7px -8px 12px rgba(100, 116, 139, 0.3),
+          0 0 0 4px rgba(99, 102, 241, 0.22);
+      }
+
+      .board-die.rolling {
+        animation: diceRoll 0.22s ease-in-out infinite;
+      }
+
+      .die-pip {
+        width: 74%;
+        height: 74%;
+        border-radius: 999px;
+        background: #111827;
+        box-shadow:
+          inset 0 1px 2px rgba(0, 0, 0, 0.46),
+          0 1px 0 rgba(255, 255, 255, 0.6);
+      }
+
+      .die-value {
+        position: absolute;
+        right: -8%;
+        bottom: -8%;
+        min-width: 38%;
+        height: 38%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #111827;
+        color: #fff;
+        border: 2px solid rgba(255, 255, 255, 0.95);
+        font-size: clamp(12px, 34%, 24px);
+        font-weight: 900;
+        line-height: 1;
+        box-shadow: 0 6px 12px rgba(15, 23, 42, 0.28);
+      }
+
+      .preview-die {
+        position: static;
+        width: 56px;
+        height: 56px;
+        transform: none !important;
+      }
+
+      .dice-selected-preview {
+        grid-template-columns: 56px 1fr;
+      }
+
+      @keyframes diceRoll {
+        0% {
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1);
+          filter: blur(0);
+        }
+        15% {
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(45deg) rotateY(60deg) rotateZ(30deg) scale(1.1);
+          filter: blur(0.5px);
+        }
+        30% {
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(120deg) rotateY(150deg) rotateZ(90deg) scale(1.12);
+          filter: blur(0.8px);
+        }
+        50% {
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(200deg) rotateY(240deg) rotateZ(180deg) scale(1.08);
+          filter: blur(1px);
+        }
+        70% {
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(300deg) rotateY(320deg) rotateZ(270deg) scale(1.05);
+          filter: blur(0.6px);
+        }
+        85% {
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(350deg) rotateY(340deg) rotateZ(330deg) scale(1.02);
+          filter: blur(0.3px);
+        }
+        100% {
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1);
+          filter: blur(0);
+        }
+      }
+
       .empty-note {
         padding: 12px;
         border-radius: var(--radius-md);
@@ -651,7 +877,9 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
   boardSrc: string | null = null;
   tokenLibrary: TokenLibraryItem[] = [];
   tokens: BoardToken[] = [];
+  dice: BoardDice[] = [];
   selectedTokenId: string | null = null;
+  selectedDiceId: string | null = null;
 
   isBoardFullscreen = false;
 
@@ -662,7 +890,18 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
   private boardMetrics = { width: 0, height: 0 };
   private resizeObserver: ResizeObserver | null = null;
 
-  private dragging: { tokenId: string; pointerId: number } | null = null;
+  private dragging:
+    | {
+        kind: 'token' | 'dice';
+        id: string;
+        pointerId: number;
+        startClientX: number;
+        startClientY: number;
+        offsetXRel: number;
+        offsetYRel: number;
+        moved: boolean;
+      }
+    | null = null;
 
   @HostListener('document:fullscreenchange')
   onFullscreenChange(): void {
@@ -685,8 +924,16 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
     return [...this.tokens].sort((a, b) => a.z - b.z);
   }
 
+  get diceSorted(): BoardDice[] {
+    return [...this.dice].sort((a, b) => a.z - b.z);
+  }
+
   get selectedToken(): BoardToken | null {
     return this.tokens.find((t) => t.id === this.selectedTokenId) ?? null;
+  }
+
+  get selectedDice(): BoardDice | null {
+    return this.dice.find((d) => d.id === this.selectedDiceId) ?? null;
   }
 
   trackById(_: number, item: { id: string }): string {
@@ -747,7 +994,27 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
       z: nextZ,
     };
     this.tokens.push(token);
-    this.selectedTokenId = token.id;
+    this.selectToken(token.id);
+  }
+
+  addDice(): void {
+    if (this.dice.length > 0) {
+      this.selectDice(this.dice[0].id);
+      return;
+    }
+
+    const die: BoardDice = {
+      id: this.uid('die'),
+      value: 1,
+      x: 0.5,
+      y: 0.5,
+      sizeRel: 0.045,
+      rotationDeg: 0,
+      z: this.getMaxZ() + 1,
+      rolling: false,
+    };
+    this.dice = [die];
+    this.selectDice(die.id);
   }
 
   toggleBoardFullscreen(): void {
@@ -767,40 +1034,102 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
 
   selectToken(tokenId: string | null): void {
     this.selectedTokenId = tokenId;
+    if (tokenId) this.selectedDiceId = null;
+  }
+
+  selectDice(diceId: string | null): void {
+    this.selectedDiceId = diceId;
+    if (diceId) this.selectedTokenId = null;
   }
 
   onSurfacePointerDown(evt: PointerEvent): void {
     if (this.dragging) return;
     // Click/tap the surface (or board image) to deselect.
     this.selectToken(null);
+    this.selectDice(null);
   }
 
   onTokenPointerDown(evt: PointerEvent, token: BoardToken): void {
     evt.preventDefault();
     evt.stopPropagation();
 
-    this.selectedTokenId = token.id;
+    this.selectToken(token.id);
     this.bringToFront(token.id);
 
     const el = evt.currentTarget as HTMLElement | null;
     if (el) el.setPointerCapture(evt.pointerId);
 
-    this.dragging = { tokenId: token.id, pointerId: evt.pointerId };
-    this.updateTokenPositionFromClient(evt.clientX, evt.clientY, token.id);
+    const pointerRel = this.getRelativePointFromClient(evt.clientX, evt.clientY);
+    this.dragging = {
+      kind: 'token',
+      id: token.id,
+      pointerId: evt.pointerId,
+      startClientX: evt.clientX,
+      startClientY: evt.clientY,
+      offsetXRel: token.x - pointerRel.x,
+      offsetYRel: token.y - pointerRel.y,
+      moved: false,
+    };
+  }
+
+  onDicePointerDown(evt: PointerEvent, die: BoardDice): void {
+    evt.preventDefault();
+    evt.stopPropagation();
+
+    this.selectDice(die.id);
+    this.bringDiceToFront(die.id);
+
+    const el = evt.currentTarget as HTMLElement | null;
+    if (el) el.setPointerCapture(evt.pointerId);
+
+    const pointerRel = this.getRelativePointFromClient(evt.clientX, evt.clientY);
+    this.dragging = {
+      kind: 'dice',
+      id: die.id,
+      pointerId: evt.pointerId,
+      startClientX: evt.clientX,
+      startClientY: evt.clientY,
+      offsetXRel: die.x - pointerRel.x,
+      offsetYRel: die.y - pointerRel.y,
+      moved: false,
+    };
   }
 
   @HostListener('window:pointermove', ['$event'])
   onWindowPointerMove(evt: PointerEvent): void {
     if (!this.dragging) return;
     if (evt.pointerId !== this.dragging.pointerId) return;
-    this.updateTokenPositionFromClient(evt.clientX, evt.clientY, this.dragging.tokenId);
+    const dx = evt.clientX - this.dragging.startClientX;
+    const dy = evt.clientY - this.dragging.startClientY;
+    if (Math.hypot(dx, dy) > 5) this.dragging.moved = true;
+
+    if (this.dragging.kind === 'token') {
+      this.updateTokenPositionFromClient(
+        evt.clientX,
+        evt.clientY,
+        this.dragging.id,
+        this.dragging.offsetXRel,
+        this.dragging.offsetYRel,
+      );
+      return;
+    }
+    this.updateDicePositionFromClient(
+      evt.clientX,
+      evt.clientY,
+      this.dragging.id,
+      this.dragging.offsetXRel,
+      this.dragging.offsetYRel,
+    );
   }
 
   @HostListener('window:pointerup', ['$event'])
   onWindowPointerUp(evt: PointerEvent): void {
     if (!this.dragging) return;
     if (evt.pointerId !== this.dragging.pointerId) return;
+    const wasClick = this.dragging.kind === 'dice' && !this.dragging.moved;
+    const diceId = this.dragging.id;
     this.dragging = null;
+    if (wasClick) this.rollDice(diceId);
   }
 
   @HostListener('window:pointercancel', ['$event'])
@@ -816,10 +1145,59 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
     return Math.max(24, Math.round(token.sizeRel * width));
   }
 
+  getDiceWidthPx(die: BoardDice): number {
+    const width = this.boardMetrics.width;
+    if (width <= 0) return 58;
+    return Math.max(34, Math.round(die.sizeRel * width));
+  }
+
+  getDicePips(value: number): Array<{ row: number; col: number }> {
+    const pipMap: Record<number, Array<{ row: number; col: number }>> = {
+      1: [{ row: 2, col: 2 }],
+      2: [
+        { row: 1, col: 1 },
+        { row: 3, col: 3 },
+      ],
+      3: [
+        { row: 1, col: 1 },
+        { row: 2, col: 2 },
+        { row: 3, col: 3 },
+      ],
+      4: [
+        { row: 1, col: 1 },
+        { row: 1, col: 3 },
+        { row: 3, col: 1 },
+        { row: 3, col: 3 },
+      ],
+      5: [
+        { row: 1, col: 1 },
+        { row: 1, col: 3 },
+        { row: 2, col: 2 },
+        { row: 3, col: 1 },
+        { row: 3, col: 3 },
+      ],
+      6: [
+        { row: 1, col: 1 },
+        { row: 1, col: 3 },
+        { row: 2, col: 1 },
+        { row: 2, col: 3 },
+        { row: 3, col: 1 },
+        { row: 3, col: 3 },
+      ],
+    };
+    return pipMap[this.clamp(Math.round(value), 1, 6)] ?? pipMap[1];
+  }
+
   touchToken(tokenId: string): void {
     // noop: called to keep template interactions explicit.
     const t = this.tokens.find((x) => x.id === tokenId);
     if (!t) return;
+  }
+
+  touchDice(diceId: string): void {
+    // noop: called to keep template interactions explicit.
+    const d = this.dice.find((x) => x.id === diceId);
+    if (!d) return;
   }
 
   nudgeRotate(delta: number): void {
@@ -842,6 +1220,12 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
     t.z = this.getMaxZ() + 1;
   }
 
+  bringDiceToFront(diceId: string): void {
+    const d = this.dice.find((x) => x.id === diceId);
+    if (!d) return;
+    d.z = this.getMaxZ() + 1;
+  }
+
   sendToBack(tokenId: string): void {
     const t = this.tokens.find((x) => x.id === tokenId);
     if (!t) return;
@@ -853,9 +1237,47 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
     if (this.selectedTokenId === tokenId) this.selectedTokenId = null;
   }
 
+  deleteDice(diceId: string): void {
+    this.dice = this.dice.filter((d) => d.id !== diceId);
+    if (this.selectedDiceId === diceId) this.selectedDiceId = null;
+  }
+
   clearTokens(): void {
     this.tokens = [];
     this.selectedTokenId = null;
+  }
+
+  clearDice(): void {
+    this.dice = [];
+    this.selectedDiceId = null;
+  }
+
+  rollDice(diceId: string): void {
+    const die = this.dice.find((d) => d.id === diceId);
+    if (!die || die.rolling) return;
+
+    die.rolling = true;
+    const originalRotation = die.rotationDeg;
+    let ticks = 0;
+    const interval = window.setInterval(() => {
+      const current = this.dice.find((d) => d.id === diceId);
+      if (!current) {
+        window.clearInterval(interval);
+        return;
+      }
+      current.value = this.randomDiceValue();
+      current.rotationDeg = this.clamp(originalRotation + (ticks % 2 === 0 ? 14 : -14), -180, 180);
+      ticks++;
+    }, 85);
+
+    window.setTimeout(() => {
+      window.clearInterval(interval);
+      const current = this.dice.find((d) => d.id === diceId);
+      if (!current) return;
+      current.value = this.randomDiceValue();
+      current.rotationDeg = originalRotation;
+      current.rolling = false;
+    }, 700);
   }
 
   clearBoard(): void {
@@ -867,7 +1289,9 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
     this.boardSrc = null;
     this.tokenLibrary = [];
     this.tokens = [];
+    this.dice = [];
     this.selectedTokenId = null;
+    this.selectedDiceId = null;
     this.saveLabel = 'My Board';
     this.selectedSavedKey = '';
     this.refreshBoardMetrics();
@@ -883,6 +1307,7 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
       boardSrc: this.boardSrc,
       library: this.tokenLibrary,
       tokens: this.tokens,
+      dice: this.dice.map((d) => ({ ...d, rolling: false })),
     };
     localStorage.setItem(key, JSON.stringify(state));
     this.refreshSavedStates();
@@ -902,7 +1327,9 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
     this.boardSrc = parsed.boardSrc ?? null;
     this.tokenLibrary = Array.isArray(parsed.library) ? (parsed.library as TokenLibraryItem[]) : [];
     this.tokens = Array.isArray(parsed.tokens) ? (parsed.tokens as BoardToken[]) : [];
+    this.dice = this.normalizeDice(parsed.dice);
     this.selectedTokenId = null;
+    this.selectedDiceId = null;
     this.saveLabel = parsed.label ?? this.saveLabel;
     this.refreshBoardMetrics();
   }
@@ -969,16 +1396,63 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
     this.resizeObserver.observe(el);
   }
 
-  private updateTokenPositionFromClient(clientX: number, clientY: number, tokenId: string): void {
+  private updateTokenPositionFromClient(
+    clientX: number,
+    clientY: number,
+    tokenId: string,
+    offsetXRel = 0,
+    offsetYRel = 0,
+  ): void {
     const token = this.tokens.find((t) => t.id === tokenId);
+    if (!token) return;
+
+    const point = this.getRelativePointFromClient(clientX, clientY);
+    token.x = this.clamp(point.x + offsetXRel, 0, 1);
+    token.y = this.clamp(point.y + offsetYRel, 0, 1);
+  }
+
+  private updateDicePositionFromClient(
+    clientX: number,
+    clientY: number,
+    diceId: string,
+    offsetXRel = 0,
+    offsetYRel = 0,
+  ): void {
+    const die = this.dice.find((d) => d.id === diceId);
+    if (!die) return;
+
+    const point = this.getRelativePointFromClient(clientX, clientY);
+    die.x = this.clamp(point.x + offsetXRel, 0, 1);
+    die.y = this.clamp(point.y + offsetYRel, 0, 1);
+  }
+
+  private getRelativePointFromClient(clientX: number, clientY: number): { x: number; y: number } {
     const surface = this.boardSurfaceRef?.nativeElement;
-    if (!token || !surface) return;
+    if (!surface) return { x: 0.5, y: 0.5 };
 
     const rect = surface.getBoundingClientRect();
-    const x = (clientX - rect.left) / rect.width;
-    const y = (clientY - rect.top) / rect.height;
-    token.x = this.clamp(x, 0, 1);
-    token.y = this.clamp(y, 0, 1);
+    return {
+      x: rect.width > 0 ? (clientX - rect.left) / rect.width : 0.5,
+      y: rect.height > 0 ? (clientY - rect.top) / rect.height : 0.5,
+    };
+  }
+
+  private normalizeDice(value: unknown): BoardDice[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((item) => item as Partial<BoardDice>)
+      .filter((item) => typeof item.id === 'string')
+      .slice(0, 1)
+      .map((item) => ({
+        id: item.id ?? this.uid('die'),
+        value: this.clamp(Math.round(Number(item.value) || 1), 1, 6),
+        x: this.clamp(Number(item.x) || 0.5, 0, 1),
+        y: this.clamp(Number(item.y) || 0.5, 0, 1),
+        sizeRel: this.clamp(Number(item.sizeRel) || 0.075, 0.04, 0.16),
+        rotationDeg: this.clamp(Number(item.rotationDeg) || 0, -180, 180),
+        z: Number.isFinite(Number(item.z)) ? Number(item.z) : this.getMaxZ() + 1,
+        rolling: false,
+      }));
   }
 
   private readFileAsDataUrl(file: File): Promise<string> {
@@ -1013,11 +1487,17 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
     return Math.min(max, Math.max(min, value));
   }
 
+  private randomDiceValue(): number {
+    return Math.floor(Math.random() * 6) + 1;
+  }
+
   private getMaxZ(): number {
-    return this.tokens.reduce((m, t) => Math.max(m, t.z), 0);
+    const tokenMax = this.tokens.reduce((m, t) => Math.max(m, t.z), 0);
+    return this.dice.reduce((m, d) => Math.max(m, d.z), tokenMax);
   }
 
   private getMinZ(): number {
-    return this.tokens.reduce((m, t) => Math.min(m, t.z), 0);
+    const tokenMin = this.tokens.reduce((m, t) => Math.min(m, t.z), 0);
+    return this.dice.reduce((m, d) => Math.min(m, d.z), tokenMin);
   }
 }
