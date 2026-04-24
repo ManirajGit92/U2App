@@ -63,7 +63,9 @@ type BoardDice = {
 
         <div class="header-actions">
           <a class="btn-outline" routerLink="/real-life-steps/game">Back to Real Life Steps</a>
-          <button class="btn-outline" type="button" (click)="resetWorkspace()">Reset Workspace</button>
+          <button class="btn-outline" type="button" (click)="resetWorkspace()">
+            Reset Workspace
+          </button>
         </div>
       </div>
 
@@ -88,12 +90,20 @@ type BoardDice = {
           <div class="form-group mt-4">
             <label>Token Images</label>
             <input type="file" accept="image/*" multiple (change)="onTokenLibraryUpload($event)" />
-            <p class="hint">Tip: Upload multiple icons (coins, cars, people). Click a token below to add it to the board.</p>
+            <p class="hint">
+              Tip: Upload multiple icons (coins, cars, people). Click a token below to add it to the
+              board.
+            </p>
           </div>
 
           <div class="form-group mt-4">
             <label>Dice</label>
-            <button class="btn-primary full" type="button" [disabled]="dice.length > 0" (click)="addDice()">
+            <button
+              class="btn-primary full"
+              type="button"
+              [disabled]="dice.length > 0"
+              (click)="addDice()"
+            >
               Add Dice
             </button>
             <div class="row mt-2">
@@ -142,10 +152,20 @@ type BoardDice = {
               </option>
             </select>
             <div class="row mt-2">
-              <button class="btn-outline" type="button" [disabled]="!selectedSavedKey" (click)="loadState()">
+              <button
+                class="btn-outline"
+                type="button"
+                [disabled]="!selectedSavedKey"
+                (click)="loadState()"
+              >
                 Load
               </button>
-              <button class="btn-outline danger" type="button" [disabled]="!selectedSavedKey" (click)="deleteSavedState()">
+              <button
+                class="btn-outline danger"
+                type="button"
+                [disabled]="!selectedSavedKey"
+                (click)="deleteSavedState()"
+              >
                 Delete
               </button>
             </div>
@@ -165,10 +185,20 @@ type BoardDice = {
               <button class="btn-outline" type="button" (click)="toggleBoardFullscreen()">
                 {{ isBoardFullscreen ? 'Exit Full Screen' : 'Full Screen' }}
               </button>
-              <button class="btn-outline" type="button" [disabled]="tokens.length === 0" (click)="clearTokens()">
+              <button
+                class="btn-outline"
+                type="button"
+                [disabled]="tokens.length === 0"
+                (click)="clearTokens()"
+              >
                 Clear Tokens
               </button>
-              <button class="btn-outline" type="button" [disabled]="dice.length === 0" (click)="clearDice()">
+              <button
+                class="btn-outline"
+                type="button"
+                [disabled]="dice.length === 0"
+                (click)="clearDice()"
+              >
                 Clear Dice
               </button>
             </div>
@@ -259,7 +289,7 @@ type BoardDice = {
                 [(ngModel)]="t.sizeRel"
                 (ngModelChange)="touchToken(t.id)"
               />
-              <div class="hint">{{ (t.sizeRel * 100) | number:'1.0-1' }}% of board width</div>
+              <div class="hint">{{ t.sizeRel * 100 | number: '1.0-1' }}% of board width</div>
             </div>
 
             <div class="form-group mt-3">
@@ -282,13 +312,19 @@ type BoardDice = {
             <div class="form-group mt-3">
               <label>Layer</label>
               <div class="row">
-                <button class="btn-outline" type="button" (click)="sendToBack(t.id)">Send to back</button>
-                <button class="btn-outline" type="button" (click)="bringToFront(t.id)">Bring to front</button>
+                <button class="btn-outline" type="button" (click)="sendToBack(t.id)">
+                  Send to back
+                </button>
+                <button class="btn-outline" type="button" (click)="bringToFront(t.id)">
+                  Bring to front
+                </button>
               </div>
             </div>
 
             <div class="form-group mt-4">
-              <button class="btn-outline danger full" type="button" (click)="deleteToken(t.id)">Delete Token</button>
+              <button class="btn-outline danger full" type="button" (click)="deleteToken(t.id)">
+                Delete Token
+              </button>
             </div>
           </ng-container>
 
@@ -324,13 +360,17 @@ type BoardDice = {
                 [(ngModel)]="d.sizeRel"
                 (ngModelChange)="touchDice(d.id)"
               />
-              <div class="hint">{{ (d.sizeRel * 100) | number:'1.0-1' }}% of board width</div>
+              <div class="hint">{{ d.sizeRel * 100 | number: '1.0-1' }}% of board width</div>
             </div>
 
             <div class="form-group mt-4">
               <div class="row">
-                <button class="btn-primary" type="button" (click)="rollDice(d.id)">Roll Dice</button>
-                <button class="btn-outline danger" type="button" (click)="deleteDice(d.id)">Delete Dice</button>
+                <button class="btn-primary" type="button" (click)="rollDice(d.id)">
+                  Roll Dice
+                </button>
+                <button class="btn-outline danger" type="button" (click)="deleteDice(d.id)">
+                  Delete Dice
+                </button>
               </div>
             </div>
           </ng-container>
@@ -695,7 +735,12 @@ type BoardDice = {
         border: 1px solid rgba(15, 23, 42, 0.18);
         border-radius: 14%;
         background:
-          radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.16) 34%, transparent 35%),
+          radial-gradient(
+            circle at 30% 24%,
+            rgba(255, 255, 255, 0.96),
+            rgba(255, 255, 255, 0.16) 34%,
+            transparent 35%
+          ),
           linear-gradient(145deg, #ffffff 0%, #eef3f8 45%, #c7d2df 100%);
         box-shadow:
           0 14px 24px rgba(15, 23, 42, 0.28),
@@ -774,31 +819,38 @@ type BoardDice = {
 
       @keyframes diceRoll {
         0% {
-          transform: translate(-50%, -50%) perspective(1000px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1);
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(0deg) rotateY(0deg)
+            rotateZ(0deg) scale(1);
           filter: blur(0);
         }
         15% {
-          transform: translate(-50%, -50%) perspective(1000px) rotateX(45deg) rotateY(60deg) rotateZ(30deg) scale(1.1);
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(45deg) rotateY(60deg)
+            rotateZ(30deg) scale(1.1);
           filter: blur(0.5px);
         }
         30% {
-          transform: translate(-50%, -50%) perspective(1000px) rotateX(120deg) rotateY(150deg) rotateZ(90deg) scale(1.12);
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(120deg) rotateY(150deg)
+            rotateZ(90deg) scale(1.12);
           filter: blur(0.8px);
         }
         50% {
-          transform: translate(-50%, -50%) perspective(1000px) rotateX(200deg) rotateY(240deg) rotateZ(180deg) scale(1.08);
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(200deg) rotateY(240deg)
+            rotateZ(180deg) scale(1.08);
           filter: blur(1px);
         }
         70% {
-          transform: translate(-50%, -50%) perspective(1000px) rotateX(300deg) rotateY(320deg) rotateZ(270deg) scale(1.05);
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(300deg) rotateY(320deg)
+            rotateZ(270deg) scale(1.05);
           filter: blur(0.6px);
         }
         85% {
-          transform: translate(-50%, -50%) perspective(1000px) rotateX(350deg) rotateY(340deg) rotateZ(330deg) scale(1.02);
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(350deg) rotateY(340deg)
+            rotateZ(330deg) scale(1.02);
           filter: blur(0.3px);
         }
         100% {
-          transform: translate(-50%, -50%) perspective(1000px) rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1);
+          transform: translate(-50%, -50%) perspective(1000px) rotateX(360deg) rotateY(360deg)
+            rotateZ(360deg) scale(1);
           filter: blur(0);
         }
       }
@@ -890,18 +942,16 @@ export class CustomBoardCreatorComponent implements AfterViewInit, OnDestroy {
   private boardMetrics = { width: 0, height: 0 };
   private resizeObserver: ResizeObserver | null = null;
 
-  private dragging:
-    | {
-        kind: 'token' | 'dice';
-        id: string;
-        pointerId: number;
-        startClientX: number;
-        startClientY: number;
-        offsetXRel: number;
-        offsetYRel: number;
-        moved: boolean;
-      }
-    | null = null;
+  private dragging: {
+    kind: 'token' | 'dice';
+    id: string;
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    offsetXRel: number;
+    offsetYRel: number;
+    moved: boolean;
+  } | null = null;
 
   @HostListener('document:fullscreenchange')
   onFullscreenChange(): void {
