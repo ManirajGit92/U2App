@@ -1,0 +1,142 @@
+<div class="flipbook-wrapper" [class.fullscreen]="isFullscreen">
+  
+  <div class="control-panel top-bar">
+    <div class="tb-left">
+      <h2>Interactive Flip Book</h2>
+      <div class="upload-btn-wrapper">
+        <button class="btn btn-primary">Upload Excel</button>
+        <input type="file" (change)="onFileChange($event)" accept=".xls,.xlsx" />
+      </div>
+      <button class="btn" (click)="downloadTemplate()">Download Template</button>
+      <button class="btn btn-outline" (click)="resetBook()">Reset Demo</button>
+    </div>
+    <div class="tb-right">
+      <button class="btn icon-btn" (click)="toggleMute()" [title]="isMuted ? 'Unmute' : 'Mute'">
+        <i class="fa fa-volume-up" *ngIf="!isMuted"></i>
+        <i class="fa fa-volume-mute" *ngIf="isMuted"></i> 
+        {{ isMuted ? 'Muted' : 'Voice On' }}
+      </button>
+      <button class="btn icon-btn" (click)="replayVoice()" title="Replay Narraration">
+        <i class="fa fa-sync"></i> Replay Voice
+      </button>
+      <button class="btn icon-btn" (click)="toggleFullscreen()" title="Toggle Fullscreen">
+        <i class="fa fa-expand" *ngIf="!isFullscreen"></i>
+        <i class="fa fa-compress" *ngIf="isFullscreen"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="error-banner" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- BOOK VIEWER -->
+  <div class="viewer-area">
+    <div class="loading-overlay" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>Processing Flipbook...</p>
+    </div>
+
+    <!-- PURE CSS 3D BOOK -->
+    <div class="book-container">
+      <div class="book" 
+           #bookContainer 
+           [style.--zoom]="zoomLevel"
+           [class.open]="currentPaperIndex > 0 && currentPaperIndex < physicalPages.length"
+           [class.closed-front]="currentPaperIndex === 0"
+           [class.closed-back]="currentPaperIndex === physicalPages.length">
+        
+        <div class="paper" 
+             *ngFor="let paper of physicalPages; let i = index"
+             [class.flipped]="i < currentPaperIndex"
+             [style.z-index]="i < currentPaperIndex ? i : physicalPages.length - i">
+          
+          <!-- FRONT SIDES (Right page when viewed flat) -->
+          <div class="front">
+             <div class="page-content" *ngIf="paper.front as page">
+               <div class="sno" *ngIf="page.sno">{{ page.sno }}</div>
+               
+               <ng-container *ngIf="page.isImage">
+                  <img [src]="page.rawContent" class="content-img" alt="Page {{page.sno}}" />
+               </ng-container>
+
+               <ng-container *ngIf="page.isHtml && page.safeHtml">
+                  <div class="content-html" [innerHTML]="page.safeHtml"></div>
+               </ng-container>
+
+               <ng-container *ngIf="page.isText">
+                  <div class="content-text">{{ page.rawContent }}</div>
+               </ng-container>
+
+             </div>
+             <!-- Empty page fallback -->
+             <div class="page-empty" *ngIf="!paper.front">BLANK PAGE</div>
+          </div>
+          
+          <!-- BACK SIDES (Left page when viewed flat) -->
+          <div class="back">
+             <div class="page-content" *ngIf="paper.back as page">
+               <div class="sno" *ngIf="page.sno">{{ page.sno }}</div>
+               
+               <ng-container *ngIf="page.isImage">
+                  <img [src]="page.rawContent" class="content-img" alt="Page {{page.sno}}" />
+               </ng-container>
+
+               <ng-container *ngIf="page.isHtml && page.safeHtml">
+                  <div class="content-html" [innerHTML]="page.safeHtml"></div>
+               </ng-container>
+
+               <ng-container *ngIf="page.isText">
+                  <div class="content-text">{{ page.rawContent }}</div>
+               </ng-container>
+
+             </div>
+             <div class="page-empty" *ngIf="!paper.back">BLANK PAGE</div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM CONTROLS -->
+  <div class="control-panel bottom-bar">
+    <div class="page-stats">
+      Pages: {{ physicalPages.length > 0 ? (currentPaperIndex * 2) : 0 }} / {{ pages.length }}
+    </div>
+
+    <div class="navigation-controls">
+      <button class="btn icon-btn" (click)="firstPage()" [disabled]="currentPaperIndex === 0">
+        &laquo; First
+      </button>
+      <button class="btn icon-btn" (click)="prevPage()" [disabled]="currentPaperIndex === 0">
+        &lsaquo; Prev
+      </button>
+
+      <button class="btn btn-primary btn-play" (click)="toggleAutoPlay()">
+        {{ isPlaying ? 'Pause' : 'Auto Play' }}
+      </button>
+
+      <button class="btn icon-btn" (click)="nextPage()" [disabled]="currentPaperIndex === physicalPages.length">
+        Next &rsaquo;
+      </button>
+      <button class="btn icon-btn" (click)="lastPage()" [disabled]="currentPaperIndex === physicalPages.length">
+        Last &raquo;
+      </button>
+    </div>
+
+    <div class="zoom-controls">
+      <label>Speed:</label>
+      <input type="range" class="speed-slider" min="1000" max="10000" step="500" 
+             [(ngModel)]="playSpeedMs" (change)="isPlaying ? startInterval() : null" title="Auto Play Speed (ms)">
+      
+      <button class="btn icon-btn" (click)="zoomOut()" [disabled]="zoomLevel <= 0.4">
+        &minus;
+      </button>
+      <span class="zoom-level">{{ zoomLevel | percent }}</span>
+      <button class="btn icon-btn" (click)="zoomIn()" [disabled]="zoomLevel >= 2.5">
+        &plus;
+      </button>
+    </div>
+  </div>
+</div>

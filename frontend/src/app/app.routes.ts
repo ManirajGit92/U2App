@@ -159,5 +159,13 @@ export const routes: Routes = [
         (m) => m.EasyDocumentsComponent
       ),
   },
+  {
+    path: 'flip-book',
+    data: { navLabel: 'Flip Book', showInNav: true },
+    loadComponent: () =>
+      import('./features/flip-book/flip-book.component').then(
+        (m) => m.FlipBookComponent
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

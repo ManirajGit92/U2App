@@ -572,5 +572,15 @@ export class HomeComponent {
       available: true,
       color: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(168,85,247,0.2))',
     },
+    {
+      id: 'flip-book',
+      title: 'Flip Book Viewer',
+      description:
+        'Create interactive animated flip books from an Excel template with automatic voice narration.',
+      icon: '📖',
+      route: '/flip-book',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.2))',
+    },
   ];
 }

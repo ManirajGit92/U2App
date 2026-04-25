@@ -1,0 +1,315 @@
+// Dark/Light Theme Basic Variables (fallback mapped to U2App usage if needed)
+:host {
+  display: block;
+  height: 100vh;
+  width: 100%;
+  --fb-bg: #1e1e24;
+  --fb-panel-bg: #2b2b36;
+  --fb-text: #f0f0f0;
+  --fb-border: #444;
+  --fb-primary: #ff5722;
+  --fb-primary-hover: #e64a19;
+  --fb-page-bg: #fff;
+  --fb-page-text: #333;
+}
+
+@media (prefers-color-scheme: light) {
+  :host {
+    --fb-bg: #f5f5f5;
+    --fb-panel-bg: #fff;
+    --fb-text: #222;
+    --fb-border: #ccc;
+    --fb-page-bg: #fff;
+    --fb-page-text: #222;
+  }
+}
+
+.flipbook-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  background: var(--fb-bg);
+  color: var(--fb-text);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  overflow: hidden;
+
+  &.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+  }
+}
+
+.control-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: var(--fb-panel-bg);
+  border-bottom: 1px solid var(--fb-border);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  z-index: 10;
+  
+  &.bottom-bar {
+    border-bottom: none;
+    border-top: 1px solid var(--fb-border);
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+  }
+}
+
+.tb-left, .tb-right, .navigation-controls, .zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-right: 20px;
+}
+
+.btn {
+  background: transparent;
+  color: var(--fb-text);
+  border: 1px solid var(--fb-border);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.btn-primary {
+    background: var(--fb-primary);
+    color: #fff;
+    border-color: var(--fb-primary);
+
+    &:hover:not(:disabled) {
+      background: var(--fb-primary-hover);
+    }
+  }
+}
+
+.upload-btn-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+
+  input[type=file] {
+    font-size: 100px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+.error-banner {
+  background: #ff5252;
+  color: #fff;
+  padding: 10px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* =======================================================
+   PURE CSS 3D BOOK VIEWER
+======================================================== */
+.viewer-area {
+  flex: 1;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective: 2000px; /* Crucial for 3D depth */
+  overflow: hidden;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+  }
+}
+
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* The Book itself */
+.book-container {
+  width: 0;
+  height: 70vh;
+  max-height: 800px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Spine anchor is visually 0-width in center */
+}
+
+.book {
+  position: absolute;
+  left: 0;
+  width: 45vw;         /* Single page width */
+  height: 100%;
+  max-width: 600px;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  transition: transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
+  will-change: transform;
+
+  &.closed-front {
+    transform: translateX(-50%) scale(var(--zoom, 1));
+  }
+  &.open {
+    transform: translateX(0%) scale(var(--zoom, 1));
+  }
+  &.closed-back {
+    transform: translateX(50%) scale(var(--zoom, 1));
+  }
+}
+
+
+.paper {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  perspective: 2000px;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  transition: transform 1.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+  
+  /* Realistic shadow for unturned pages */
+  box-shadow: 0 0 10px rgba(0,0,0,0.1), inset 5px 0 20px rgba(0,0,0,0.05);
+
+  &.flipped {
+    transform: rotateY(-180deg);
+  }
+}
+
+.front, .back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-color: var(--fb-page-bg);
+  backface-visibility: hidden;
+  overflow: hidden;
+  border-radius: 2px 10px 10px 2px;
+  
+  /* Inner shadow to simulate book binding */
+  box-shadow: inset 10px 0 20px rgba(0,0,0,0.1);
+}
+
+.back {
+  transform: rotateY(180deg);
+  border-radius: 10px 2px 2px 10px;
+  /* Reverse inner shadow for back page */
+  box-shadow: inset -10px 0 20px rgba(0,0,0,0.1);
+}
+
+/* Page Content Formatting */
+.page-content {
+  padding: 40px;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--fb-page-text);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.page-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #aaa;
+  font-size: 1.5rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.sno {
+  position: absolute;
+  bottom: 20px;
+  font-size: 0.9rem;
+  color: #888;
+}
+
+.front .sno { right: 20px; }
+.back .sno { left: 20px; }
+
+.content-img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill; /* Stretch to fill completely, removing blank space */
+  margin: auto;
+}
+
+.content-text {
+  flex: 1;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  overflow: hidden; /* Hide scrollbars */
+  text-align: center;
+}
+
+.content-html {
+  flex: 1;
+  overflow: hidden; /* Hide scrollbars */
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  align-items: stretch;
+  
+  h1, h2, h3, p {
+    margin-top: 0;
+  }
+  
+  /* Ensure images inside HTML also stretch correctly */
+  img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+}
+
+.speed-slider {
+  width: 100px;
+}
