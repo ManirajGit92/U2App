@@ -15,8 +15,14 @@ export const REAL_LIFE_STEPS_ROUTES: Routes = [
     path: 'custom-board-creator',
     loadComponent: () =>
       import('./custom-board-creator/custom-board-creator.component').then(
-        (m) => m.CustomBoardCreatorComponent
+        (m) => m.CustomBoardCreatorComponent,
+      ),
+  },
+  {
+    path: 'number-chess-battle',
+    loadComponent: () =>
+      import('./number-chess-battle/number-chess-battle.component').then(
+        (m) => m.NumberChessBattleComponent,
       ),
   },
 ];
-

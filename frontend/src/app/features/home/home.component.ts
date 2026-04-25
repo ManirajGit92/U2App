@@ -47,7 +47,7 @@ interface Tool {
         </div>
         <div class="hero-stats">
           <div class="stat">
-            <span class="stat-number">9+</span>
+            <span class="stat-number">20+</span>
             <span class="stat-label">Tools</span>
           </div>
           <div class="stat-divider"></div>
@@ -561,6 +561,16 @@ export class HomeComponent {
       route: '/easy-documents',
       available: true,
       color: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.2))',
+    },
+    {
+      id: 'number-chess-battle',
+      title: 'Number Chess Battle',
+      description:
+        'Strategic board game combining chess mechanics with mathematics. Move pieces, perform arithmetic attacks, and capture the enemy king to win!',
+      icon: '♟️',
+      route: '/real-life-steps/number-chess-battle',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(168,85,247,0.2))',
     },
   ];
 }
