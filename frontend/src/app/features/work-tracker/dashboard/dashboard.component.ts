@@ -1,9 +1,16 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WorkTrackerService, DeveloperTask, HourlyUpdateStatus, HourlyWorkUpdate, ReleaseTrack } from '../work-tracker.service';
-import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
+import { BehaviorSubject, Subscription, combineLatest, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { NotificationReminder, NotificationReminderService } from '../../../core/services/notification-reminder.service';
+
+interface HourlyReminderPopup {
+  hour: string;
+  taskDescription: string;
+  status: string;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -216,6 +223,13 @@ import { map } from 'rxjs/operators';
         <div class="table-header">
           <h2>Hourly Updates Data</h2>
           <div class="table-actions">
+            <button class="btn-table secondary" type="button" (click)="enableHourlyReminders()">
+              {{ reminderPermissionLabel }}
+            </button>
+            <label class="voice-toggle">
+              <input type="checkbox" [(ngModel)]="voiceRemindersEnabled" (ngModelChange)="rescheduleHourlyReminders()">
+              Voice Reminder
+            </label>
             <button class="btn-table" type="button" (click)="openHourlyModal()">Add Update</button>
             <button class="btn-table secondary" type="button" (click)="toggleHiddenHourlyRows()">
               {{ showHiddenHourlyRows ? 'Hide Hidden Rows' : 'Show Hidden Rows' }}
@@ -628,6 +642,31 @@ import { map } from 'rxjs/operators';
         </div>
       }
 
+      @if (activeHourlyReminderPopup) {
+        <div class="reminder-popup-backdrop" role="presentation">
+          <section class="reminder-popup" role="alertdialog" aria-modal="true" aria-labelledby="reminderPopupTitle">
+            <div class="reminder-popup-header">
+              <h2 id="reminderPopupTitle">Hourly Update Reminder</h2>
+              <button class="modal-close" type="button" (click)="closeHourlyReminderPopup()" aria-label="Close reminder popup">x</button>
+            </div>
+            <div class="reminder-popup-body">
+              <p class="reminder-time">{{ activeHourlyReminderPopup.hour }}</p>
+              <div class="reminder-detail">
+                <span>Task Description</span>
+                <strong>{{ activeHourlyReminderPopup.taskDescription }}</strong>
+              </div>
+              <div class="reminder-detail">
+                <span>Status</span>
+                <strong>{{ activeHourlyReminderPopup.status }}</strong>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button class="btn-table" type="button" (click)="closeHourlyReminderPopup()">Close</button>
+            </div>
+          </section>
+        </div>
+      }
+
     </div>
   `,
   styles: [`
@@ -989,6 +1028,17 @@ import { map } from 'rxjs/operators';
       flex-wrap: wrap;
     }
 
+    .voice-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin: 0.5rem;
+      color: #4a5568;
+      font-size: 0.85rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
     .btn-table, .row-button {
       border: none;
       border-radius: 8px;
@@ -1231,6 +1281,70 @@ import { map } from 'rxjs/operators';
       color: #4a5568;
     }
 
+    .reminder-popup-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1300;
+      display: grid;
+      place-items: center;
+      padding: 0.5rem;
+      background: rgba(26, 32, 44, 0.48);
+    }
+
+    .reminder-popup {
+      width: min(520px, 100%);
+      padding: 0.5rem;
+      border: 1px solid rgba(255,255,255,0.45);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 18px 48px rgba(31, 38, 135, 0.22);
+    }
+
+    .reminder-popup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .reminder-popup-header h2 {
+      margin: 0.5rem;
+      border-bottom: 0;
+    }
+
+    .reminder-popup-body {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .reminder-time {
+      margin: 0.5rem;
+      color: #2b6cb0;
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+
+    .reminder-detail {
+      display: grid;
+      gap: 0.35rem;
+      padding: 0.5rem;
+      border-radius: 8px;
+      background: rgba(237, 242, 247, 0.82);
+      color: #2d3748;
+    }
+
+    .reminder-detail span {
+      color: #718096;
+      font-size: 0.76rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .reminder-detail strong {
+      white-space: normal;
+    }
+
     @keyframes progress {
       0% { stroke-dasharray: 0 100; }
     }
@@ -1256,8 +1370,19 @@ import { map } from 'rxjs/operators';
     }
   `]
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnDestroy {
   workTrackerService = inject(WorkTrackerService);
+  private notificationReminderService = inject(NotificationReminderService);
+  private changeDetectorRef = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
+  private reminderSubscription = new Subscription();
+  private scheduledHourlyReminderIds: string[] = [];
+  private hourlyReminderRows: HourlyWorkUpdate[] = [];
+  private readonly alarmUrl = '/assets/audio/work-tracker-alarm.wav';
+  hourlyRemindersEnabled = false;
+  voiceRemindersEnabled = false;
+  reminderPermissionLabel = 'Enable Reminders';
+  activeHourlyReminderPopup: HourlyReminderPopup | null = null;
 
   rawTasks$: Observable<DeveloperTask[]> = this.workTrackerService.data$.pipe(
     map(data => data.developerTasks)
@@ -1327,6 +1452,33 @@ export class DashboardComponent {
   inlineTaskForm: DeveloperTask = this.createEmptyTask();
   newReleaseForm: ReleaseTrack = this.createEmptyRelease();
   inlineReleaseForm: ReleaseTrack = this.createEmptyRelease();
+
+  constructor() {
+    this.updateReminderPermissionLabel();
+    this.reminderSubscription.add(this.rawHourlyUpdates$.subscribe(updates => {
+      this.hourlyReminderRows = updates;
+      this.rescheduleHourlyReminders();
+    }));
+    this.reminderSubscription.add(this.notificationReminderService.reminderTriggered$.subscribe(reminder => {
+      if (!reminder.id.startsWith('work-tracker-hourly-')) {
+        return;
+      }
+
+      this.ngZone.run(() => {
+        this.activeHourlyReminderPopup = {
+          hour: reminder.metadata?.['hour'] ?? '',
+          taskDescription: reminder.metadata?.['taskDescription'] ?? reminder.body,
+          status: reminder.metadata?.['status'] ?? ''
+        };
+        this.changeDetectorRef.detectChanges();
+      });
+    }));
+  }
+
+  ngOnDestroy(): void {
+    this.reminderSubscription.unsubscribe();
+    this.cancelHourlyReminders();
+  }
 
   // Task Dropdown options
   uniqueResources$: Observable<string[]> = this.allTasks$.pipe(
@@ -1538,6 +1690,39 @@ export class DashboardComponent {
       case 'priority': this.relFilterPriority.next(value); break;
       case 'assigned': this.relFilterAssigned.next(value); break;
     }
+  }
+
+  async enableHourlyReminders(): Promise<void> {
+    const alarmPreparation = this.notificationReminderService
+      .prepareAlarm(this.alarmUrl)
+      .catch(error => console.warn('Unable to prepare reminder alarm', error));
+    const permission = await this.notificationReminderService.requestPermission();
+    this.hourlyRemindersEnabled = permission === 'granted' || permission === 'unsupported';
+    if (this.hourlyRemindersEnabled) {
+      await alarmPreparation;
+    }
+    this.updateReminderPermissionLabel();
+    this.rescheduleHourlyReminders();
+  }
+
+  rescheduleHourlyReminders(): void {
+    this.cancelHourlyReminders();
+
+    if (!this.hourlyRemindersEnabled) {
+      return;
+    }
+
+    this.hourlyReminderRows
+      .map(update => this.toHourlyReminder(update))
+      .filter((reminder): reminder is NotificationReminder => Boolean(reminder))
+      .forEach(reminder => {
+        this.scheduledHourlyReminderIds.push(reminder.id);
+        this.notificationReminderService.schedule(reminder);
+      });
+  }
+
+  closeHourlyReminderPopup(): void {
+    this.activeHourlyReminderPopup = null;
   }
 
   getPercentage(completed: number, total: number): number {
@@ -1794,6 +1979,71 @@ export class DashboardComponent {
 
   normalizeStatus(status: string): string {
     return status.toLowerCase().replace(/\s+/g, '');
+  }
+
+  private cancelHourlyReminders(): void {
+    this.scheduledHourlyReminderIds.forEach(id => this.notificationReminderService.cancel(id));
+    this.scheduledHourlyReminderIds = [];
+  }
+
+  private toHourlyReminder(update: HourlyWorkUpdate): NotificationReminder | null {
+    if (!(update.isVisible ?? true)) {
+      return null;
+    }
+
+    const triggerAt = this.getHourlyReminderDate(update);
+    if (!triggerAt || triggerAt.getTime() <= Date.now()) {
+      return null;
+    }
+
+    const body = [
+      `Time: ${update.hour}`,
+      `Task Description: ${update.taskDescription}`,
+      `Status: ${update.status}`
+    ].join('\n');
+    return {
+      id: `work-tracker-hourly-${update.id}`,
+      title: 'Work Tracker Reminder',
+      body,
+      triggerAt,
+      alarmUrl: this.alarmUrl,
+      speechText: `Work tracker reminder. ${update.taskDescription}`,
+      useSpeech: this.voiceRemindersEnabled,
+      metadata: {
+        hour: update.hour,
+        taskDescription: update.taskDescription,
+        status: update.status
+      }
+    };
+  }
+
+  private getHourlyReminderDate(update: HourlyWorkUpdate): Date | null {
+    if (!update.date || !update.hour) {
+      return null;
+    }
+
+    const triggerAt = new Date(`${update.date}T${update.hour}`);
+    return Number.isNaN(triggerAt.getTime()) ? null : triggerAt;
+  }
+
+  private updateReminderPermissionLabel(): void {
+    const permission = this.notificationReminderService.permission;
+    if (permission === 'granted') {
+      this.reminderPermissionLabel = 'Reminders Enabled';
+      return;
+    }
+
+    if (permission === 'denied') {
+      this.reminderPermissionLabel = 'Notifications Blocked';
+      return;
+    }
+
+    if (permission === 'unsupported') {
+      this.reminderPermissionLabel = 'Enable Alarm';
+      return;
+    }
+
+    this.reminderPermissionLabel = 'Enable Reminders';
   }
 
   private isHourlyUpdateValid(update: HourlyWorkUpdate): boolean {
