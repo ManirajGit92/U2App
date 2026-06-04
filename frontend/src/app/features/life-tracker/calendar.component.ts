@@ -69,12 +69,12 @@ import { FormsModule } from '@angular/forms';
   `,
   styles: [`
     .calendar-container { display: grid; grid-template-columns: 1fr 350px; gap: 1.5rem; }
-    .calendar-card { padding: 1.5rem; }
-    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .calendar-card { padding: 0.5rem; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
     .month-selector { display: flex; align-items: center; gap: 1rem; font-weight: 700; }
 
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
-    .day-label { background: var(--bg-secondary); text-align: center; font-weight: 700; color: var(--text-tertiary); font-size: 0.7rem; padding: 0.75rem; text-transform: uppercase; }
+    .day-label { background: var(--bg-secondary); text-align: center; font-weight: 700; color: var(--text-tertiary); font-size: 0.7rem; padding: 0.5rem; text-transform: uppercase; }
     .day-cell { height: 90px; background: var(--bg-primary); padding: 0.5rem; cursor: pointer; transition: all 0.2s; position: relative; border: 1px solid transparent; }
     .day-cell:hover { background: rgba(var(--accent-rgb), 0.05); }
     .day-cell.selected { background: rgba(var(--accent-rgb), 0.08); border-color: var(--accent-primary); z-index: 10; }
@@ -85,20 +85,20 @@ import { FormsModule } from '@angular/forms';
     .habit-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 0.5rem; }
     .dot { width: 6px; height: 6px; border-radius: 50%; }
 
-    .day-details { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+    .day-details { padding: 0.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
     .details-header { display: flex; justify-content: space-between; align-items: center; }
     .details-header h4 { font-size: 0.95rem; }
 
-    .mini-form { padding: 1rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); }
-    .mini-form select { width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); margin-bottom: 0.75rem; }
+    .mini-form { padding: 0.5rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); }
+    .mini-form select { width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); margin-bottom: 0.5rem; }
 
     .entries-list { display: flex; flex-direction: column; gap: 0.75rem; }
-    .entry-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: rgba(var(--accent-rgb), 0.02); border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.85rem; }
+    .entry-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; background: rgba(var(--accent-rgb), 0.02); border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.85rem; }
     .cat-badge { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 40px; color: white; width: 80px; text-align: center; flex-shrink: 0; }
     .entry-text { flex: 1; display: flex; flex-direction: column; }
     .entry-text small { color: var(--text-tertiary); font-size: 0.75rem; }
 
-    .empty-state { text-align: center; padding: 2rem; color: var(--text-tertiary); font-style: italic; font-size: 0.85rem; }
+    .empty-state { text-align: center; padding: 0.5rem; color: var(--text-tertiary); font-style: italic; font-size: 0.85rem; }
 
     @media (max-width: 992px) {
       .calendar-container { grid-template-columns: 1fr; }

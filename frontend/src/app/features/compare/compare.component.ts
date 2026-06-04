@@ -202,7 +202,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
   `,
   styles: [`
     .compare-page {
-      padding: 32px 24px 80px;
+      padding: 0.5rem 0.5rem 0.5rem;
     }
 
     /* ───── Page Header ───── */
@@ -210,7 +210,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      margin-bottom: 24px;
+      margin-bottom: 0.5rem;
     }
 
     .page-icon {
@@ -238,8 +238,8 @@ import { SupabaseService } from '../../core/services/supabase.service';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 20px;
-      margin-bottom: 24px;
+      padding: 0.5rem 0.5rem;
+      margin-bottom: 0.5rem;
       flex-wrap: wrap;
       gap: 12px;
     }
@@ -264,7 +264,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 18px;
+      padding: 8px 0.5rem;
       font-family: var(--font-family);
       font-size: 0.85rem;
       font-weight: 600;
@@ -297,8 +297,8 @@ import { SupabaseService } from '../../core/services/supabase.service';
 
     /* ───── History Panel ───── */
     .history-panel {
-      padding: 32px;
-      margin-bottom: 24px;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
       text-align: center;
     }
 
@@ -332,7 +332,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
     .input-grid {
       display: grid;
       gap: 24px;
-      margin-bottom: 32px;
+      margin-bottom: 0.5rem;
     }
 
     .input-panel {
@@ -348,7 +348,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 20px;
+      padding: 0.5rem 0.5rem;
       border-bottom: 1px solid var(--border-color);
       gap: 12px;
     }
@@ -404,7 +404,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
 
     /* ───── Results ───── */
     .json-status {
-      padding: 10px 20px 14px;
+      padding: 0.5rem 0.5rem 0.5rem;
       font-size: 0.83rem;
       color: var(--success);
       border-top: 1px solid var(--border-color);
@@ -420,7 +420,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
       display: flex;
       flex-wrap: wrap;
       gap: 8px 16px;
-      padding: 12px 20px 14px;
+      padding: 0.5rem 0.5rem 0.5rem;
       border-top: 1px solid var(--border-color);
       font-size: 0.8rem;
       color: var(--text-secondary);
@@ -432,19 +432,19 @@ import { SupabaseService } from '../../core/services/supabase.service';
     }
 
     .results-section {
-      margin-top: 16px;
+      margin-top: 0.5rem;
     }
 
     .result-block {
-      margin-bottom: 40px;
+      margin-bottom: 0.5rem;
     }
 
     .result-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 24px;
-      margin-bottom: 16px;
+      padding: 0.5rem 0.5rem;
+      margin-bottom: 0.5rem;
     }
 
     .result-header:hover {
@@ -460,7 +460,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 18px;
+      padding: 8px 0.5rem;
       border-radius: 50px;
       font-weight: 700;
     }
@@ -496,7 +496,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
     .diff-view {
       padding: 0;
       overflow: hidden;
-      margin-bottom: 16px;
+      margin-bottom: 0.5rem;
     }
 
     .diff-view:hover {
@@ -536,7 +536,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
       align-items: center;
       justify-content: flex-end;
       width: 48px;
-      padding: 0 12px;
+      padding: 0 0.5rem;
       font-size: 0.75rem;
       color: var(--text-tertiary);
       background: var(--bg-tertiary);
@@ -564,7 +564,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
 
     .line-content {
       flex: 1;
-      padding: 2px 12px 2px 4px;
+      padding: 2px 0.5rem 2px 4px;
       white-space: pre-wrap;
       word-break: break-all;
     }
@@ -590,7 +590,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 16px 20px;
+      padding: 0.5rem 0.5rem;
       font-weight: 700;
       font-size: 0.9rem;
       color: var(--warning);
@@ -607,7 +607,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
     }
 
     .mismatch-line {
-      padding: 6px 20px;
+      padding: 6px 0.5rem;
       border-bottom: 1px solid var(--border-color);
       white-space: pre-wrap;
       word-break: break-all;
@@ -626,7 +626,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
     /* ───── Responsive ───── */
     @media (max-width: 768px) {
       .compare-page {
-        padding: 20px 16px 60px;
+        padding: 0.5rem 0.5rem 0.5rem;
       }
 
       .page-header {

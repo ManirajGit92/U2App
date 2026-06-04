@@ -153,7 +153,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       justify-content: space-between;
       align-items: center;
       background: var(--bg-secondary);
-      padding: 1rem 1.5rem;
+      padding: 0.5rem 0.5rem;
       border-radius: 12px;
       box-shadow: var(--shadow-sm);
       border: 1px solid var(--border-color);
@@ -166,7 +166,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       flex-wrap: wrap;
     }
     .input-modern {
-      padding: 0.6rem 1rem;
+      padding: 0.5rem 0.5rem;
       border: 1px solid var(--border-color);
       border-radius: 6px;
       font-size: 0.9rem;
@@ -188,7 +188,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       align-items: center;
       gap: 0.5rem;
       background: var(--bg-tertiary);
-      padding: 0.35rem 0.75rem;
+      padding: 0.35rem 0.5rem;
       border-radius: 6px;
       border: 1px solid var(--border-color);
     }
@@ -200,7 +200,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
     }
 
     .btn {
-      padding: 0.6rem 1.2rem;
+      padding: 0.5rem 0.5rem;
       border: none;
       border-radius: 6px;
       font-weight: 600;
@@ -239,7 +239,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       box-shadow: 0 1px 2px var(--border-color);
     }
     .modern-table th {
-      padding: 1rem;
+      padding: 0.5rem;
       font-size: 0.85rem;
       font-weight: 600;
       color: var(--text-secondary);
@@ -251,7 +251,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
     }
     .modern-table th:hover { background: var(--bg-secondary); }
     .modern-table td {
-      padding: 0.8rem 1rem;
+      padding: 0.5rem 0.5rem;
       border-bottom: 1px solid var(--border-color);
       font-size: 0.9rem;
       color: var(--text-primary);
@@ -281,7 +281,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
 
     /* Badges */
     .badge {
-      padding: 0.25rem 0.6rem;
+      padding: 0.25rem 0.5rem;
       border-radius: 20px;
       font-size: 0.75rem;
       font-weight: 600;
@@ -325,7 +325,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
 
     .empty-state {
       text-align: center;
-      padding: 3rem !important;
+      padding: 0.5rem !important;
       color: var(--text-tertiary);
       font-style: italic;
     }
@@ -335,7 +335,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1rem 1.5rem;
+      padding: 0.5rem 0.5rem;
       background: var(--bg-tertiary);
       border-top: 1px solid var(--border-color);
       font-size: 0.9rem;
@@ -346,7 +346,7 @@ import { TestCase, UnitTestService } from '../unit-test.service';
       align-items: center;
       gap: 0.5rem;
     }
-    .page-info { margin-right: 1rem; }
+    .page-info { margin-right: 0.5rem; }
     .page-size select { 
       margin-left: 0.5rem; padding: 0.2rem; border-radius: 4px; 
       border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-primary);

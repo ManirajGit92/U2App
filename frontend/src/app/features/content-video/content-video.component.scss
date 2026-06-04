@@ -1,5 +1,5 @@
 .content-video-page {
-  padding: 32px 24px 80px;
+  padding: 0.5rem 0.5rem 0.5rem;
 }
 
 /* ───── Page Header ───── */
@@ -7,7 +7,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 0.5rem;
 }
 
 .page-icon {
@@ -60,7 +60,7 @@
 }
 
 .panel-header {
-  padding: 14px 20px;
+  padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -78,7 +78,7 @@
   width: 100%;
   border: none;
   background: transparent;
-  padding: 20px;
+  padding: 0.5rem;
   min-height: 200px;
   color: var(--text-primary);
   resize: vertical;
@@ -93,13 +93,13 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  padding: 20px;
+  padding: 0.5rem;
 }
 
 .controls-row {
   display: flex;
   gap: 20px;
-  padding: 20px;
+  padding: 0.5rem;
 }
 
 .control-group {
@@ -156,7 +156,7 @@
 
 /* Select */
 .styled-select {
-  padding: 10px 14px;
+  padding: 0.5rem 0.5rem;
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   border: 1px solid var(--border-color);
@@ -174,7 +174,7 @@
 
 /* ───── Preview Panel ───── */
 .video-preview-panel {
-  padding: 24px;
+  padding: 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -208,13 +208,13 @@
 
 .placeholder-content {
   text-align: center;
-  padding: 20px;
+  padding: 0.5rem;
   opacity: 0.6;
 }
 
 .placeholder-icon {
   font-size: 3rem;
-  margin-bottom: 12px;
+  margin-bottom: 0.5rem;
 }
 
 .loading-state {
@@ -274,12 +274,12 @@
 }
 
 .mt-3 {
-  margin-top: 12px;
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 768px) {
   .content-video-page {
-    padding: 20px 16px 60px;
+    padding: 0.5rem 0.5rem 0.5rem;
   }
 
   .page-header {
@@ -296,12 +296,12 @@
     grid-template-columns: 1fr;
     flex-direction: column;
     gap: 14px;
-    padding: 16px;
+    padding: 0.5rem;
   }
 
   .panel-header,
   .video-preview-panel {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 }

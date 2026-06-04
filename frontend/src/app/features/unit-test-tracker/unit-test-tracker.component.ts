@@ -107,7 +107,7 @@ import { BugsComponent } from './bugs/bugs.component';
     }
 
     .nav-branding {
-      padding: 1.5rem;
+      padding: 0.5rem;
       display: flex;
       align-items: center;
       gap: 0.8rem;
@@ -133,12 +133,12 @@ import { BugsComponent } from './bugs/bugs.component';
     .nav-links {
       display: flex;
       flex-direction: column;
-      padding: 0.75rem;
+      padding: 0.5rem;
       gap: 0.5rem;
     }
 
     .nav-links button {
-      padding: 0.85rem;
+      padding: 0.5rem;
       border: none;
       background: transparent;
       text-align: left;
@@ -157,7 +157,7 @@ import { BugsComponent } from './bugs/bugs.component';
 
     .sidebar-hidden .nav-links button {
       justify-content: center;
-      padding: 0.85rem 0;
+      padding: 0.5rem 0;
     }
 
     .btn-icon {
@@ -194,7 +194,7 @@ import { BugsComponent } from './bugs/bugs.component';
     }
 
     .top-header {
-      padding: 0.75rem 2rem;
+      padding: 0.5rem 0.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -244,7 +244,7 @@ import { BugsComponent } from './bugs/bugs.component';
     }
 
     .btn {
-      padding: 0.6rem 1.2rem;
+      padding: 0.5rem 0.5rem;
       border: none;
       border-radius: 6px;
       font-weight: 600;
@@ -287,10 +287,10 @@ import { BugsComponent } from './bugs/bugs.component';
     /* ─── View Container ─── */
     .view-container {
       flex: 1;
-      margin: 1.5rem;
+      margin: 0.5rem;
       border-radius: 12px;
       overflow-y: auto;
-      padding: 1.5rem;
+      padding: 0.5rem;
     }
   `]
 })

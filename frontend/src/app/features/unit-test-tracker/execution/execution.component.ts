@@ -96,7 +96,7 @@ import { TestExecution, UnitTestService, Bug } from '../unit-test.service';
       justify-content: space-between;
       align-items: center;
       background: var(--bg-secondary);
-      padding: 1rem 1.5rem;
+      padding: 0.5rem 0.5rem;
       border-radius: 12px;
       box-shadow: var(--shadow-sm);
       border: 1px solid var(--border-color);
@@ -106,7 +106,7 @@ import { TestExecution, UnitTestService, Bug } from '../unit-test.service';
     .toolbar h2 { margin: 0; font-size: 1.25rem; color: var(--text-primary); }
     .search-filters { display: flex; gap: 1rem; }
     .input-modern {
-      padding: 0.6rem 1rem;
+      padding: 0.5rem 0.5rem;
       border: 1px solid var(--border-color);
       border-radius: 6px;
       font-size: 0.9rem;
@@ -121,7 +121,7 @@ import { TestExecution, UnitTestService, Bug } from '../unit-test.service';
       align-items: center;
       gap: 0.5rem;
       background: var(--bg-tertiary);
-      padding: 0.35rem 0.75rem;
+      padding: 0.35rem 0.5rem;
       border-radius: 6px;
       border: 1px solid var(--border-color);
     }
@@ -146,15 +146,15 @@ import { TestExecution, UnitTestService, Bug } from '../unit-test.service';
     .table-responsive { flex: 1; overflow: auto; }
     .modern-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 800px; }
     .modern-table thead { position: sticky; top: 0; background: var(--bg-tertiary); z-index: 2; box-shadow: 0 1px 2px var(--border-color); }
-    .modern-table th { padding: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; cursor: pointer; }
-    .modern-table td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; color: var(--text-primary); vertical-align: middle; }
+    .modern-table th { padding: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; cursor: pointer; }
+    .modern-table td { padding: 0.5rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; color: var(--text-primary); vertical-align: middle; }
     .modern-table tbody tr:hover { background: var(--bg-tertiary); }
     
     .id-col { font-weight: 600; font-family: monospace; color: var(--accent-primary) !important; width: 120px; }
     .comments-col { max-width: 300px; }
     .truncate-text { white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-secondary); font-size: 0.85rem; }
     
-    .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .badge { padding: 0.25rem 0.5rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
     .badge-pass { background: rgba(52,211,153,0.15); color: var(--success); }
     .badge-fail { background: rgba(239,68,68,0.15); color: var(--danger); }
     .badge-pending { background: var(--bg-tertiary); color: var(--text-tertiary); }
@@ -162,13 +162,13 @@ import { TestExecution, UnitTestService, Bug } from '../unit-test.service';
     .input-inline { width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-input); color: var(--text-primary); font-family: inherit; font-size: 0.85rem; }
     
     .actions-cell { white-space: nowrap; width: 120px; }
-    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; border-radius: 4px; border: 1px solid transparent; }
+    .btn-sm { padding: 0.4rem 0.5rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; border-radius: 4px; border: 1px solid transparent; }
     .btn-outline { background: transparent; border-color: var(--accent-primary); color: var(--accent-primary); }
     .btn-outline:hover { background: var(--accent-surface); }
     
     .icon-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; opacity: 0.7; transition: opacity 0.2s, transform 0.2s; padding: 0 0.4rem; }
     .icon-btn:hover { opacity: 1; transform: scale(1.1); }
-    .empty-state { text-align: center; padding: 3rem !important; color: var(--text-tertiary); font-style: italic; }
+    .empty-state { text-align: center; padding: 0.5rem !important; color: var(--text-tertiary); font-style: italic; }
   `]
 })
 export class ExecutionComponent implements OnInit {

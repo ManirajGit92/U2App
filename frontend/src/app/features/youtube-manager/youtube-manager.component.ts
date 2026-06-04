@@ -89,20 +89,20 @@ import { DataTableComponent } from './components/data-table.component';
       display: flex;
       flex-direction: column;
     }
-    .view-toggle-bar { display: flex; justify-content: center; gap: 8px; padding: 12px; background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .view-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #aaa; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+    .view-toggle-bar { display: flex; justify-content: center; gap: 8px; padding: 0.5rem; background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .view-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #aaa; padding: 6px 0.5rem; border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
     .view-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
     .view-btn.active { background: var(--accent-primary); border-color: var(--accent-primary); color: #fff; font-weight: 600; box-shadow: 0 0 12px rgba(239,68,68,0.4); }
     
     .view-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
     .player-wrapper-container { flex: 1; display: flex; flex-direction: column; }
-    .db-wrapper { flex: 1; padding: 24px; overflow-y: auto; background: var(--bg-primary); }
+    .db-wrapper { flex: 1; padding: 0.5rem; overflow-y: auto; background: var(--bg-primary); }
 
     .panel-header {
       height: 50px;
       display: flex;
       align-items: center;
-      padding: 0 16px;
+      padding: 0 0.5rem;
       background: rgba(0, 0, 0, 0.02);
       border-bottom: 1px solid var(--border-color);
       justify-content: space-between;
@@ -134,7 +134,7 @@ import { DataTableComponent } from './components/data-table.component';
     
     .panel-content {
       flex: 1;
-      padding: 16px;
+      padding: 0.5rem;
       overflow-y: auto;
     }
     .panel-content.p-0 {

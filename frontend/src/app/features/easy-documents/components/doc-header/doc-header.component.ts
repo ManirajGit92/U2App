@@ -74,7 +74,7 @@ import { RouterLink } from '@angular/router';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 24px;
+      padding: 0 0.5rem;
       z-index: 1000;
       border-radius: 0;
       border-bottom: 1px solid var(--border-color);
@@ -121,7 +121,7 @@ import { RouterLink } from '@angular/router';
     }
 
     .tab-btn {
-      padding: 6px 16px;
+      padding: 6px 0.5rem;
       padding-bottom: 5px;
       border-radius: 8px;
       border: none;
@@ -148,7 +148,7 @@ import { RouterLink } from '@angular/router';
     }
 
     .search-container input {
-      padding: 8px 32px 8px 12px;
+      padding: 8px 0.5rem 8px 0.5rem;
       border-radius: 8px;
       border: 1px solid var(--border-color);
       background: var(--bg-surface);
@@ -199,7 +199,7 @@ import { RouterLink } from '@angular/router';
     }
 
     .dropdown-menu button {
-      padding: 8px 12px;
+      padding: 8px 0.5rem;
       border-radius: 6px;
       border: none;
       background: transparent;
@@ -226,7 +226,7 @@ import { RouterLink } from '@angular/router';
 
     @media (max-width: 640px) {
       .doc-header {
-        padding: 0 12px;
+        padding: 0 0.5rem;
       }
       .btn-sm {
         padding: 4px 8px;

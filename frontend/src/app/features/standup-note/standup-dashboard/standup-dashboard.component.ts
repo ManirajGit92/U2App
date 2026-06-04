@@ -103,7 +103,7 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService } from '..
     .stat-card {
       background: var(--bg-secondary); border-radius: 12px;
       border: 1px solid var(--border-color);
-      padding: 1.25rem; display: flex; align-items: center; gap: 1rem;
+      padding: 0.5rem; display: flex; align-items: center; gap: 1rem;
       box-shadow: var(--shadow-sm);
     }
     .stat-icon { font-size: 2rem; }
@@ -114,13 +114,13 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService } from '..
 
     /* Panel */
     .panel { background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; }
-    .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.5rem; border-bottom: 1px solid var(--border-color); }
     .panel-header h3 { margin: 0; font-size: 0.95rem; color: var(--text-primary); }
-    .panel-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 1rem; max-height: 420px; overflow-y: auto; }
+    .panel-body { padding: 0.5rem 0.5rem; display: flex; flex-direction: column; gap: 1rem; max-height: 420px; overflow-y: auto; }
 
     /* Today's note cards */
-    .today-card { border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem; background: var(--bg-tertiary); }
-    .tc-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
+    .today-card { border: 1px solid var(--border-color); border-radius: 10px; padding: 0.5rem; background: var(--bg-tertiary); }
+    .tc-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
     .avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: white; flex-shrink: 0; }
     .tc-name { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); }
     .tc-position { font-size: 0.75rem; color: var(--text-secondary); }
@@ -131,7 +131,7 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService } from '..
     .tc-tag.blocker { background: rgba(239,68,68,0.15); color: #ef4444; }
 
     /* Reminders */
-    .reminder-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
+    .reminder-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
     .reminder-row:last-child { border-bottom: none; }
     .rem-title { font-weight: 600; font-size: 0.88rem; color: var(--text-primary); }
     .rem-meta { font-size: 0.75rem; color: var(--text-secondary); }
@@ -140,19 +140,19 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService } from '..
     .rem-days.overdue { color: var(--danger); font-weight: 600; }
 
     /* Projects grid */
-    .projects-grid { padding: 1.25rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-    .proj-card { border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; background: var(--bg-tertiary); }
+    .projects-grid { padding: 0.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .proj-card { border: 1px solid var(--border-color); border-radius: 10px; padding: 0.5rem; background: var(--bg-tertiary); }
     .proj-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem; }
     .proj-name { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); }
     .proj-lead { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
-    .proj-notes { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; }
+    .proj-notes { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
     .timeline-bar-wrap { }
     .timeline-bar { height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
     .timeline-fill { height: 100%; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); border-radius: 4px; transition: width 0.5s ease; }
     .timeline-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.3rem; }
 
     /* Badges */
-    .badge { padding: 0.2rem 0.55rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+    .badge { padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
     .badge-blue { background: #dbeafe; color: #1d4ed8; }
     .badge-red { background: #fee2e2; color: #b91c1c; }
     .badge-active { background: #d1fae5; color: #065f46; }
@@ -161,7 +161,7 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService } from '..
     .badge-high { background: #fee2e2; color: #b91c1c; }
     .badge-medium { background: #fef3c7; color: #b45309; }
     .badge-low { background: #d1fae5; color: #065f46; }
-    .empty { text-align: center; padding: 2rem; color: var(--text-muted, #64748b); font-style: italic; font-size: 0.85rem; }
+    .empty { text-align: center; padding: 0.5rem; color: var(--text-muted, #64748b); font-style: italic; font-size: 0.85rem; }
 
     @media (max-width: 768px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }

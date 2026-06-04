@@ -51,13 +51,13 @@ import { Subject, takeUntil } from 'rxjs';
   `,
   styles: [`
     .table-container { display: flex; flex-direction: column; height: 100%; border-radius: var(--radius-md); overflow: hidden; background: var(--surface-card); border: 1px solid var(--border-color); }
-    .table-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.02); }
+    .table-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.02); }
     .table-header h2 { margin: 0; font-size: 1.1rem; color: var(--text-primary); }
     .record-cnt { font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; }
     
     .table-responsive { flex: 1; overflow: auto; }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
-    th, td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+    th, td { padding: 0.5rem 0.5rem; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
     th { position: sticky; top: 0; background: var(--surface-card); font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; z-index: 10; border-bottom: 2px solid var(--border-color); }
     
     tbody tr:hover { background: rgba(255,255,255,0.03); }
@@ -71,7 +71,7 @@ import { Subject, takeUntil } from 'rxjs';
     .tag-list { display: flex; flex-wrap: wrap; gap: 4px; }
     .min-tag { background: rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; color: var(--text-secondary); }
     
-    .empty-state { text-align: center; color: var(--text-tertiary); padding: 32px !important; }
+    .empty-state { text-align: center; color: var(--text-tertiary); padding: 0.5rem !important; }
   `]
 })
 export class DataTableComponent implements OnInit, OnDestroy {

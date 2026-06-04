@@ -246,7 +246,7 @@ import { Observable, Subscription } from 'rxjs';
   styles: [
     `
       .game-container {
-        padding: 1.5rem;
+        padding: 0.5rem;
         min-height: 100vh;
         background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
         font-family: 'Inter', sans-serif;
@@ -257,10 +257,10 @@ import { Observable, Subscription } from 'rxjs';
         flex-wrap: wrap;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
+        margin-bottom: 0.5rem;
         background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(10px);
-        padding: 1.5rem 2rem;
+        padding: 0.5rem 0.5rem;
         border-radius: 16px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         position: sticky;
@@ -311,7 +311,7 @@ import { Observable, Subscription } from 'rxjs';
 
       .btn-primary,
       .btn-outline {
-        padding: 0.6rem 1.2rem;
+        padding: 0.5rem 0.5rem;
         border-radius: 8px;
         font-weight: 600;
         cursor: pointer;
@@ -339,7 +339,7 @@ import { Observable, Subscription } from 'rxjs';
         background: rgba(255, 255, 255, 0.5);
         backdrop-filter: blur(12px);
         border-radius: 20px;
-        padding: 1.5rem;
+        padding: 0.5rem;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
       }
@@ -352,14 +352,14 @@ import { Observable, Subscription } from 'rxjs';
       .setup-grid {
         display: flex;
         gap: 1rem;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
       }
       .form-group {
         display: flex;
         flex-direction: column;
         gap: 0.4rem;
         flex: 1;
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.5rem;
       }
       .form-group label {
         font-size: 0.85rem;
@@ -368,7 +368,7 @@ import { Observable, Subscription } from 'rxjs';
       }
       .form-group select,
       .form-group input {
-        padding: 0.6rem;
+        padding: 0.5rem;
         border-radius: 8px;
         border: 1px solid #cbd5e0;
       }
@@ -378,7 +378,7 @@ import { Observable, Subscription } from 'rxjs';
         gap: 1rem;
       }
       .mt-4 {
-        margin-top: 1rem;
+        margin-top: 0.5rem;
       }
 
       /* Main Game */
@@ -399,12 +399,12 @@ import { Observable, Subscription } from 'rxjs';
       .board-column {
         width: 100%;
         overflow-x: auto;
-        padding-bottom: 2rem;
+        padding-bottom: 0.5rem;
       }
       .board-column:fullscreen {
         width: 100vw;
         height: 100vh;
-        padding: 1rem;
+        padding: 0.5rem;
         background: #f7fafc;
         overflow: auto;
         display: flex;
@@ -642,12 +642,12 @@ import { Observable, Subscription } from 'rxjs';
       }
       .dice-section {
         background: rgba(0, 0, 0, 0.03);
-        padding: 1rem;
+        padding: 0.5rem;
         border-radius: 12px;
-        margin-top: 1rem;
+        margin-top: 0.5rem;
       }
       .dice-btn {
-        padding: 0.8rem 1.5rem;
+        padding: 0.5rem 0.5rem;
         font-size: 1.2rem;
         background: #fff;
         border: 2px solid #cbd5e0;
@@ -686,7 +686,7 @@ import { Observable, Subscription } from 'rxjs';
       }
 
       .dice-result {
-        margin-top: 1rem;
+        margin-top: 0.5rem;
         font-size: 1.2rem;
         color: #e53e3e;
         animation: popIn 0.3s;
@@ -708,7 +708,7 @@ import { Observable, Subscription } from 'rxjs';
       }
 
       .token-selection {
-        margin-top: 1rem;
+        margin-top: 0.5rem;
         animation: slideDown 0.3s;
       }
       @keyframes slideDown {
@@ -729,7 +729,7 @@ import { Observable, Subscription } from 'rxjs';
         justify-content: center;
       }
       .token-btn {
-        padding: 0.4rem 0.8rem;
+        padding: 0.4rem 0.5rem;
         background: #fff;
         border: 2px solid #ccc;
         border-radius: 8px;
@@ -753,7 +753,7 @@ import { Observable, Subscription } from 'rxjs';
       }
       .player-stat {
         background: white;
-        padding: 0.8rem;
+        padding: 0.5rem;
         border-radius: 8px;
         margin-bottom: 0.5rem;
         border-left: 4px solid #000;

@@ -73,14 +73,14 @@ import * as mermaid from 'mermaid';
     .content-wrapper {
       max-width: 900px;
       margin: 0 auto;
-      padding: 40px 24px;
+      padding: 0.5rem 0.5rem;
       display: flex;
       flex-direction: column;
       gap: 64px;
     }
 
     .doc-section {
-      scroll-margin-top: 100px;
+      scroll-margin-top: 0.5rem;
       animation: fadeInUp 0.5s ease-out both;
     }
 
@@ -88,9 +88,9 @@ import * as mermaid from 'mermaid';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 24px;
+      margin-bottom: 0.5rem;
       border-bottom: 2px solid var(--accent-surface);
-      padding-bottom: 12px;
+      padding-bottom: 0.5rem;
     }
 
     .section-title {
@@ -142,7 +142,7 @@ import * as mermaid from 'mermaid';
     .note-box {
       background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.1);
       border-left: 4px solid var(--accent-primary);
-      padding: 20px;
+      padding: 0.5rem;
       border-radius: 8px;
       display: flex;
       gap: 16px;
@@ -164,7 +164,7 @@ import * as mermaid from 'mermaid';
       position: relative;
       background: #1e293b;
       border-radius: 12px;
-      padding: 24px;
+      padding: 0.5rem;
       overflow: hidden;
     }
 
@@ -191,7 +191,7 @@ import * as mermaid from 'mermaid';
       background: rgba(255,255,255,0.1);
       border: 1px solid rgba(255,255,255,0.2);
       color: white;
-      padding: 4px 12px;
+      padding: 4px 0.5rem;
       border-radius: 6px;
       font-size: 0.75rem;
       cursor: pointer;
@@ -224,10 +224,10 @@ import * as mermaid from 'mermaid';
         display: flex;
         justify-content: center;
         background: white;
-        padding: 20px;
+        padding: 0.5rem;
         border-radius: 12px;
         border: 1px solid var(--border-color);
-        margin-top: 12px;
+        margin-top: 0.5rem;
     }
 
     @keyframes fadeInUp {

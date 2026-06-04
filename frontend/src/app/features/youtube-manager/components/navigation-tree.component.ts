@@ -80,17 +80,17 @@ import { Subject, takeUntil } from 'rxjs';
   styles: [`
     .nav-tree-container { display: flex; flex-direction: column; gap: 16px; height: 100%; }
     .tree-controls { display: flex; gap: 8px; justify-content: space-between; }
-    .btn-sm { flex: 1; padding: 6px 10px; font-size: 0.85rem; }
+    .btn-sm { flex: 1; padding: 6px 0.5rem; font-size: 0.85rem; }
     .btn-text { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem; padding: 0; }
     .btn-text:hover { color: var(--accent-primary); text-decoration: underline; }
     
-    .filter-section { display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
+    .filter-section { display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
     .filter-section label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; display: block; }
     
     .tags-container { display: flex; flex-wrap: wrap; gap: 6px; max-height: 120px; overflow-y: auto; padding-right: 4px; }
     .tag-pill { 
       background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary);
-      border-radius: 12px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
+      border-radius: 12px; padding: 4px 0.5rem; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
     }
     .tag-pill:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
     .tag-pill.selected { 
@@ -99,11 +99,11 @@ import { Subject, takeUntil } from 'rxjs';
     }
 
     .tree-view { flex: 1; overflow-y: auto; padding-right: 8px; }
-    .tree-actions { display: flex; justify-content: space-between; margin-bottom: 12px; }
+    .tree-actions { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
     
     .tree-list { list-style: none; padding-left: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
-    .tree-list.sub { padding-left: 16px; margin-top: 4px; border-left: 1px dashed var(--border-color); }
-    .tree-list.video { padding-left: 20px; margin-top: 2px; }
+    .tree-list.sub { padding-left: 0.5rem; margin-top: 4px; border-left: 1px dashed var(--border-color); }
+    .tree-list.video { padding-left: 0.5rem; margin-top: 2px; }
     
     .tree-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); cursor: pointer; transition: background 0.2s; user-select: none; }
     .tree-item:hover { background: rgba(0,0,0,0.03); }
@@ -118,7 +118,7 @@ import { Subject, takeUntil } from 'rxjs';
     .text-primary { color: var(--accent-primary); }
     .badge { background: var(--accent-primary); color: #fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: 500;}
     
-    .empty-state { color: var(--text-tertiary); font-size: 0.85rem; text-align: center; padding: 24px 0; }
+    .empty-state { color: var(--text-tertiary); font-size: 0.85rem; text-align: center; padding: 0.5rem 0; }
   `]
 })
 export class NavigationTreeComponent implements OnInit, OnDestroy {

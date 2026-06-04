@@ -155,7 +155,7 @@ import { Subscription } from 'rxjs';
 
     .creator-header {
       height: 70px;
-      padding: 0 2rem;
+      padding: 0 0.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -180,7 +180,7 @@ import { Subscription } from 'rxjs';
     .main-layout {
       flex: 1;
       display: flex;
-      padding: 1rem;
+      padding: 0.5rem;
       gap: 1rem;
       overflow: hidden;
     }
@@ -199,7 +199,7 @@ import { Subscription } from 'rxjs';
 
     .sidebar-tabs button {
       flex: 1;
-      padding: 1rem;
+      padding: 0.5rem;
       border: none;
       background: transparent;
       color: var(--text-secondary);
@@ -216,7 +216,7 @@ import { Subscription } from 'rxjs';
     .tab-content {
       flex: 1;
       overflow-y: auto;
-      padding: 1rem;
+      padding: 0.5rem;
     }
 
     .entries-list {
@@ -226,7 +226,7 @@ import { Subscription } from 'rxjs';
     }
 
     .entry-card {
-      padding: 1rem;
+      padding: 0.5rem;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
@@ -324,7 +324,7 @@ import { Subscription } from 'rxjs';
       text-align: center;
       width: 80%;
       background: rgba(0,0,0,0.5);
-      padding: 1rem;
+      padding: 0.5rem;
       border-radius: 8px;
     }
 
@@ -342,7 +342,7 @@ import { Subscription } from 'rxjs';
       gap: 1rem;
       background: rgba(255,255,255,0.1);
       backdrop-filter: blur(10px);
-      padding: 0.75rem 1.5rem;
+      padding: 0.5rem 0.5rem;
       border-radius: 50px;
     }
 
@@ -364,13 +364,13 @@ import { Subscription } from 'rxjs';
       text-align: center;
       color: var(--text-tertiary);
     }
-    .empty-preview .icon { font-size: 4rem; margin-bottom: 1rem; display: block; }
+    .empty-preview .icon { font-size: 4rem; margin-bottom: 0.5rem; display: block; }
 
-    .setting-group { margin-bottom: 1.5rem; }
+    .setting-group { margin-bottom: 0.5rem; }
     .setting-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600; }
     .setting-group input[type="range"], .setting-group select { width: 100%; }
 
-    .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
 
     .subtitle-controls { display: flex; gap: 0.5rem; align-items: center; }
     .subtitle-controls input[type="color"] { width: 40px; height: 30px; padding: 0; border: none; }
@@ -405,7 +405,7 @@ import { Subscription } from 'rxjs';
     @media (max-width: 768px) {
       .creator-header {
         height: auto;
-        padding: 1rem;
+        padding: 0.5rem;
         align-items: flex-start;
         flex-direction: column;
         gap: 1rem;
@@ -422,7 +422,7 @@ import { Subscription } from 'rxjs';
       }
 
       .main-layout {
-        padding: 0.75rem;
+        padding: 0.5rem;
       }
 
       .field-row {
@@ -436,13 +436,13 @@ import { Subscription } from 'rxjs';
       .player-controls {
         width: calc(100% - 1rem);
         bottom: 0.75rem;
-        padding: 0.6rem 0.9rem;
+        padding: 0.5rem 0.5rem;
       }
 
       .subtitles {
         width: calc(100% - 1rem);
         bottom: 72px;
-        padding: 0.75rem;
+        padding: 0.5rem;
       }
     }
   `]

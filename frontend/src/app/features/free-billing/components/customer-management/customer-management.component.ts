@@ -93,25 +93,25 @@ import { Customer } from '../../models/billing.models';
   styles: [`
     .crud-container { display: flex; flex-direction: column; gap: 24px; }
     .actions-header { display: flex; justify-content: space-between; gap: 16px; }
-    .search-input { flex: 1; max-width: 300px; padding: 10px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-primary); color: var(--text-primary); }
+    .search-input { flex: 1; max-width: 300px; padding: 0.5rem 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-primary); color: var(--text-primary); }
     .table-card { overflow-x: auto; border-radius: var(--radius-md); }
     .data-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .data-table th, .data-table td { padding: 16px; border-bottom: 1px solid var(--border-color); }
+    .data-table th, .data-table td { padding: 0.5rem; border-bottom: 1px solid var(--border-color); }
     .data-table th { background: rgba(0,0,0,0.02); font-weight: 600; color: var(--text-secondary); }
     .actions-cell { display: flex; gap: 8px; }
     .action-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; opacity: 0.7; transition: opacity 0.2s; }
     .action-btn:hover { opacity: 1; }
-    .empty-state { text-align: center; color: var(--text-tertiary); padding: 32px !important; }
+    .empty-state { text-align: center; color: var(--text-tertiary); padding: 0.5rem !important; }
 
     /* Modal */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-    .modal { background: var(--surface-card); width: 100%; max-width: 600px; padding: 32px; border-radius: var(--radius-lg); }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+    .modal { background: var(--surface-card); width: 100%; max-width: 600px; padding: 0.5rem; border-radius: var(--radius-lg); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0.5rem 0; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-group label { font-size: 0.85rem; color: var(--text-secondary); }
-    .form-group input, .form-group textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-primary); color: var(--text-primary); }
+    .form-group input, .form-group textarea { padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-primary); color: var(--text-primary); }
     .form-check { display: flex; align-items: center; gap: 8px; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 0.5rem; }
   `]
 })
 export class CustomerManagementComponent implements OnInit {

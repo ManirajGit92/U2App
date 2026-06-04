@@ -94,7 +94,7 @@ import { Observable } from 'rxjs';
     .card {
       background: var(--bg-secondary);
       border-radius: 12px;
-      padding: 1.5rem;
+      padding: 0.5rem;
       box-shadow: var(--shadow-sm);
       border: 1px solid var(--border-color);
     }
@@ -143,11 +143,11 @@ import { Observable } from 'rxjs';
       gap: 1.5rem;
     }
     .chart-card h3 {
-      margin: 0 0 1.5rem 0;
+      margin: 0 0 0.5rem 0;
       color: var(--text-primary);
       font-size: 1.1rem;
       border-bottom: 1px solid var(--border-color);
-      padding-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
     }
     
     /* Pie Chart */
@@ -155,7 +155,7 @@ import { Observable } from 'rxjs';
       display: flex;
       align-items: center;
       justify-content: space-around;
-      padding: 1rem 0;
+      padding: 0.5rem 0;
     }
     .pie-chart {
       width: 150px;

@@ -65,7 +65,7 @@ import { EasyDocumentsService } from '../../easy-documents.service';
     }
 
     .sidebar-header {
-      padding: 24px;
+      padding: 0.5rem;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -101,7 +101,7 @@ import { EasyDocumentsService } from '../../easy-documents.service';
     .sidebar-content {
       flex: 1;
       overflow-y: auto;
-      padding: 16px 0;
+      padding: 0.5rem 0;
     }
 
     .tree-view {
@@ -110,7 +110,7 @@ import { EasyDocumentsService } from '../../easy-documents.service';
     }
 
     .tree-item {
-      padding: 10px 24px;
+      padding: 0.5rem 0.5rem;
       cursor: pointer;
       color: var(--text-secondary);
       font-size: 0.9rem;

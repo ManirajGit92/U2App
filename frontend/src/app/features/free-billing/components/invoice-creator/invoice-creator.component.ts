@@ -77,7 +77,7 @@ import { Product, Customer, Invoice, InvoiceItem } from '../../models/billing.mo
                 <td><button class="text-danger" style="background:none;border:none;cursor:pointer" (click)="removeItem(i)">✕</button></td>
               </tr>
               <tr *ngIf="invoiceItems.length === 0">
-                <td colspan="7" style="text-align:center; padding: 20px;">No items added to invoice.</td>
+                <td colspan="7" style="text-align:center; padding: 0.5rem;">No items added to invoice.</td>
               </tr>
             </tbody>
           </table>
@@ -90,7 +90,7 @@ import { Product, Customer, Invoice, InvoiceItem } from '../../models/billing.mo
           <div class="summary-row grand-total"><span>Grand Total:</span> <span>₹{{ grandTotal | number:'1.2-2' }}</span></div>
         </div>
 
-        <div class="form-group" style="margin-top: 24px;">
+        <div class="form-group" style="margin-top: 0.5rem;">
           <label>Additional Notes (Printed on Receipt)</label>
           <textarea [(ngModel)]="notes" class="input-field" style="height: 60px;"></textarea>
         </div>
@@ -135,32 +135,32 @@ import { Product, Customer, Invoice, InvoiceItem } from '../../models/billing.mo
   styles: [`
     .invoice-container { display: flex; flex-direction: column; gap: 24px; }
     .invoice-list-toggle { display: flex; gap: 12px; }
-    .invoice-form, .invoice-history { padding: 32px; border-radius: var(--radius-lg); }
-    .form-row { display: flex; gap: 24px; margin-bottom: 24px; }
+    .invoice-form, .invoice-history { padding: 0.5rem; border-radius: var(--radius-lg); }
+    .form-row { display: flex; gap: 24px; margin-bottom: 0.5rem; }
     .flex-1 { flex: 1; }
     .form-group { display: flex; flex-direction: column; gap: 8px; }
     .form-group label { font-size: 0.9rem; color: var(--text-secondary); font-weight: 500; }
-    .input-field { padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-primary); color: var(--text-primary); }
+    .input-field { padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-primary); color: var(--text-primary); }
     
-    .add-item-section { background: rgba(0,0,0,0.03); padding: 20px; border-radius: var(--radius-md); margin-bottom: 24px; }
-    .add-item-section h3 { margin-top: 0; margin-bottom: 16px; font-size: 1.1rem; }
+    .add-item-section { background: rgba(0,0,0,0.03); padding: 0.5rem; border-radius: var(--radius-md); margin-bottom: 0.5rem; }
+    .add-item-section h3 { margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem; }
     .add-item-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: center; }
     
-    .items-table-wrapper { overflow-x: auto; margin-bottom: 24px; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+    .items-table-wrapper { overflow-x: auto; margin-bottom: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
     .data-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .data-table th, .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+    .data-table th, .data-table td { padding: 0.5rem 0.5rem; border-bottom: 1px solid var(--border-color); }
     .data-table th { background: rgba(0,0,0,0.02); font-weight: 600; color: var(--text-secondary); }
     .font-bold { font-weight: 700; }
     .text-primary { color: var(--accent-primary); }
     .text-danger { color: #ef4444; }
 
-    .invoice-summary { display: flex; flex-direction: column; gap: 12px; align-items: flex-end; padding-top: 16px; }
+    .invoice-summary { display: flex; flex-direction: column; gap: 12px; align-items: flex-end; padding-top: 0.5rem; }
     .summary-row { display: flex; justify-content: space-between; width: 300px; font-size: 1rem; color: var(--text-secondary); }
     .grand-total { font-size: 1.4rem; font-weight: 800; color: var(--text-primary); margin-top: 8px; padding-top: 8px; border-top: 2px solid var(--border-color); }
     
-    .form-actions { display: flex; justify-content: flex-end; margin-top: 32px; }
-    .btn-lg { padding: 12px 24px; font-size: 1.1rem; }
-    .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+    .form-actions { display: flex; justify-content: flex-end; margin-top: 0.5rem; }
+    .btn-lg { padding: 0.5rem 0.5rem; font-size: 1.1rem; }
+    .btn-sm { padding: 6px 0.5rem; font-size: 0.85rem; }
     
     @media (max-width: 900px) {
       .add-item-grid { grid-template-columns: 1fr; }

@@ -81,23 +81,23 @@ import { Purchase, Product } from '../../models/billing.models';
   styles: [`
     .crud-container { display: flex; flex-direction: column; gap: 24px; }
     .actions-header { display: flex; justify-content: space-between; gap: 16px; }
-    .search-input { flex: 1; max-width: 300px; padding: 10px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-primary); color: var(--text-primary); }
+    .search-input { flex: 1; max-width: 300px; padding: 0.5rem 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-primary); color: var(--text-primary); }
     .table-card { overflow-x: auto; border-radius: var(--radius-md); }
     .data-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .data-table th, .data-table td { padding: 16px; border-bottom: 1px solid var(--border-color); }
+    .data-table th, .data-table td { padding: 0.5rem; border-bottom: 1px solid var(--border-color); }
     .data-table th { background: rgba(0,0,0,0.02); font-weight: 600; color: var(--text-secondary); }
     .text-success { color: #10b981; font-weight: 700; }
     .text-sm { font-size: 0.85rem; }
-    .text-muted { color: var(--text-secondary); margin-bottom: 16px; display: block; }
-    .empty-state { text-align: center; color: var(--text-tertiary); padding: 32px !important; }
+    .text-muted { color: var(--text-secondary); margin-bottom: 0.5rem; display: block; }
+    .empty-state { text-align: center; color: var(--text-tertiary); padding: 0.5rem !important; }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-    .modal { background: var(--surface-card); width: 100%; max-width: 500px; padding: 32px; border-radius: var(--radius-lg); }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    .modal { background: var(--surface-card); width: 100%; max-width: 500px; padding: 0.5rem; border-radius: var(--radius-lg); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0.5rem 0; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-group label { font-size: 0.85rem; color: var(--text-secondary); }
-    .form-group input, .form-group select { padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-primary); color: var(--text-primary); }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+    .form-group input, .form-group select { padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-primary); color: var(--text-primary); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 0.5rem; }
   `]
 })
 export class PurchaseManagementComponent implements OnInit {

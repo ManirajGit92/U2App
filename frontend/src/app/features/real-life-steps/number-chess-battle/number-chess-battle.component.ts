@@ -200,7 +200,7 @@ import { Observable, Subscription } from 'rxjs';
   styles: [
     `
       .game-container {
-        padding: 1.5rem;
+        padding: 0.5rem;
         min-height: 100vh;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         font-family: 'Inter', sans-serif;
@@ -211,8 +211,8 @@ import { Observable, Subscription } from 'rxjs';
         justify-content: space-between;
         align-items: center;
         gap: 1.5rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -241,7 +241,7 @@ import { Observable, Subscription } from 'rxjs';
 
       .btn-primary,
       .btn-outline {
-        padding: 10px 16px;
+        padding: 0.5rem 0.5rem;
         border-radius: 8px;
         font-weight: 700;
         cursor: pointer;
@@ -283,7 +283,7 @@ import { Observable, Subscription } from 'rxjs';
       }
 
       .glass-card {
-        padding: 1.5rem;
+        padding: 0.5rem;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -294,14 +294,14 @@ import { Observable, Subscription } from 'rxjs';
 
       .setup-card {
         max-width: 600px;
-        margin: 0 auto 2rem;
+        margin: 0 auto 0.5rem;
       }
 
       .setup-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.5rem;
       }
 
       .form-group {
@@ -319,7 +319,7 @@ import { Observable, Subscription } from 'rxjs';
 
       .form-group input,
       .form-group select {
-        padding: 10px;
+        padding: 0.5rem;
         border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.3);
         background: rgba(0, 0, 0, 0.2);
@@ -334,8 +334,8 @@ import { Observable, Subscription } from 'rxjs';
       }
 
       .rules-section {
-        margin: 1.5rem 0;
-        padding: 1rem;
+        margin: 0.5rem 0;
+        padding: 0.5rem;
         border-radius: 8px;
         background: rgba(0, 0, 0, 0.2);
       }
@@ -347,7 +347,7 @@ import { Observable, Subscription } from 'rxjs';
 
       .rules-list {
         margin: 0;
-        padding-left: 1.5rem;
+        padding-left: 0.5rem;
         color: rgba(255, 255, 255, 0.8);
         font-size: 13px;
         line-height: 1.6;
@@ -358,7 +358,7 @@ import { Observable, Subscription } from 'rxjs';
       }
 
       .mt-4 {
-        margin-top: 1.5rem;
+        margin-top: 0.5rem;
       }
 
       .main-game {
@@ -401,7 +401,7 @@ import { Observable, Subscription } from 'rxjs';
 
       .winner-card {
         background: linear-gradient(135deg, #667eea, #764ba2);
-        padding: 2rem;
+        padding: 0.5rem;
         border-radius: 12px;
         text-align: center;
         color: white;
@@ -409,7 +409,7 @@ import { Observable, Subscription } from 'rxjs';
       }
 
       .winner-card h2 {
-        margin: 0 0 1rem;
+        margin: 0 0 0.5rem;
         font-size: 28px;
       }
 
@@ -551,14 +551,14 @@ import { Observable, Subscription } from 'rxjs';
 
       .side-controls h3 {
         margin-top: 0;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.5rem;
         font-size: 14px;
         text-transform: uppercase;
         color: rgba(255, 255, 255, 0.9);
       }
 
       .turn-display {
-        padding: 1rem;
+        padding: 0.5rem;
         border-radius: 6px;
         text-align: center;
         font-size: 18px;
@@ -619,7 +619,7 @@ import { Observable, Subscription } from 'rxjs';
       .no-moves {
         text-align: center;
         color: rgba(255, 255, 255, 0.5);
-        padding: 1rem;
+        padding: 0.5rem;
       }
 
       @media (max-width: 1024px) {
@@ -635,7 +635,7 @@ import { Observable, Subscription } from 'rxjs';
 
       @media (max-width: 768px) {
         .game-container {
-          padding: 0.75rem;
+          padding: 0.5rem;
         }
 
         .header-section {

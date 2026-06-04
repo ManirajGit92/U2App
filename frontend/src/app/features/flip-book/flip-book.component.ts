@@ -76,9 +76,9 @@ export class FlipBookComponent implements OnInit, OnDestroy {
         ...this.parseContent('This is a sample text page. It is styled with safe fonts and padding, just plain text that wraps automatically.')
       },
       {
-        sno: 4, rawContent: `<div style="text-align:center; padding-top: 50px;"><h2>The End</h2><p>Design stunning books.</p></div>`, 
+        sno: 4, rawContent: `<div style="text-align:center; padding-top: 0.5rem;"><h2>The End</h2><p>Design stunning books.</p></div>`, 
         voiceOver: 'The end. You can upload an Excel file to see your own content.',
-        ...this.parseContent(`<div style="text-align:center; padding-top: 50px;"><h2>The End</h2><p>Design stunning books.</p></div>`)
+        ...this.parseContent(`<div style="text-align:center; padding-top: 0.5rem;"><h2>The End</h2><p>Design stunning books.</p></div>`)
       }
     ];
     this.buildPhysicalBook();

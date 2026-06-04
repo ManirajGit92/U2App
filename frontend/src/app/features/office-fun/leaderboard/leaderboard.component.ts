@@ -72,20 +72,20 @@ import { GameState, OfficeFunService } from '../office-fun.service';
     </div>
   `,
   styles: [`
-    .leaderboard-page { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+    .leaderboard-page { flex: 1; overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
 
     .lb-header { display: flex; align-items: center; gap: 1rem; }
     .lb-title { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); flex: 1; }
     .lb-subtitle { font-size: 0.9rem; color: var(--text-secondary); margin-left: -0.5rem; }
 
-    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.5rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
     .btn-secondary { background: var(--accent-surface); border-color: var(--accent-primary); color: var(--accent-primary); }
     .btn-secondary:hover { opacity: 0.8; }
 
     /* Game Over */
     .game-over-banner {
       background: radial-gradient(ellipse at center, rgba(245,158,11,0.15), transparent);
-      border: 1px solid var(--accent-secondary); border-radius: 16px; padding: 1.5rem;
+      border: 1px solid var(--accent-secondary); border-radius: 16px; padding: 0.5rem;
       text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
     }
     .go-emoji { font-size: 3rem; }
@@ -93,7 +93,7 @@ import { GameState, OfficeFunService } from '../office-fun.service';
     .go-winner { font-size: 1rem; color: var(--accent-secondary); font-weight: 600; }
 
     /* Podium */
-    .podium-row { display: flex; justify-content: center; align-items: flex-end; gap: 1rem; padding: 1rem 0; }
+    .podium-row { display: flex; justify-content: center; align-items: flex-end; gap: 1rem; padding: 0.5rem 0; }
     .podium-slot { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
     .crown { font-size: 2rem; }
     .podium-avatar { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 700; color: white; }
@@ -111,7 +111,7 @@ import { GameState, OfficeFunService } from '../office-fun.service';
     .score-row {
       display: flex; align-items: center; gap: 1rem;
       background: var(--bg-secondary); border: 1px solid var(--border-color);
-      border-radius: 12px; padding: 0.85rem 1.25rem; transition: border-color 0.15s;
+      border-radius: 12px; padding: 0.5rem 0.5rem; transition: border-color 0.15s;
     }
     .score-row.top3 { border-color: rgba(245,158,11,0.3); }
     .score-row.top1 { border-color: var(--accent-secondary); background: rgba(245,158,11,0.06); }
@@ -122,7 +122,7 @@ import { GameState, OfficeFunService } from '../office-fun.service';
     .score-bar { height: 100%; border-radius: 5px; transition: width 0.8s ease; }
     .player-score { font-size: 1rem; font-weight: 800; color: var(--text-primary); min-width: 70px; text-align: right; }
 
-    .empty-lb { text-align: center; padding: 3rem; color: var(--text-secondary); font-style: italic; }
+    .empty-lb { text-align: center; padding: 0.5rem; color: var(--text-secondary); font-style: italic; }
   `]
 })
 export class LeaderboardComponent implements OnInit {

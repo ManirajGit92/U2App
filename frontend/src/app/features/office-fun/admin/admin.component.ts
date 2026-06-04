@@ -119,15 +119,15 @@ import { OfficeFunService, SmsLogEntry } from '../office-fun.service';
     </div>
   `,
   styles: [`
-    .admin-panel { display: flex; gap: 1.25rem; flex: 1; overflow: hidden; padding: 1.25rem; }
+    .admin-panel { display: flex; gap: 1.25rem; flex: 1; overflow: hidden; padding: 0.5rem; }
     .admin-col { display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
     .left-col { width: 340px; min-width: 340px; }
     .right-col { flex: 1; }
     .fill { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
     .card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); }
-    .card-header { padding: 0.85rem 1rem; background: var(--bg-tertiary); font-size: 0.88rem; font-weight: 700; color: var(--text-primary); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-    .card-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .card-header { padding: 0.5rem 0.5rem; background: var(--bg-tertiary); font-size: 0.88rem; font-weight: 700; color: var(--text-primary); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .card-body { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
 
     /* Status */
     .status-body .status-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.83rem; color: var(--text-primary); }
@@ -149,7 +149,7 @@ import { OfficeFunService, SmsLogEntry } from '../office-fun.service';
     .btn-row .btn { flex: 1; }
 
     /* Buttons */
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; white-space: nowrap; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.5rem 0.5rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; white-space: nowrap; }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-primary { background: var(--accent-primary); color: white; }
     .btn-primary:not(:disabled):hover { opacity: 0.9; }
@@ -168,13 +168,13 @@ import { OfficeFunService, SmsLogEntry } from '../office-fun.service';
     /* Form */
     .form-row { display: flex; flex-direction: column; gap: 0.3rem; }
     .form-row label { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); }
-    .input-field { padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); color: var(--text-primary); font-size: 0.85rem; outline: none; }
+    .input-field { padding: 0.5rem 0.5rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); color: var(--text-primary); font-size: 0.85rem; outline: none; }
     .input-field:focus { border-color: var(--accent-primary); }
 
     /* SMS Feed */
     .feed-count { font-size: 0.75rem; font-weight: 600; background: var(--accent-surface); color: var(--accent-primary); padding: 0.15rem 0.5rem; border-radius: 20px; }
-    .sms-feed { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.6rem; min-height: 0; }
-    .sms-entry { display: flex; gap: 0.75rem; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--border-color); transition: border-color 0.15s; background: var(--bg-secondary); }
+    .sms-feed { flex: 1; overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.6rem; min-height: 0; }
+    .sms-entry { display: flex; gap: 0.75rem; padding: 0.5rem; border-radius: 10px; border: 1px solid var(--border-color); transition: border-color 0.15s; background: var(--bg-secondary); }
     .sms-entry.correct { border-color: var(--success); background: rgba(16,185,129,0.08); }
     .sms-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: white; flex-shrink: 0; }
     .sms-body { flex: 1; min-width: 0; }
@@ -184,7 +184,7 @@ import { OfficeFunService, SmsLogEntry } from '../office-fun.service';
     .sms-time { font-size: 0.72rem; color: var(--text-secondary); margin-left: auto; }
     .sms-message { font-size: 0.88rem; color: var(--text-primary); }
     .sms-verdict { font-size: 0.78rem; font-weight: 700; color: var(--success); margin-top: 0.25rem; }
-    .feed-empty { text-align: center; padding: 3rem; color: var(--text-secondary); font-style: italic; }
+    .feed-empty { text-align: center; padding: 0.5rem; color: var(--text-secondary); font-style: italic; }
   `]
 })
 export class AdminComponent implements OnInit {

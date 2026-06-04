@@ -171,7 +171,7 @@ a:hover {
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 0.5rem;
 }
 
 .glass-card {
@@ -194,7 +194,7 @@ a:hover {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 22px;
+  padding: 0.5rem 0.5rem;
   font-family: var(--font-family);
   font-size: 0.9rem;
   font-weight: 600;
@@ -228,7 +228,7 @@ a:hover {
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);
-  padding: 8px 14px;
+  padding: 8px 0.5rem;
 }
 .btn-ghost:hover {
   background: var(--accent-surface);
@@ -236,12 +236,12 @@ a:hover {
 }
 
 .btn-sm {
-  padding: 6px 14px;
+  padding: 6px 0.5rem;
   font-size: 0.8rem;
 }
 
 .btn-lg {
-  padding: 14px 32px;
+  padding: 0.5rem 0.5rem;
   font-size: 1rem;
 }
 
@@ -249,7 +249,7 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
+  padding: 3px 0.5rem;
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -277,7 +277,7 @@ a:hover {
 .textarea-styled {
   width: 100%;
   min-height: 200px;
-  padding: 16px;
+  padding: 0.5rem;
   font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
   font-size: 0.88rem;
   line-height: 1.7;
@@ -301,17 +301,17 @@ a:hover {
 
 @media (max-width: 1024px) {
   .container {
-    padding: 0 20px;
+    padding: 0 0.5rem;
   }
 }
 
 @media (max-width: 768px) {
   .container {
-    padding: 0 16px;
+    padding: 0 0.5rem;
   }
 
   .btn-lg {
-    padding: 12px 20px;
+    padding: 0.5rem 0.5rem;
     font-size: 0.95rem;
   }
 
@@ -326,16 +326,16 @@ a:hover {
   }
 
   .btn {
-    padding: 10px 16px;
+    padding: 0.5rem 0.5rem;
   }
 
   .btn-sm {
-    padding: 7px 12px;
+    padding: 7px 0.5rem;
   }
 
   .textarea-styled {
     min-height: 160px;
-    padding: 14px;
+    padding: 0.5rem;
     font-size: 0.84rem;
   }
 }

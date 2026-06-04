@@ -81,7 +81,7 @@ import { LifeTrackerService, FitnessEntry, MentalHealthEntry, Reminder, ExpenseE
                   [style.background]="getInvestmentColor(i.type)" [title]="i.asset">
              </div>
           </div>
-          <p class="text-tertiary" style="margin-top: 1rem; font-size: 0.8rem">
+          <p class="text-tertiary" style="margin-top: 0.5rem; font-size: 0.8rem">
             Total Assets Value: <strong>\${{ totalInvestments() }}</strong>
           </p>
         </div>
@@ -102,13 +102,13 @@ import { LifeTrackerService, FitnessEntry, MentalHealthEntry, Reminder, ExpenseE
   `,
   styles: [`
     .dashboard-grid { display: flex; flex-direction: column; gap: 1.5rem; }
-    .insights-card { padding: 1.5rem; background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(99,102,241,0.1)); border: 1px solid rgba(16,185,129,0.2); }
-    .insights-card ul { list-style: none; padding: 0; margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .insights-card li { padding-left: 1.5rem; position: relative; font-size: 0.9rem; }
+    .insights-card { padding: 0.5rem; background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(99,102,241,0.1)); border: 1px solid rgba(16,185,129,0.2); }
+    .insights-card ul { list-style: none; padding: 0; margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .insights-card li { padding-left: 0.5rem; position: relative; font-size: 0.9rem; }
     .insights-card li::before { content: '💡'; position: absolute; left: 0; }
 
     .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
-    .stat-card { padding: 1.5rem; text-align: center; position: relative; min-height: 120px; display: flex; flex-direction: column; justify-content: center; }
+    .stat-card { padding: 0.5rem; text-align: center; position: relative; min-height: 120px; display: flex; flex-direction: column; justify-content: center; }
     .stat-card .label { display: block; font-size: 0.75rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 1px; }
     .stat-card .value { font-size: 1.8rem; font-weight: 800; color: var(--accent-primary); }
     .px-value { color: #f59e0b !important; }
@@ -117,24 +117,24 @@ import { LifeTrackerService, FitnessEntry, MentalHealthEntry, Reminder, ExpenseE
     .mood-indicator { width: 12px; height: 12px; border-radius: 50%; position: absolute; top: 1rem; right: 1rem; box-shadow: 0 0 10px currentColor; }
 
     .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .chart-box { padding: 1.5rem; min-height: 250px; display: flex; flex-direction: column; }
-    .chart-box h3 { margin-bottom: 1.5rem; font-size: 1rem; color: var(--text-secondary); }
+    .chart-box { padding: 0.5rem; min-height: 250px; display: flex; flex-direction: column; }
+    .chart-box h3 { margin-bottom: 0.5rem; font-size: 1rem; color: var(--text-secondary); }
 
     /* Bar Chart */
-    .bar-chart { flex: 1; display: flex; gap: 0.75rem; align-items: flex-end; justify-content: space-around; padding-bottom: 1.5rem; }
+    .bar-chart { flex: 1; display: flex; gap: 0.75rem; align-items: flex-end; justify-content: space-around; padding-bottom: 0.5rem; }
     .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; height: 100%; justify-content: flex-end; }
     .bar { width: 100%; background: var(--accent-gradient); border-radius: 4px 4px 0 0; min-height: 4px; height: var(--h); transition: height 0.3s ease; }
     .bar-label { font-size: 0.65rem; color: var(--text-tertiary); text-transform: uppercase; }
 
     /* Pie/Segment Chart */
-    .pie-alt { height: 20px; display: flex; border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; }
+    .pie-alt { height: 20px; display: flex; border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem; }
     .pie-segment { height: 100%; transition: flex 0.3s ease; }
     .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
     .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
     .legend-item .dot { width: 8px; height: 8px; border-radius: 50%; }
 
     /* Line Chart Alt */
-    .line-alt { flex: 1; border-bottom: 1px solid var(--border-color); border-left: 1px solid var(--border-color); position: relative; margin: 1rem; }
+    .line-alt { flex: 1; border-bottom: 1px solid var(--border-color); border-left: 1px solid var(--border-color); position: relative; margin: 0.5rem; }
     .point { width: 8px; height: 8px; background: var(--accent-primary); border-radius: 50%; position: absolute; transition: bottom 0.3s ease; transform: translateX(-50%); }
     .point:nth-child(1) { left: 10%; }
     .point:nth-child(2) { left: 25%; }
@@ -148,9 +148,9 @@ import { LifeTrackerService, FitnessEntry, MentalHealthEntry, Reminder, ExpenseE
     .stack-chart { height: 40px; border-radius: 8px; overflow: hidden; display: flex; border: 1px solid var(--border-color); }
     .stack-bar { height: 100%; transition: width 0.3s ease; }
 
-    .tasks-area { padding: 1.5rem; }
-    .task-list { margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 2rem; }
-    .task-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
+    .tasks-area { padding: 0.5rem; }
+    .task-list { margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 2rem; }
+    .task-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
     .task-item .done { text-decoration: line-through; opacity: 0.5; }
     .task-item .time { margin-left: auto; font-size: 0.75rem; color: var(--text-tertiary); }
 

@@ -97,15 +97,15 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
     }
     .sidebar-logo {
       display: flex; align-items: center; gap: 0.75rem;
-      padding: 1.25rem 1rem;
+      padding: 0.5rem 0.5rem;
       border-bottom: 1px solid var(--border);
     }
     .logo-icon { font-size: 1.5rem; }
     .logo-text { font-weight: 700; font-size: 1rem; color: var(--primary); }
-    .sidebar-nav { flex: 1; padding: 1rem 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; }
+    .sidebar-nav { flex: 1; padding: 0.5rem 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; }
     .nav-item {
       display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.65rem 0.85rem;
+      padding: 0.5rem 0.5rem;
       border: none; background: none; cursor: pointer;
       border-radius: 8px; color: var(--text-muted);
       font-size: 0.9rem; font-weight: 500;
@@ -114,7 +114,7 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
     .nav-item:hover { background: var(--primary-light); color: var(--primary); }
     .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
     .nav-icon { font-size: 1.1rem; }
-    .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); }
+    .sidebar-footer { padding: 0.5rem; border-top: 1px solid var(--border); }
     .back-link { font-size: 0.8rem; color: var(--text-muted); text-decoration: none; }
     .back-link:hover { color: var(--primary); }
 
@@ -124,7 +124,7 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
     /* ── Header ──────────────────────────── */
     .app-header {
       display: flex; justify-content: space-between; align-items: center;
-      height: var(--header-h); padding: 0 1.5rem;
+      height: var(--header-h); padding: 0 0.5rem;
       background: var(--surface); border-bottom: 1px solid var(--border);
       box-shadow: 0 1px 3px rgba(0,0,0,0.04);
       position: sticky; top: 0; z-index: 5;
@@ -135,7 +135,7 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
 
     .btn {
       display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.5rem 1rem; border-radius: 8px;
+      padding: 0.5rem 0.5rem; border-radius: 8px;
       font-size: 0.85rem; font-weight: 600; cursor: pointer;
       border: 1px solid transparent; transition: all 0.15s;
     }
@@ -145,7 +145,7 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
     .btn-icon:hover { background: var(--primary-light); }
 
     /* ── Page Content ─────────────────────── */
-    .page-content { flex: 1; overflow-y: auto; padding: 1.5rem; }
+    .page-content { flex: 1; overflow-y: auto; padding: 0.5rem; }
   `]
 })
 export class StandupNoteComponent {

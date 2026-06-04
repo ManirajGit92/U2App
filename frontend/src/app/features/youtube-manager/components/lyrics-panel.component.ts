@@ -42,11 +42,11 @@ import { Subject, takeUntil } from 'rxjs';
   `,
   styles: [`
     .lyrics-container { display: flex; flex-direction: column; gap: 16px; height: 100%; }
-    .actions-header { border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+    .actions-header { border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
     .lyrics-content { flex: 1; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
     .lyrics-content h3 { margin: 0; font-size: 1rem; color: var(--text-primary); }
     
-    .dictation-panel { background: rgba(0,0,0,0.02); padding: 12px; border-radius: var(--radius-sm); border: 1px dashed var(--border-color); }
+    .dictation-panel { background: rgba(0,0,0,0.02); padding: 0.5rem; border-radius: var(--radius-sm); border: 1px dashed var(--border-color); }
     .active-mic { background: rgba(239, 68, 68, 0.1) !important; color: #ef4444 !important; border-color: #ef4444 !important; animation: pulse 2s infinite; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     
@@ -54,7 +54,7 @@ import { Subject, takeUntil } from 'rxjs';
       flex: 1; 
       width: 100%; 
       resize: none; 
-      padding: 12px; 
+      padding: 0.5rem; 
       border: 1px solid var(--border-color); 
       border-radius: var(--radius-sm); 
       background: var(--bg-primary); 
@@ -63,13 +63,13 @@ import { Subject, takeUntil } from 'rxjs';
       line-height: 1.6;
     }
     
-    .btn { cursor: pointer; padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid transparent; }
+    .btn { cursor: pointer; padding: 6px 0.5rem; border-radius: var(--radius-sm); border: 1px solid transparent; }
     .btn-primary { background: var(--accent-primary); color: #fff; }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secondary { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); }
     
     .text-muted { font-size: 0.75rem; color: var(--text-tertiary); }
-    .empty-state { text-align: center; color: var(--text-tertiary); padding: 32px 0; font-size: 0.9rem; }
+    .empty-state { text-align: center; color: var(--text-tertiary); padding: 0.5rem 0; font-size: 0.9rem; }
   `]
 })
 export class LyricsPanelComponent implements OnInit, OnDestroy {

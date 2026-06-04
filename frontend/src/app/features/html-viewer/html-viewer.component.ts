@@ -17,7 +17,7 @@ const DEFAULT_CSS = `body {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 32px;
+  padding: 0.5rem;
   background:
     radial-gradient(circle at top, rgba(56, 189, 248, 0.35), transparent 35%),
     linear-gradient(160deg, #07111f 0%, #0f172a 55%, #111827 100%);
@@ -27,7 +27,7 @@ const DEFAULT_CSS = `body {
 
 .hero-card {
   width: min(560px, 100%);
-  padding: 32px;
+  padding: 0.5rem;
   border-radius: 24px;
   background: rgba(15, 23, 42, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.25);
@@ -36,7 +36,7 @@ const DEFAULT_CSS = `body {
 
 .eyebrow {
   display: inline-block;
-  margin-bottom: 12px;
+  margin-bottom: 0.5rem;
   font-size: 0.8rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -44,13 +44,13 @@ const DEFAULT_CSS = `body {
 }
 
 h1 {
-  margin: 0 0 12px;
+  margin: 0 0 0.5rem;
   font-size: clamp(2rem, 4vw, 3rem);
   line-height: 1.05;
 }
 
 p {
-  margin: 0 0 16px;
+  margin: 0 0 0.5rem;
   line-height: 1.6;
   color: #cbd5e1;
 }
@@ -58,7 +58,7 @@ p {
 .hero-btn {
   border: none;
   border-radius: 999px;
-  padding: 12px 18px;
+  padding: 0.5rem 0.5rem;
   background: linear-gradient(135deg, #38bdf8, #818cf8);
   color: #020617;
   font-weight: 700;
@@ -66,7 +66,7 @@ p {
 }
 
 .hero-output {
-  margin-top: 16px;
+  margin-top: 0.5rem;
   font-weight: 600;
   color: #fef08a;
 }`;

@@ -84,7 +84,7 @@ import { InvoiceCreatorComponent } from './components/invoice-creator/invoice-cr
     }
     
     .sidebar-header {
-      padding: 24px;
+      padding: 0.5rem;
       border-bottom: 1px solid var(--border-color);
     }
     
@@ -99,7 +99,7 @@ import { InvoiceCreatorComponent } from './components/invoice-creator/invoice-cr
     
     .sidebar-nav {
       flex: 1;
-      padding: 16px;
+      padding: 0.5rem;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -109,7 +109,7 @@ import { InvoiceCreatorComponent } from './components/invoice-creator/invoice-cr
       background: none;
       border: none;
       border-radius: var(--radius-md);
-      padding: 12px 16px;
+      padding: 0.5rem 0.5rem;
       text-align: left;
       font-size: 0.95rem;
       font-weight: 500;
@@ -134,13 +134,13 @@ import { InvoiceCreatorComponent } from './components/invoice-creator/invoice-cr
     
     .main-content {
       flex: 1;
-      padding: 32px;
+      padding: 0.5rem;
       overflow-y: auto;
     }
 
     h2 {
       margin-top: 0;
-      margin-bottom: 24px;
+      margin-bottom: 0.5rem;
       font-weight: 700;
     }
   `]

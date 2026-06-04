@@ -60,15 +60,15 @@ import { Subject, takeUntil, interval } from 'rxjs';
     </div>
   `,
   styles: [`
-    .player-container { display: flex; flex-direction: column; height: 100%; width: 100%; max-width: 900px; margin: 0 auto; gap: 16px; padding: 24px; overflow-y: auto; }
+    .player-container { display: flex; flex-direction: column; height: 100%; width: 100%; max-width: 900px; margin: 0 auto; gap: 16px; padding: 0.5rem; overflow-y: auto; }
     
-    .direct-input-bar { display: flex; gap: 8px; background: rgba(255,255,255,0.05); padding: 12px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.1); }
+    .direct-input-bar { display: flex; gap: 8px; background: rgba(255,255,255,0.05); padding: 0.5rem; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.1); }
     .direct-input-bar input { flex: 1; min-width: 0; background: transparent; border: none; color: #fff; font-size: 0.95rem; outline: none; }
     .direct-input-bar input::placeholder { color: rgba(255,255,255,0.4); }
     
-    .video-info h2 { margin: 0 0 12px; color: #fff; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    .video-info h2 { margin: 0 0 0.5rem; color: #fff; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     .tags { display: flex; gap: 8px; flex-wrap: wrap; }
-    .tag { background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(220,38,38,0.2)); border: 1px solid rgba(239,68,68,0.3); color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;}
+    .tag { background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(220,38,38,0.2)); border: 1px solid rgba(239,68,68,0.3); color: #fff; padding: 4px 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;}
     
     .player-wrapper { 
       flex: 1; 
@@ -90,11 +90,11 @@ import { Subject, takeUntil, interval } from 'rxjs';
     ::ng-deep youtube-player iframe { width: 100% !important; height: 100% !important; aspect-ratio: 16/9; }
     
     .empty-state { color: #666; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;}
-    .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+    .empty-icon { font-size: 3rem; margin-bottom: 0.5rem; opacity: 0.5; }
 
     .advanced-controls { 
       background: rgba(255,255,255,0.05); 
-      padding: 16px; 
+      padding: 0.5rem; 
       border-radius: var(--radius-md); 
       display: flex; justify-content: space-between; align-items: center;
       border: 1px solid rgba(255,255,255,0.1);
@@ -103,7 +103,7 @@ import { Subject, takeUntil, interval } from 'rxjs';
     .status-text { margin: 0; color: #aaa; font-size: 0.85rem; }
     .control-actions { display: flex; gap: 12px; }
     
-    .btn { padding: 8px 16px; font-size: 0.9rem; border-radius: var(--radius-sm); border: none; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .btn { padding: 8px 0.5rem; font-size: 0.9rem; border-radius: var(--radius-sm); border: none; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
     .btn-primary { background: var(--accent-primary); color: #fff; box-shadow: 0 2px 8px rgba(239,68,68,0.3); }
     .btn-primary:hover { filter: brightness(1.1); }
     .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }

@@ -385,7 +385,7 @@ type BoardDice = {
   styles: [
     `
       .creator-container {
-        padding: 18px;
+        padding: 0.5rem;
         max-width: 1400px;
         margin: 0 auto;
       }
@@ -395,8 +395,8 @@ type BoardDice = {
         justify-content: space-between;
         align-items: center;
         gap: 14px;
-        padding: 14px 16px;
-        margin-bottom: 16px;
+        padding: 0.5rem 0.5rem;
+        margin-bottom: 0.5rem;
         border-radius: var(--radius-lg);
         background: var(--bg-overlay);
         border: 1px solid var(--border-color);
@@ -429,7 +429,7 @@ type BoardDice = {
 
       .btn-primary,
       .btn-outline {
-        padding: 10px 14px;
+        padding: 0.5rem 0.5rem;
         border-radius: var(--radius-md);
         font-weight: 700;
         cursor: pointer;
@@ -479,7 +479,7 @@ type BoardDice = {
       }
 
       .panel {
-        padding: 16px;
+        padding: 0.5rem;
       }
 
       .form-group {
@@ -504,7 +504,7 @@ type BoardDice = {
       input[type='text'],
       input[type='number'],
       select {
-        padding: 10px 12px;
+        padding: 0.5rem 0.5rem;
         border-radius: var(--radius-md);
         border: 1px solid var(--border-color);
         background: var(--bg-input);
@@ -531,7 +531,7 @@ type BoardDice = {
       .divider {
         border: none;
         border-top: 1px solid var(--border-color);
-        margin: 16px 0;
+        margin: 0.5rem 0;
       }
 
       .hint {
@@ -544,10 +544,10 @@ type BoardDice = {
         margin-top: 8px;
       }
       .mt-3 {
-        margin-top: 12px;
+        margin-top: 0.5rem;
       }
       .mt-4 {
-        margin-top: 16px;
+        margin-top: 0.5rem;
       }
 
       .row {
@@ -569,7 +569,7 @@ type BoardDice = {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
-        margin-top: 10px;
+        margin-top: 0.5rem;
       }
 
       .library-item {
@@ -577,7 +577,7 @@ type BoardDice = {
         grid-template-columns: 40px 1fr;
         gap: 10px;
         align-items: center;
-        padding: 10px;
+        padding: 0.5rem;
         border-radius: var(--radius-md);
         border: 1px solid var(--border-color);
         background: var(--bg-overlay);
@@ -609,7 +609,7 @@ type BoardDice = {
       }
 
       .board-panel {
-        padding: 12px;
+        padding: 0.5rem;
       }
 
       .board-panel:fullscreen {
@@ -617,7 +617,7 @@ type BoardDice = {
         height: 100vh;
         border-radius: 0;
         margin: 0;
-        padding: 12px;
+        padding: 0.5rem;
         background: var(--bg-primary);
         display: flex;
         flex-direction: column;
@@ -628,12 +628,12 @@ type BoardDice = {
         justify-content: space-between;
         align-items: center;
         gap: 10px;
-        padding: 6px 6px 12px;
+        padding: 6px 6px 0.5rem;
       }
 
       .pill {
         display: inline-block;
-        padding: 6px 10px;
+        padding: 6px 0.5rem;
         border-radius: 999px;
         border: 1px solid var(--border-color);
         background: var(--bg-overlay);
@@ -680,7 +680,7 @@ type BoardDice = {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 24px;
+        padding: 0.5rem;
         min-width: 420px;
         min-height: 420px;
       }
@@ -856,7 +856,7 @@ type BoardDice = {
       }
 
       .empty-note {
-        padding: 12px;
+        padding: 0.5rem;
         border-radius: var(--radius-md);
         border: 1px solid var(--border-color);
         background: var(--bg-overlay);
@@ -869,7 +869,7 @@ type BoardDice = {
         grid-template-columns: 56px 1fr;
         gap: 12px;
         align-items: center;
-        padding: 10px;
+        padding: 0.5rem;
         border-radius: var(--radius-md);
         border: 1px solid var(--border-color);
         background: var(--bg-overlay);

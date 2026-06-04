@@ -64,13 +64,13 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 0.5rem;
     }
 
     .upload-card {
       max-width: 500px;
       width: 100%;
-      padding: 48px;
+      padding: 0.5rem;
       text-align: center;
       display: flex;
       flex-direction: column;
@@ -86,13 +86,13 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       display: flex;
       gap: 12px;
       justify-content: center;
-      margin-top: 16px;
+      margin-top: 0.5rem;
     }
 
     .docs-layout {
       display: flex;
       height: calc(100vh - 64px);
-      margin-top: 64px;
+      margin-top: 0.5rem;
       overflow: hidden;
     }
 
@@ -105,7 +105,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
 
     @media (max-width: 768px) {
       .upload-card {
-        padding: 28px 20px;
+        padding: 0.5rem 0.5rem;
       }
 
       .upload-actions {

@@ -1,6 +1,6 @@
 .mapper-shell {
   min-height: 100vh;
-  padding: 96px 24px 40px;
+  padding: 0.5rem 0.5rem 0.5rem;
   background:
     radial-gradient(circle at top left, rgba(31, 140, 235, 0.16), transparent 32%),
     radial-gradient(circle at top right, rgba(19, 78, 74, 0.12), transparent 30%),
@@ -23,12 +23,12 @@
   display: flex;
   justify-content: space-between;
   gap: 24px;
-  padding: 32px;
-  margin-bottom: 20px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .eyebrow {
-  margin: 0 0 10px;
+  margin: 0 0 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
   font-size: 0.76rem;
@@ -46,7 +46,7 @@
 
 .hero-copy {
   max-width: 760px;
-  margin: 14px 0 0;
+  margin: 0.5rem 0 0;
   color: var(--text-secondary);
   font-size: 1rem;
   line-height: 1.7;
@@ -61,7 +61,7 @@
 
 .stat {
   border-radius: 18px;
-  padding: 18px;
+  padding: 0.5rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(240, 249, 255, 0.88));
   border: 1px solid rgba(15, 118, 110, 0.14);
 }
@@ -81,8 +81,8 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
-  padding: 12px;
-  margin-bottom: 20px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .step {
@@ -90,7 +90,7 @@
   align-items: center;
   gap: 12px;
   border: 0;
-  padding: 14px;
+  padding: 0.5rem;
   border-radius: 16px;
   background: transparent;
   color: var(--text-secondary);
@@ -120,15 +120,15 @@
 }
 
 .status-card {
-  padding: 18px 22px;
-  margin-bottom: 20px;
+  padding: 0.5rem 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .status-row {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
+  margin-bottom: 0.5rem;
 }
 
 .progress-track {
@@ -157,7 +157,7 @@
 }
 
 .panel-card {
-  padding: 28px;
+  padding: 0.5rem;
 }
 
 .panel-head {
@@ -165,7 +165,7 @@
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 0.5rem;
 }
 
 .panel-head h2,
@@ -201,7 +201,7 @@
   border: 1px solid var(--border-color);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.75);
-  padding: 20px;
+  padding: 0.5rem;
 }
 
 .upload-tile {
@@ -223,7 +223,7 @@
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 6px 0.5rem;
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -235,9 +235,9 @@
 }
 
 .issue-strip {
-  padding: 12px 14px;
+  padding: 0.5rem 0.5rem;
   border-radius: 14px;
-  margin-top: 12px;
+  margin-top: 0.5rem;
   font-size: 0.92rem;
 }
 
@@ -255,7 +255,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 0.5rem;
 }
 
 .chip,
@@ -283,7 +283,7 @@
 .mapping-table td,
 .preview-table th,
 .preview-table td {
-  padding: 14px 12px;
+  padding: 0.5rem 0.5rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.18);
   vertical-align: top;
   text-align: left;
@@ -325,7 +325,7 @@ textarea {
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.36);
   border-radius: 12px;
-  padding: 11px 12px;
+  padding: 0.5rem 0.5rem;
   background: white;
   color: var(--text-primary);
 }
@@ -350,7 +350,7 @@ textarea {
   border: 0;
   border-radius: 14px;
   cursor: pointer;
-  padding: 11px 16px;
+  padding: 0.5rem 0.5rem;
   font-weight: 700;
 }
 
@@ -383,24 +383,24 @@ textarea {
 }
 
 .mini-section + .mini-section {
-  margin-top: 18px;
+  margin-top: 0.5rem;
 }
 
 .mini-section h4 {
-  margin: 0 0 12px;
+  margin: 0 0 0.5rem;
 }
 
 .operation-card,
 .validation-card {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 16px;
-  padding: 16px;
+  padding: 0.5rem;
   background: rgba(248, 250, 252, 0.7);
 }
 
 .operation-card + .operation-card,
 .validation-card + .validation-card {
-  margin-top: 12px;
+  margin-top: 0.5rem;
 }
 
 .operation-grid {
@@ -429,11 +429,11 @@ textarea {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 0.5rem;
 }
 
 .summary-banner > div {
-  padding: 18px;
+  padding: 0.5rem;
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(240, 253, 250, 0.9), rgba(239, 246, 255, 0.9));
 }
@@ -459,23 +459,23 @@ textarea {
 }
 
 .side-card {
-  padding: 22px;
+  padding: 0.5rem;
 }
 
 .side-card ul {
-  margin: 14px 0 0;
-  padding-left: 18px;
+  margin: 0.5rem 0 0;
+  padding-left: 0.5rem;
   color: var(--text-secondary);
   line-height: 1.7;
 }
 
 .audit-card {
-  margin-top: 18px;
+  margin-top: 0.5rem;
 }
 
 .footer-actions {
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 1100px) {
@@ -511,12 +511,12 @@ textarea {
 
 @media (max-width: 640px) {
   .mapper-shell {
-    padding: 84px 16px 32px;
+    padding: 0.5rem 0.5rem 0.5rem;
   }
 
   .panel-card,
   .side-card,
   .hero-card {
-    padding: 20px;
+    padding: 0.5rem;
   }
 }

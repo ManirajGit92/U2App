@@ -106,7 +106,7 @@ interface Tool {
       /* ───── Hero ───── */
       .hero {
         position: relative;
-        padding: 100px 0 80px;
+        padding: 0.5rem 0 0.5rem;
         overflow: hidden;
         min-height: 75vh;
         display: flex;
@@ -139,14 +139,14 @@ interface Tool {
 
       .hero-badge {
         display: inline-block;
-        padding: 8px 20px;
+        padding: 8px 0.5rem;
         font-size: 0.85rem;
         font-weight: 600;
         color: var(--accent-primary);
         background: var(--accent-surface);
         border: 1px solid var(--accent-primary);
         border-radius: 50px;
-        margin-bottom: 28px;
+        margin-bottom: 0.5rem;
         animation: fadeInUp 0.5s ease-out;
       }
 
@@ -155,7 +155,7 @@ interface Tool {
         font-weight: 900;
         line-height: 1.1;
         letter-spacing: -1.5px;
-        margin-bottom: 24px;
+        margin-bottom: 0.5rem;
         animation: fadeInUp 0.5s ease-out 0.1s both;
       }
 
@@ -170,7 +170,7 @@ interface Tool {
         font-size: 1.15rem;
         color: var(--text-secondary);
         max-width: 560px;
-        margin: 0 auto 36px;
+        margin: 0 auto 0.5rem;
         line-height: 1.7;
         animation: fadeInUp 0.5s ease-out 0.2s both;
       }
@@ -180,7 +180,7 @@ interface Tool {
         align-items: center;
         justify-content: center;
         gap: 16px;
-        margin-bottom: 56px;
+        margin-bottom: 0.5rem;
         animation: fadeInUp 0.5s ease-out 0.3s both;
       }
 
@@ -218,19 +218,19 @@ interface Tool {
 
       /* ───── Tools Section ───── */
       .tools-section {
-        padding: 80px 24px 100px;
+        padding: 0.5rem 0.5rem 0.5rem;
       }
 
       .section-header {
         text-align: center;
-        margin-bottom: 56px;
+        margin-bottom: 0.5rem;
       }
 
       .section-title {
         font-size: 2.2rem;
         font-weight: 800;
         letter-spacing: -0.5px;
-        margin-bottom: 12px;
+        margin-bottom: 0.5rem;
       }
 
       .section-subtitle {
@@ -245,7 +245,7 @@ interface Tool {
       }
 
       .tool-card {
-        padding: 32px 28px;
+        padding: 0.5rem 0.5rem;
         display: flex;
         flex-direction: column;
         gap: 16px;
@@ -288,7 +288,7 @@ interface Tool {
       /* ───── Footer ───── */
       .footer {
         border-top: 1px solid var(--border-color);
-        padding: 32px 0;
+        padding: 0.5rem 0;
       }
 
       .footer-inner {
@@ -311,7 +311,7 @@ interface Tool {
       /* ───── Responsive ───── */
       @media (max-width: 768px) {
         .hero {
-          padding: 60px 0;
+          padding: 0.5rem 0;
           min-height: auto;
         }
         .hero-title {

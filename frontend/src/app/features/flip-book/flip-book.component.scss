@@ -46,7 +46,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
+  padding: 0.5rem 0.5rem;
   background: var(--fb-panel-bg);
   border-bottom: 1px solid var(--fb-border);
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -69,14 +69,14 @@ h2 {
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  margin-right: 20px;
+  margin-right: 0.5rem;
 }
 
 .btn {
   background: transparent;
   color: var(--fb-text);
   border: 1px solid var(--fb-border);
-  padding: 8px 16px;
+  padding: 8px 0.5rem;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
@@ -120,7 +120,7 @@ h2 {
 .error-banner {
   background: #ff5252;
   color: #fff;
-  padding: 10px;
+  padding: 0.5rem;
   text-align: center;
   font-weight: bold;
 }
@@ -155,7 +155,7 @@ h2 {
     border-top-color: #fff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-bottom: 10px;
+    margin-bottom: 0.5rem;
   }
 }
 
@@ -238,7 +238,7 @@ h2 {
 
 /* Page Content Formatting */
 .page-content {
-  padding: 40px;
+  padding: 0.5rem;
   height: 100%;
   width: 100%;
   box-sizing: border-box;

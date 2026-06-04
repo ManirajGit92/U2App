@@ -142,7 +142,7 @@ import { GameQuestion, GameState, OfficeFunService, Winner } from '../office-fun
     .break-text, .idle-title, .fin-title { font-size: 2.5rem; font-weight: 800; color: var(--text-primary); }
     .break-count { font-size: 6rem; font-weight: 900; color: var(--accent-primary); line-height: 1; animation: pulse 1s ease infinite; }
     .idle-sub, .fin-sub { font-size: 1rem; color: var(--text-secondary); }
-    .idle-hint { background: var(--accent-surface); border: 1px solid var(--accent-primary); padding: 0.75rem 1.5rem; border-radius: 12px; color: var(--accent-primary); font-size: 0.95rem; }
+    .idle-hint { background: var(--accent-surface); border: 1px solid var(--accent-primary); padding: 0.5rem 0.5rem; border-radius: 12px; color: var(--accent-primary); font-size: 0.95rem; }
 
     /* Question layout */
     .question-layout {
@@ -152,7 +152,7 @@ import { GameQuestion, GameState, OfficeFunService, Winner } from '../office-fun
       width: 180px; min-width: 180px; display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 1rem;
       background: var(--bg-secondary); border-right: 1px solid var(--border-color);
-      padding: 1.5rem 1rem;
+      padding: 0.5rem 0.5rem;
     }
     .q-number { font-size: 0.9rem; font-weight: 700; color: var(--text-secondary); }
     .q-points { font-size: 1.5rem; font-weight: 800; color: var(--accent-secondary); }
@@ -165,10 +165,10 @@ import { GameQuestion, GameState, OfficeFunService, Winner } from '../office-fun
       font-size: 2rem; font-weight: 900; color: var(--text-primary);
     }
     .q-hint { font-size: 0.78rem; color: var(--accent-primary); text-align: center; background: var(--accent-surface); padding: 0.5rem; border-radius: 8px; width: 100%; }
-    .paused-badge { font-size: 0.85rem; font-weight: 700; color: var(--accent-secondary); background: rgba(245,158,11,0.15); padding: 0.35rem 0.75rem; border-radius: 8px; width: 100%; text-align: center; }
+    .paused-badge { font-size: 0.85rem; font-weight: 700; color: var(--accent-secondary); background: rgba(245,158,11,0.15); padding: 0.35rem 0.5rem; border-radius: 8px; width: 100%; text-align: center; }
 
     .reveal-box {
-      margin-top: auto; width: 100%; background: var(--success); border-radius: 12px; padding: 1rem;
+      margin-top: auto; width: 100%; background: var(--success); border-radius: 12px; padding: 0.5rem;
       text-align: center; animation: slideUp 0.3s ease-out;
     }
     .reveal-label { font-size: 0.65rem; font-weight: 800; color: rgba(255,255,255,0.7); letter-spacing: 0.05em; margin-bottom: 0.25rem; }
@@ -179,7 +179,7 @@ import { GameQuestion, GameState, OfficeFunService, Winner } from '../office-fun
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       animation: fadeIn 0.3s ease;
     }
-    .ts-icon { font-size: 4rem; margin-bottom: 1rem; }
+    .ts-icon { font-size: 4rem; margin-bottom: 0.5rem; }
     .ts-text { font-size: 3rem; font-weight: 900; color: var(--danger); }
     .ts-sub { color: var(--text-secondary); font-size: 1.1rem; }
 

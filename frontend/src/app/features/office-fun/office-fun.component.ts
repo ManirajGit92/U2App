@@ -76,7 +76,7 @@ type View = 'game' | 'admin' | 'leaderboard';
     /* Header */
     .of-header {
       display: flex; align-items: center; gap: 1.5rem;
-      padding: 0 1.5rem; height: 60px;
+      padding: 0 0.5rem; height: 60px;
       background: var(--surface); border-bottom: 1px solid var(--border);
       position: sticky; top: 0; z-index: 50;
       box-shadow: var(--shadow-md);
@@ -86,7 +86,7 @@ type View = 'game' | 'admin' | 'leaderboard';
 
     .of-nav { display: flex; gap: 0.25rem; flex: 1; }
     .nav-tab {
-      padding: 0.5rem 1.1rem; border: none; background: none;
+      padding: 0.5rem 0.5rem; border: none; background: none;
       border-radius: 8px; cursor: pointer; font-size: 0.88rem; font-weight: 600;
       color: var(--text-muted); transition: all 0.15s;
     }
@@ -98,7 +98,7 @@ type View = 'game' | 'admin' | 'leaderboard';
     .conn-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); animation: pulse 2s infinite; }
     .conn-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
 
-    .status-badge { padding: 0.25rem 0.7rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; }
+    .status-badge { padding: 0.25rem 0.5rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; }
     .status-idle     { background: rgba(100,116,139,0.2); color: var(--text-muted); }
     .status-playing  { background: rgba(16,185,129,0.2); color: var(--success); }
     .status-paused   { background: rgba(245,158,11,0.2); color: var(--accent); }

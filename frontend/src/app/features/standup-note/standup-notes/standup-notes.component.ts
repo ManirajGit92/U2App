@@ -113,9 +113,9 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
   `,
   styles: [`
     .notes-page { display: flex; flex-direction: column; gap: 1.25rem; }
-    .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--bg-secondary); padding: 1rem 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--bg-secondary); padding: 0.5rem 0.5rem; border-radius: 12px; border: 1px solid var(--border-color); }
     .toolbar-left { display: flex; gap: 0.75rem; flex-wrap: wrap; flex: 1; }
-    .input-field { padding: 0.55rem 0.9rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.88rem; background: var(--bg-input); color: var(--text-primary); outline: none; }
+    .input-field { padding: 0.5rem 0.5rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.88rem; background: var(--bg-input); color: var(--text-primary); outline: none; }
     .input-field:focus { border-color: var(--accent-primary); }
     .search { min-width: 200px; flex: 1; }
 
@@ -123,7 +123,7 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
     .note-card { background: var(--bg-secondary); border-radius: 14px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: var(--shadow-sm); transition: box-shadow 0.2s; }
     .note-card:hover { box-shadow: var(--shadow-md); }
 
-    .card-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem; border-bottom: 1px solid var(--border-color); background: var(--bg-tertiary); }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 0.5rem; border-bottom: 1px solid var(--border-color); background: var(--bg-tertiary); }
     .emp-info { display: flex; align-items: center; gap: 0.75rem; }
     .avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700; color: white; }
     .emp-name { font-weight: 700; font-size: 0.92rem; color: var(--text-primary); }
@@ -134,7 +134,7 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
     .icon-btn { background: none; border: none; cursor: pointer; font-size: 1rem; opacity: 0.6; transition: opacity 0.15s, transform 0.15s; padding: 0.2rem 0.3rem; border-radius: 4px; }
     .icon-btn:hover { opacity: 1; transform: scale(1.1); }
 
-    .card-body { padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
+    .card-body { padding: 0.5rem 0.5rem; display: flex; flex-direction: column; gap: 0.6rem; }
     .note-row { display: flex; gap: 0.5rem; }
     .note-label { font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; white-space: nowrap; height: fit-content; }
     .note-label.yesterday { background: rgba(16,185,129,0.15); color: #10b981; }
@@ -143,11 +143,11 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
     .note-label.misc { background: rgba(59,130,246,0.15); color: #3b82f6; }
     .note-text { font-size: 0.83rem; color: var(--text-primary); line-height: 1.5; }
 
-    .empty-state { text-align: center; padding: 4rem; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+    .empty-state { text-align: center; padding: 0.5rem; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 1rem; }
     .empty-icon { font-size: 3rem; }
 
     /* Buttons */
-    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.5rem; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
     .btn-primary { background: var(--accent-primary); color: white; }
     .btn-primary:hover { opacity: 0.9; }
     .btn-ghost { background: none; border-color: var(--border-color); color: var(--text-secondary); }
@@ -156,10 +156,10 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
     /* Modal */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
     .modal { background: var(--bg-secondary); border-radius: 16px; width: 540px; max-width: 95vw; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.5rem; border-bottom: 1px solid var(--border-color); }
     .modal-header h3 { margin: 0; font-size: 1.05rem; color: var(--text-primary); }
-    .modal-body { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; max-height: 65vh; overflow-y: auto; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); }
+    .modal-body { padding: 0.5rem 0.5rem; display: flex; flex-direction: column; gap: 1rem; max-height: 65vh; overflow-y: auto; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 0.5rem 0.5rem; border-top: 1px solid var(--border-color); }
     .form-row { display: flex; flex-direction: column; gap: 0.4rem; }
     .form-row label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
     .form-row .input-field { width: 100%; box-sizing: border-box; }

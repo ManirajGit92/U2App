@@ -116,7 +116,7 @@ interface SyncModule {
     .profile-page {
       position: relative;
       min-height: 100vh;
-      padding: 32px 24px 80px;
+      padding: 0.5rem 0.5rem 0.5rem;
     }
 
     .profile-bg {
@@ -136,8 +136,8 @@ interface SyncModule {
 
     /* User Card */
     .user-card {
-      padding: 32px;
-      margin-bottom: 40px;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
       animation: fadeInUp 0.5s ease-out;
     }
 
@@ -145,7 +145,7 @@ interface SyncModule {
       display: flex;
       align-items: center;
       gap: 24px;
-      margin-bottom: 24px;
+      margin-bottom: 0.5rem;
     }
 
     .user-photo {
@@ -176,7 +176,7 @@ interface SyncModule {
     .user-provider {
       display: inline-block;
       margin-top: 6px;
-      padding: 4px 12px;
+      padding: 4px 0.5rem;
       font-size: 0.75rem;
       font-weight: 600;
       background: var(--accent-surface);
@@ -192,7 +192,7 @@ interface SyncModule {
 
     /* Sync Section */
     .sync-section {
-      margin-bottom: 32px;
+      margin-bottom: 0.5rem;
       animation: fadeInUp 0.5s ease-out 0.1s both;
     }
 
@@ -211,13 +211,13 @@ interface SyncModule {
     .section-subtitle {
       font-size: 0.9rem;
       color: var(--text-secondary);
-      margin-bottom: 24px;
+      margin-bottom: 0.5rem;
       line-height: 1.6;
     }
 
     .sync-error-banner {
-      padding: 12px 16px;
-      margin-bottom: 20px;
+      padding: 0.5rem 0.5rem;
+      margin-bottom: 0.5rem;
       background: rgba(239, 68, 68, 0.1);
       border: 1px solid rgba(239, 68, 68, 0.3);
       border-radius: var(--radius-md);
@@ -232,7 +232,7 @@ interface SyncModule {
     }
 
     .module-card {
-      padding: 20px 24px;
+      padding: 0.5rem 0.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -265,7 +265,7 @@ interface SyncModule {
 
     .sync-all-row {
       text-align: center;
-      margin-top: 32px;
+      margin-top: 0.5rem;
       animation: fadeInUp 0.5s ease-out 0.2s both;
     }
 

@@ -109,7 +109,7 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 0.5rem;
       overflow: hidden;
     }
 
@@ -128,18 +128,18 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
       z-index: 1;
       width: 100%;
       max-width: 460px;
-      padding: 48px 40px;
+      padding: 0.5rem 0.5rem;
       text-align: center;
       animation: fadeInUp 0.6s ease-out;
     }
 
     .login-header {
-      margin-bottom: 36px;
+      margin-bottom: 0.5rem;
     }
 
     .login-icon {
       font-size: 3rem;
-      margin-bottom: 16px;
+      margin-bottom: 0.5rem;
       animation: pulse 2s ease-in-out infinite;
     }
 
@@ -152,7 +152,7 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
       font-size: 1.8rem;
       font-weight: 800;
       letter-spacing: -0.5px;
-      margin-bottom: 12px;
+      margin-bottom: 0.5rem;
     }
 
     .gradient-text {
@@ -173,8 +173,8 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 14px 16px;
-      margin-bottom: 24px;
+      padding: 0.5rem 0.5rem;
+      margin-bottom: 0.5rem;
       background: rgba(239, 68, 68, 0.1);
       border: 1px solid rgba(239, 68, 68, 0.3);
       border-radius: var(--radius-md);
@@ -199,7 +199,7 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
       flex-direction: column;
       align-items: center;
       gap: 16px;
-      padding: 40px 0;
+      padding: 0.5rem 0;
       color: var(--text-secondary);
       font-size: 0.95rem;
     }
@@ -222,7 +222,7 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
       display: flex;
       flex-direction: column;
       gap: 14px;
-      margin-bottom: 24px;
+      margin-bottom: 0.5rem;
     }
 
     .login-btn {
@@ -231,7 +231,7 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
       justify-content: center;
       gap: 12px;
       width: 100%;
-      padding: 14px 20px;
+      padding: 0.5rem 0.5rem;
       font-family: var(--font-family);
       font-size: 0.95rem;
       font-weight: 600;
@@ -289,7 +289,7 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
       display: flex;
       align-items: center;
       gap: 16px;
-      margin-bottom: 20px;
+      margin-bottom: 0.5rem;
       color: var(--text-tertiary);
       font-size: 0.82rem;
     }
@@ -304,7 +304,7 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
 
     /* Footer */
     .login-footer {
-      margin-top: 28px;
+      margin-top: 0.5rem;
       font-size: 0.78rem;
       color: var(--text-tertiary);
       line-height: 1.5;
@@ -312,7 +312,7 @@ import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
 
     @media (max-width: 480px) {
       .login-card {
-        padding: 36px 24px;
+        padding: 0.5rem 0.5rem;
       }
       .login-title {
         font-size: 1.4rem;

@@ -36,12 +36,12 @@ import { LifeTrackerService } from './life-tracker.service';
   `,
   styles: [`
     .life-tracker-layout { display: flex; flex-direction: column; height: 100vh; background: var(--bg-primary); }
-    .tracker-header { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; border-bottom: 1px solid var(--border-color); }
+    .tracker-header { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 0.5rem; border-bottom: 1px solid var(--border-color); }
     .logo { font-size: 1.5rem; font-weight: 800; color: var(--accent-primary); }
     .tracker-nav { display: flex; gap: 0.5rem; }
-    .tracker-nav a { text-decoration: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; padding: 0.5rem 0.75rem; border-radius: 8px; transition: all 0.2s; }
+    .tracker-nav a { text-decoration: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; padding: 0.5rem 0.5rem; border-radius: 8px; transition: all 0.2s; }
     .tracker-nav a.active { color: var(--accent-primary); background: rgba(var(--accent-rgb), 0.1); }
-    .tracker-content { flex: 1; overflow-y: auto; padding: 2rem; }
+    .tracker-content { flex: 1; overflow-y: auto; padding: 0.5rem; }
     .header-actions { display: flex; gap: 0.5rem; }
   `]
 })

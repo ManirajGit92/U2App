@@ -242,7 +242,7 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
   `,
   styles: [`
     .estimator-container {
-      padding: 2rem;
+      padding: 0.5rem;
       min-height: 100vh;
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       font-family: 'Inter', 'Segoe UI', sans-serif;
@@ -252,10 +252,10 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2rem;
+      margin-bottom: 0.5rem;
       background: rgba(255, 255, 255, 0.7);
       backdrop-filter: blur(10px);
-      padding: 1.5rem 2rem;
+      padding: 0.5rem 0.5rem;
       border-radius: 16px;
       box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.18);
@@ -277,7 +277,7 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
       background: rgba(255, 255, 255, 0.5);
       backdrop-filter: blur(12px);
       border-radius: 20px;
-      padding: 2rem;
+      padding: 0.5rem;
       border: 1px solid rgba(255, 255, 255, 0.4);
       box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
     }
@@ -286,8 +286,8 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
       margin-top: 0;
       color: #1a202c;
       border-bottom: 2px solid rgba(0,0,0,0.05);
-      padding-bottom: 1rem;
-      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.5rem;
     }
 
     .main-content {
@@ -318,7 +318,7 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
       letter-spacing: 0.5px;
     }
     .form-group input, .form-group select {
-      padding: 0.8rem 1rem;
+      padding: 0.5rem 0.5rem;
       border-radius: 10px;
       border: 2px solid transparent;
       background: rgba(255, 255, 255, 0.8);
@@ -334,12 +334,12 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
       box-shadow: 0 4px 12px rgba(79, 172, 254, 0.2);
     }
     .form-actions {
-      margin-top: 1rem;
+      margin-top: 0.5rem;
     }
 
     /* Buttons */
     .btn-primary, .btn-secondary, .btn-outline {
-      padding: 0.8rem 1.5rem;
+      padding: 0.5rem 0.5rem;
       border: none;
       border-radius: 8px;
       font-weight: 600;
@@ -384,7 +384,7 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
 
     /* Configuration */
     .config-section {
-      margin-bottom: 2rem;
+      margin-bottom: 0.5rem;
       animation: slideDown 0.3s ease-out;
     }
     @keyframes slideDown {
@@ -393,17 +393,17 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
     }
     .config-desc {
       color: #718096;
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.5rem;
     }
     .config-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 1.5rem;
-      margin-bottom: 2rem;
+      margin-bottom: 0.5rem;
     }
     .config-item {
       background: rgba(255,255,255,0.4);
-      padding: 1rem;
+      padding: 0.5rem;
       border-radius: 12px;
       border: 1px solid rgba(0,0,0,0.05);
     }
@@ -434,17 +434,17 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
     }
     .feature-title {
       color: #4facfe;
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.5rem;
       font-size: 1.3rem;
     }
     .total-metrics {
       display: flex;
       gap: 1rem;
-      margin-bottom: 2rem;
+      margin-bottom: 0.5rem;
     }
     .metric-box {
       flex: 1;
-      padding: 1rem;
+      padding: 0.5rem;
       border-radius: 12px;
       text-align: center;
       color: white;
@@ -474,9 +474,9 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
       display: flex;
       justify-content: space-around;
       background: rgba(255,255,255,0.8);
-      padding: 1.5rem;
+      padding: 0.5rem;
       border-radius: 16px;
-      margin-bottom: 2rem;
+      margin-bottom: 0.5rem;
       border: 1px solid rgba(0,0,0,0.05);
     }
     .grand-total .stat {
@@ -502,7 +502,7 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
       height: 24px;
       border-radius: 12px;
       overflow: hidden;
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
     }
     .bar-segment {
@@ -542,7 +542,7 @@ import { EstimatorService, EstimationInputs, EstimationResult, FormulaWeights, E
     }
     .history-item {
       background: rgba(255,255,255,0.6);
-      padding: 1rem;
+      padding: 0.5rem;
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.2s;

@@ -6,7 +6,7 @@
   min-height: calc(100vh - 64px);
   display: flex;
   flex-direction: column;
-  padding-bottom: 32px;
+  padding-bottom: 0.5rem;
 }
 
 .html-viewer-page.fullscreen {
@@ -18,8 +18,8 @@
   overflow: hidden;
 
   .page-header {
-    padding-top: 12px;
-    padding-bottom: 12px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
   }
 
   .split-pane {
@@ -32,7 +32,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 28px 24px 20px;
+  padding: 0.5rem 0.5rem 0.5rem;
   flex-wrap: wrap;
   gap: 16px;
 }
@@ -82,7 +82,7 @@
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   gap: 16px;
   height: calc(100vh - 180px);
-  padding: 0 24px;
+  padding: 0 0.5rem;
 }
 
 .editor-panel,
@@ -101,7 +101,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
   flex-shrink: 0;
@@ -146,7 +146,7 @@
 .editor-tabs {
   display: flex;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--border-color);
   background: linear-gradient(180deg, rgba(148, 163, 184, 0.08), transparent);
   flex-wrap: wrap;
@@ -157,7 +157,7 @@
   background: var(--bg-secondary);
   color: var(--text-secondary);
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 8px 0.5rem;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
@@ -193,7 +193,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 16px 12px;
+  padding: 0.5rem 0.5rem 0.5rem;
   border-bottom: 1px solid var(--border-color);
   background: rgba(148, 163, 184, 0.05);
 }
@@ -219,7 +219,7 @@
 .line-numbers {
   display: flex;
   flex-direction: column;
-  padding: 16px 8px 16px 12px;
+  padding: 0.5rem 8px 0.5rem 0.5rem;
   background: var(--bg-tertiary);
   border-right: 1px solid var(--border-color);
   font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
@@ -239,7 +239,7 @@
 
 .code-textarea {
   flex: 1;
-  padding: 16px;
+  padding: 0.5rem;
   font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
   font-size: 0.85rem;
   line-height: 1.6;
@@ -264,7 +264,7 @@
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  padding: 4px 16px;
+  padding: 4px 0.5rem;
   font-size: 0.8rem;
   color: var(--text-secondary);
   flex: 1;
@@ -273,13 +273,13 @@
 .preview-meta {
   display: flex;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--border-color);
   background: rgba(148, 163, 184, 0.05);
 }
 
 .preview-meta span {
-  padding: 6px 10px;
+  padding: 6px 0.5rem;
   border-radius: 999px;
   background: var(--bg-secondary);
   color: var(--text-tertiary);
@@ -321,7 +321,7 @@ iframe {
 
 @media (max-width: 640px) {
   .page-header {
-    padding: 20px 16px 16px;
+    padding: 0.5rem 0.5rem 0.5rem;
   }
 
   .page-title {
@@ -329,7 +329,7 @@ iframe {
   }
 
   .split-pane {
-    padding: 0 16px;
+    padding: 0 0.5rem;
   }
 
   .header-actions {
@@ -353,12 +353,12 @@ iframe {
   .panel-topbar,
   .section-header,
   .preview-meta {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 
   .code-textarea {
-    padding: 12px;
+    padding: 0.5rem;
     font-size: 0.8rem;
   }
 }

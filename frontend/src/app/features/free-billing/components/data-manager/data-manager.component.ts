@@ -54,13 +54,13 @@ import { BillingStateService } from '../../services/billing-state.service';
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 24px;
-      margin-bottom: 24px;
+      margin-bottom: 0.5rem;
     }
     .action-card {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
-      padding: 32px 24px;
+      padding: 0.5rem 0.5rem;
       text-align: center;
       display: flex;
       flex-direction: column;
@@ -89,7 +89,7 @@ import { BillingStateService } from '../../services/billing-state.service';
       background: rgba(239, 68, 68, 0.1);
       color: #ef4444;
       border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 8px 16px;
+      padding: 8px 0.5rem;
       border-radius: var(--radius-md);
       cursor: pointer;
       font-weight: 500;
@@ -98,7 +98,7 @@ import { BillingStateService } from '../../services/billing-state.service';
       background: rgba(239, 68, 68, 0.2);
     }
     .status-msg {
-      padding: 16px;
+      padding: 0.5rem;
       border-radius: var(--radius-md);
       background: rgba(16, 185, 129, 0.1);
       color: #10b981;

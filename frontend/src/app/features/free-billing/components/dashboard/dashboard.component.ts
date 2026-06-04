@@ -58,7 +58,7 @@ Chart.register(...registerables);
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
-      padding: 24px;
+      padding: 0.5rem;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -83,12 +83,12 @@ Chart.register(...registerables);
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
-      padding: 24px;
+      padding: 0.5rem;
       position: relative;
     }
     .chart-container h3 {
       margin-top: 0;
-      margin-bottom: 16px;
+      margin-bottom: 0.5rem;
       font-size: 1.1rem;
     }
     canvas {

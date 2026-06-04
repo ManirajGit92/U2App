@@ -282,7 +282,7 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
   styles: [`
     /* Dynamic Theme Variables bindings on root */
     .cte-container {
-      padding: 1.5rem; min-height: 100vh;
+      padding: 0.5rem; min-height: 100vh;
       background: var(--bg-color);
       color: var(--text-color);
       font-family: var(--font-family);
@@ -291,20 +291,20 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
     }
     
     .theme-toolbar {
-      display: flex; align-items: center; justify-content: flex-end; padding: 0.8rem 1.5rem;
-      margin-bottom: 1.5rem; border-radius: 8px; font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: flex-end; padding: 0.5rem 0.5rem;
+      margin-bottom: 0.5rem; border-radius: 8px; font-size: 0.85rem;
     }
     .theme-options { display: flex; align-items: center; gap: 0.8rem; }
     .theme-options label { font-weight: 600; color: var(--text-color); }
     .theme-options select, .theme-options input {
       background: var(--input-bg); color: var(--text-color);
-      border: 1px solid var(--border-color); padding: 0.3rem 0.6rem; border-radius: 4px; outline: none;
+      border: 1px solid var(--border-color); padding: 0.3rem 0.5rem; border-radius: 4px; outline: none;
     }
     
     .header-section {
       display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 1.5rem; background: var(--card-bg);
-      backdrop-filter: blur(10px); padding: 1.5rem; border-radius: 12px;
+      margin-bottom: 0.5rem; background: var(--card-bg);
+      backdrop-filter: blur(10px); padding: 0.5rem; border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--border-color);
     }
     .header-titles h1 { margin: 0; font-size: 1.6rem; color: var(--text-color); }
@@ -317,11 +317,11 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
       box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     }
 
-    .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; margin-bottom: 1rem; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.5rem; margin-bottom: 0.5rem; }
     .search-box { position: relative; width: 400px; }
     .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
     .search-box input {
-      width: 100%; padding: 0.8rem 1rem 0.8rem 2.5rem; border-radius: 8px;
+      width: 100%; padding: 0.5rem 0.5rem 0.5rem 0.5rem; border-radius: 8px;
       border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);
       outline: none; transition: 0.2s;
     }
@@ -331,7 +331,7 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
 
     /* Buttons */
     .btn-primary, .btn-secondary, .btn-outline {
-      padding: 0.7rem 1.2rem; border-radius: 8px; font-weight: 600; font-family: inherit; font-size: 0.9em;
+      padding: 0.5rem 0.5rem; border-radius: 8px; font-weight: 600; font-family: inherit; font-size: 0.9em;
       cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 0.5rem;
     }
     .btn-primary { background: var(--accent-color); color: white; }
@@ -344,21 +344,21 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
     .btn-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-color); opacity: 0.6; }
     .btn-close:hover { opacity: 1; color: #e53e3e; }
     .w-full { width: 100%; justify-content: center; }
-    .mt-4 { margin-top: 1rem; }
+    .mt-4 { margin-top: 0.5rem; }
 
     /* Dashboard */
-    .dashboard-section { padding: 1.5rem; margin-bottom: 1.5rem; animation: slideDown 0.3s; }
+    .dashboard-section { padding: 0.5rem; margin-bottom: 0.5rem; animation: slideDown 0.3s; }
     .dashboard-section h3 { margin-top: 0; }
-    .chart-controls { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .chart-controls { display: flex; gap: 1.5rem; margin-bottom: 0.5rem; }
     
     .form-group { flex: 1; }
     .form-group label { display: block; font-size: 0.85em; font-weight: 600; opacity: 0.8; margin-bottom: 0.4rem; text-transform: uppercase; }
     .form-group select, .form-group input { 
-      width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-color);
+      width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color);
       font-family: inherit; font-size: inherit; background: var(--input-bg); color: var(--text-color);
     }
     .type-selectors button {
-      padding: 0.6rem 1rem; background: var(--input-bg); border: 1px solid var(--border-color); cursor: pointer;
+      padding: 0.5rem 0.5rem; background: var(--input-bg); border: 1px solid var(--border-color); cursor: pointer;
       font-weight: 600; color: var(--text-color); transition: 0.2s; font-family: inherit;
     }
     .type-selectors button:first-child { border-radius: 8px 0 0 8px; }
@@ -368,12 +368,12 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
     /* Charts */
     .chart-display { 
       height: 350px; background: var(--card-bg); border-radius: 12px;
-      padding: 1.5rem; position: relative; border: 1px dashed var(--border-color);
+      padding: 0.5rem; position: relative; border: 1px dashed var(--border-color);
     }
-    .empty-chart { text-align: center; opacity: 0.6; margin-top: 100px; }
+    .empty-chart { text-align: center; opacity: 0.6; margin-top: 0.5rem; }
 
     /* Bar */
-    .css-chart-bar { display: flex; align-items: flex-end; justify-content: space-around; height: 100%; gap: 10px; padding-bottom: 25px; }
+    .css-chart-bar { display: flex; align-items: flex-end; justify-content: space-around; height: 100%; gap: 10px; padding-bottom: 0.5rem; }
     .bar-item { display: flex; flex-direction: column; align-items: center; height: 100%; flex: 1; justify-content: flex-end; position: relative; }
     .bar-fill { 
       width: 80%; background: var(--accent-color); border-radius: 6px 6px 0 0; position: relative; min-height: 20px;
@@ -385,14 +385,14 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
     /* Pie */
     .css-chart-pie-container { display: flex; align-items: center; justify-content: center; gap: 40px; height: 100%; }
     .css-pie { width: 250px; height: 250px; border-radius: 50%; box-shadow: 0 10px 25px rgba(0,0,0,0.15); transition: background 0.5s; }
-    .pie-legend { display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 15px; }
+    .pie-legend { display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 0.5rem; }
     .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85em; }
     .color-box { min-width: 14px; height: 14px; border-radius: 3px; }
 
     /* Line */
     .css-chart-line { position: relative; height: 100%; width: 100%; }
     .line-svg { width: 100%; height: 250px; overflow: visible; transition: all 0.5s; }
-    .line-labels { position: relative; height: 30px; margin-top: 10px; }
+    .line-labels { position: relative; height: 30px; margin-top: 0.5rem; }
     .l-label { position: absolute; font-size: 0.7em; transform: translateX(-50%); white-space: nowrap; }
 
     /* Zoom */
@@ -410,7 +410,7 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
       transform-origin: top left; transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
     .data-table th { 
-      position: sticky; top: 0; background: var(--header-bg); color: var(--header-text); padding: 1rem;
+      position: sticky; top: 0; background: var(--header-bg); color: var(--header-text); padding: 0.5rem;
       font-size: 0.9em; font-weight: 700; text-transform: uppercase;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10;
     }
@@ -421,7 +421,7 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
     .col-filter { margin-top: 8px; }
     .filter-input { width: 100%; padding: 4px 8px; font-size: 0.8em; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); border-radius: 4px; font-weight: normal; }
 
-    .data-table td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.9em; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+    .data-table td { padding: 0.5rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.9em; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
     .data-table tbody tr { transition: 0.1s; }
     .data-table tbody tr:nth-child(even) { background-color: var(--alternate-row-bg); }
     .data-table tbody tr:hover { background-color: var(--hover-bg); }
@@ -429,7 +429,7 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
     
     /* Pagination Footer */
     .table-footer { 
-      padding: 1rem; font-size: 0.85em; background: var(--hover-bg); 
+      padding: 0.5rem; font-size: 0.85em; background: var(--hover-bg); 
       border-top: 1px solid var(--border-color); 
       display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
     }
@@ -445,16 +445,16 @@ import { ControlsToExcelService, ColumnMetadata, ChartData } from './controls-to
 
     /* Edit/Add Panel */
     .edit-panel { flex: 0 0 350px; position: sticky; top: 1.5rem; animation: slideLeft 0.3s ease-out; }
-    .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
     .panel-header h3 { margin: 0; font-size: 1.2rem; }
     .dynamic-form { max-height: calc(100vh - 12rem); overflow-y: auto; padding-right: 5px; }
     .dynamic-form::-webkit-scrollbar { width: 4px; }
     .dynamic-form::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
-    .form-group { margin-bottom: 1rem; }
+    .form-group { margin-bottom: 0.5rem; }
 
     /* Empty State */
-    .empty-state { text-align: center; padding: 5rem 2rem; opacity: 0.8; }
-    .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.8; }
+    .empty-state { text-align: center; padding: 0.5rem 0.5rem; opacity: 0.8; }
+    .empty-icon { font-size: 4rem; margin-bottom: 0.5rem; opacity: 0.8; }
 
     @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideLeft { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }

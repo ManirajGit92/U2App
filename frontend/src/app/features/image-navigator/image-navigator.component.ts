@@ -119,7 +119,7 @@ import { TtsService } from '../../core/services/tts.service';
     }
 
     .navigator-container {
-      padding: 20px;
+      padding: 0.5rem;
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -137,7 +137,7 @@ import { TtsService } from '../../core/services/tts.service';
     }
 
     .toolbar {
-      padding: 16px 24px;
+      padding: 0.5rem 0.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -157,11 +157,11 @@ import { TtsService } from '../../core/services/tts.service';
 
     .status-badge {
       font-size: 0.75rem;
-      padding: 4px 10px;
+      padding: 4px 0.5rem;
       border-radius: 20px;
       background: rgba(255, 255, 255, 0.05);
       color: var(--text-tertiary, #94a3b8);
-      margin-left: 12px;
+      margin-left: 0.5rem;
     }
 
     .status-badge.active {
@@ -228,7 +228,7 @@ import { TtsService } from '../../core/services/tts.service';
     }
 
     .navigation-controls {
-      padding: 12px;
+      padding: 0.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -266,7 +266,7 @@ import { TtsService } from '../../core/services/tts.service';
       flex-direction: column;
       gap: 20px;
       overflow-y: auto;
-      padding-bottom: 20px;
+      padding-bottom: 0.5rem;
     }
 
     .panel-title {
@@ -274,11 +274,11 @@ import { TtsService } from '../../core/services/tts.service';
       text-transform: uppercase;
       letter-spacing: 1px;
       color: #64748b;
-      margin: 0 0 12px;
+      margin: 0 0 0.5rem;
     }
 
     .result-panel, .speech-panel, .data-panel {
-      padding: 20px;
+      padding: 0.5rem;
     }
 
     .extracted-text-box {
@@ -290,7 +290,7 @@ import { TtsService } from '../../core/services/tts.service';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 12px;
+      padding: 0.5rem;
       text-align: center;
     }
 
@@ -315,7 +315,7 @@ import { TtsService } from '../../core/services/tts.service';
     .voice-actions {
       display: flex;
       gap: 10px;
-      margin-top: 12px;
+      margin-top: 0.5rem;
     }
 
     .data-list {
@@ -327,7 +327,7 @@ import { TtsService } from '../../core/services/tts.service';
     }
 
     .data-item {
-      padding: 10px 14px;
+      padding: 0.5rem 0.5rem;
       border-radius: 8px;
       background: rgba(255,255,255,0.03);
       display: flex;
@@ -358,7 +358,7 @@ import { TtsService } from '../../core/services/tts.service';
     }
 
     .btn {
-      padding: 8px 16px;
+      padding: 8px 0.5rem;
       border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
@@ -369,7 +369,7 @@ import { TtsService } from '../../core/services/tts.service';
       transition: all 0.2s;
     }
 
-    .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+    .btn-sm { padding: 6px 0.5rem; font-size: 0.85rem; }
 
     .btn-primary { background: #6366f1; color: white; }
     .btn-primary:hover { background: #4f46e5; }
@@ -404,13 +404,13 @@ import { TtsService } from '../../core/services/tts.service';
 
     .empty-state {
       text-align: center;
-      padding: 40px;
+      padding: 0.5rem;
     }
 
     .empty-icon {
       font-size: 4rem;
       display: block;
-      margin-bottom: 20px;
+      margin-bottom: 0.5rem;
       opacity: 0.2;
     }
 

@@ -237,7 +237,7 @@ interface NavItem {
 
       .nav-link {
         flex: 0 0 auto;
-        padding: 8px 16px;
+        padding: 8px 0.5rem;
         font-size: 0.9rem;
         font-weight: 500;
         color: var(--text-secondary);
@@ -325,7 +325,7 @@ interface NavItem {
       }
 
       .user-info {
-        padding: 16px;
+        padding: 0.5rem;
         display: flex;
         flex-direction: column;
         gap: 4px;
@@ -352,7 +352,7 @@ interface NavItem {
         align-items: center;
         gap: 10px;
         width: 100%;
-        padding: 12px 16px;
+        padding: 0.5rem 0.5rem;
         font-family: var(--font-family);
         font-size: 0.88rem;
         color: var(--text-secondary);
@@ -372,8 +372,8 @@ interface NavItem {
         .navbar-inner {
           height: auto;
           min-height: 64px;
-          padding-top: 10px;
-          padding-bottom: 10px;
+          padding-top: 0.5rem;
+          padding-bottom: 0.5rem;
           flex-wrap: wrap;
         }
 
