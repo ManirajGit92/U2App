@@ -1,6 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import * as XLSX from 'xlsx';
+import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
+import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
+
+const APP_NAME = 'work-tracker';
 
 export interface DeveloperTask {
   taskId: string;
@@ -66,6 +70,8 @@ export interface WorkTrackerData {
   providedIn: 'root'
 })
 export class WorkTrackerService {
+  private authService = inject(FirebaseAuthService);
+  private syncService = inject(FirebaseSyncService);
   private initialState: WorkTrackerData = {
     developerTasks: [
       {
@@ -145,10 +151,18 @@ export class WorkTrackerService {
   private dataSubject = new BehaviorSubject<WorkTrackerData>(this.initialState);
   public data$: Observable<WorkTrackerData> = this.dataSubject.asObservable();
 
-  constructor() { }
+  constructor() {
+    // Auto-load from Firestore when signed in
+    this.syncService.onAuthChange((uid) => {
+      if (uid) {
+        this.loadFromFirestore();
+      }
+    });
+  }
 
   updateData(newData: Partial<WorkTrackerData>) {
     this.dataSubject.next({ ...this.dataSubject.value, ...newData });
+    this.syncToFirestore();
   }
 
   addDeveloperTask(task: Omit<DeveloperTask, 'taskId'> & { taskId?: string }) {
@@ -328,6 +342,8 @@ export class WorkTrackerService {
           }
 
           this.updateData({ developerTasks, releaseTracks, hourlyUpdates });
+          // Sync to Firestore after Excel import
+          this.syncToFirestore();
           resolve();
         } catch (error) {
           reject(error);
@@ -420,5 +436,40 @@ export class WorkTrackerService {
       candidate = `${prefix}-${String(next).padStart(3, '0')}`;
     }
     return candidate;
+  }
+
+  // --- Firestore Sync ---
+  private async syncToFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    const data = this.dataSubject.value;
+    await Promise.all([
+      this.syncService.pushToFirestore(APP_NAME, 'developerTasks', data.developerTasks as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'releaseTracks', data.releaseTracks as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'hourlyUpdates', data.hourlyUpdates as unknown as Record<string, unknown>[]),
+    ]);
+  }
+
+  async loadFromFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    try {
+      const developerTasks = await this.syncService.pullFromFirestore<DeveloperTask>(APP_NAME, 'developerTasks');
+      const releaseTracks = await this.syncService.pullFromFirestore<ReleaseTrack>(APP_NAME, 'releaseTracks');
+      const hourlyUpdates = await this.syncService.pullFromFirestore<HourlyWorkUpdate>(APP_NAME, 'hourlyUpdates');
+
+      if (developerTasks.length > 0 || releaseTracks.length > 0 || hourlyUpdates.length > 0) {
+        this.dataSubject.next({
+          ...this.dataSubject.value,
+          developerTasks: developerTasks.length > 0 ? developerTasks : this.dataSubject.value.developerTasks,
+          releaseTracks: releaseTracks.length > 0 ? releaseTracks : this.dataSubject.value.releaseTracks,
+          hourlyUpdates: hourlyUpdates.length > 0 ? hourlyUpdates : this.dataSubject.value.hourlyUpdates,
+        });
+      }
+    } catch (e) {
+      console.error('WorkTrackerService: failed to load from Firestore', e);
+    }
+  }
+
+  async syncAllToFirestore(): Promise<void> {
+    await this.syncToFirestore();
   }
 }

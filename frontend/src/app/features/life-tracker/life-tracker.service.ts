@@ -1,6 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import * as XLSX from 'xlsx';
+import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
+import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
 
 export interface BaseEntry {
   id: string;
@@ -62,10 +64,15 @@ export interface Reminder {
 
 export type CategoryType = 'Routines' | 'Expenses' | 'Diet' | 'Fitness' | 'MentalHealth' | 'Relationships' | 'Investments';
 
+const APP_NAME = 'life-tracker';
+
 @Injectable({
   providedIn: 'root'
 })
 export class LifeTrackerService {
+  private authService = inject(FirebaseAuthService);
+  private syncService = inject(FirebaseSyncService);
+
   private routinesSubject = new BehaviorSubject<RoutineEntry[]>([]);
   private expensesSubject = new BehaviorSubject<ExpenseEntry[]>([]);
   private dietSubject = new BehaviorSubject<DietEntry[]>([]);
@@ -86,6 +93,13 @@ export class LifeTrackerService {
 
   constructor() {
     this.loadInitialData();
+
+    // Listen for auth changes — auto-load from Firestore when signed in
+    this.syncService.onAuthChange((uid) => {
+      if (uid) {
+        this.loadFromFirestore();
+      }
+    });
   }
 
   private loadInitialData() {
@@ -131,6 +145,7 @@ export class LifeTrackerService {
   addEntry(category: CategoryType, entry: any) {
     const subject = this.getSubjectForCategory(category);
     subject.next([...subject.value, { ...entry, id: Date.now().toString() }]);
+    this.syncCategoryToFirestore(category);
   }
 
   updateEntry(category: CategoryType, id: string, updatedEntry: any) {
@@ -140,12 +155,14 @@ export class LifeTrackerService {
       const data = [...subject.value];
       data[index] = { ...updatedEntry, id };
       subject.next(data);
+      this.syncCategoryToFirestore(category);
     }
   }
 
   removeEntry(category: CategoryType, id: string) {
     const subject = this.getSubjectForCategory(category);
     subject.next(subject.value.filter(e => e.id !== id));
+    this.syncCategoryToFirestore(category);
   }
 
   private getSubjectForCategory(category: CategoryType): BehaviorSubject<any[]> {
@@ -158,6 +175,68 @@ export class LifeTrackerService {
       case 'Relationships': return this.relationshipsSubject;
       case 'Investments': return this.investmentsSubject;
       default: throw new Error('Invalid category');
+    }
+  }
+
+  // --- Firestore Sync ---
+  private getCategoryCollectionName(category: CategoryType): string {
+    switch (category) {
+      case 'Routines': return 'routines';
+      case 'Expenses': return 'expenses';
+      case 'Diet': return 'diet';
+      case 'Fitness': return 'fitness';
+      case 'MentalHealth': return 'mentalHealth';
+      case 'Relationships': return 'relationships';
+      case 'Investments': return 'investments';
+    }
+  }
+
+  private async syncCategoryToFirestore(category: CategoryType): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    const collectionName = this.getCategoryCollectionName(category);
+    const subject = this.getSubjectForCategory(category);
+    await this.syncService.pushToFirestore(APP_NAME, collectionName, subject.value);
+  }
+
+  async syncAllToFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+
+    const categories: CategoryType[] = [
+      'Routines', 'Expenses', 'Diet', 'Fitness',
+      'MentalHealth', 'Relationships', 'Investments'
+    ];
+
+    for (const category of categories) {
+      await this.syncCategoryToFirestore(category);
+    }
+  }
+
+  async loadFromFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+
+    try {
+      const routines = await this.syncService.pullFromFirestore<RoutineEntry>(APP_NAME, 'routines');
+      if (routines.length > 0) this.routinesSubject.next(routines);
+
+      const expenses = await this.syncService.pullFromFirestore<ExpenseEntry>(APP_NAME, 'expenses');
+      if (expenses.length > 0) this.expensesSubject.next(expenses);
+
+      const diet = await this.syncService.pullFromFirestore<DietEntry>(APP_NAME, 'diet');
+      if (diet.length > 0) this.dietSubject.next(diet);
+
+      const fitness = await this.syncService.pullFromFirestore<FitnessEntry>(APP_NAME, 'fitness');
+      if (fitness.length > 0) this.fitnessSubject.next(fitness);
+
+      const mentalHealth = await this.syncService.pullFromFirestore<MentalHealthEntry>(APP_NAME, 'mentalHealth');
+      if (mentalHealth.length > 0) this.mentalHealthSubject.next(mentalHealth);
+
+      const relationships = await this.syncService.pullFromFirestore<RelationshipEntry>(APP_NAME, 'relationships');
+      if (relationships.length > 0) this.relationshipsSubject.next(relationships);
+
+      const investments = await this.syncService.pullFromFirestore<InvestmentEntry>(APP_NAME, 'investments');
+      if (investments.length > 0) this.investmentsSubject.next(investments);
+    } catch (e) {
+      console.error('LifeTrackerService: failed to load from Firestore', e);
     }
   }
 
@@ -178,6 +257,9 @@ export class LifeTrackerService {
           this.parseSheet(workbook, 'Relationships', this.relationshipsSubject);
           this.parseSheet(workbook, 'Investments', this.investmentsSubject);
           
+          // After Excel import, sync to Firestore if authenticated
+          this.syncAllToFirestore();
+
           resolve(true);
         } catch (err) {
           reject(err);

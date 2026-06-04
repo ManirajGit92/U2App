@@ -1,5 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import * as XLSX from 'xlsx';
+import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
+import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
+
+const APP_NAME = 'excel-mapper';
 
 export type DataType = 'string' | 'number' | 'date' | 'boolean';
 
@@ -97,6 +101,9 @@ export interface AuditEntry {
   providedIn: 'root',
 })
 export class ExcelMapperService {
+  private authService = inject(FirebaseAuthService);
+  private syncService = inject(FirebaseSyncService);
+
   private readonly maxFileSizeMb = 10;
   private readonly templateStorageKey = 'u2.excelMapper.templates';
   private readonly auditStorageKey = 'u2.excelMapper.audit';
@@ -342,12 +349,15 @@ export class ExcelMapperService {
     }
 
     localStorage.setItem(this.templateStorageKey, JSON.stringify(templates));
+    // Sync templates to Firestore
+    this.syncTemplatesToFirestore(templates);
     return templates;
   }
 
   deleteTemplate(templateId: string): SavedMappingTemplate[] {
     const templates = this.loadTemplates().filter((template) => template.id !== templateId);
     localStorage.setItem(this.templateStorageKey, JSON.stringify(templates));
+    this.syncTemplatesToFirestore(templates);
     return templates;
   }
 
@@ -365,6 +375,7 @@ export class ExcelMapperService {
       timestamp: new Date().toISOString(),
     });
     localStorage.setItem(this.auditStorageKey, JSON.stringify(entries.slice(0, 50)));
+    this.syncAuditToFirestore(entries.slice(0, 50));
     return entries.slice(0, 50);
   }
 
@@ -778,5 +789,44 @@ export class ExcelMapperService {
 
   private createId(): string {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  // --- Firestore Sync ---
+  private syncTemplatesToFirestore(templates: SavedMappingTemplate[]): void {
+    if (!this.authService.isAuthenticated()) return;
+    this.syncService.pushToFirestore(
+      APP_NAME, 'templates',
+      templates as unknown as Record<string, unknown>[]
+    ).catch((e) => console.error('ExcelMapperService: template sync failed', e));
+  }
+
+  private syncAuditToFirestore(entries: AuditEntry[]): void {
+    if (!this.authService.isAuthenticated()) return;
+    this.syncService.pushToFirestore(
+      APP_NAME, 'audit',
+      entries as unknown as Record<string, unknown>[]
+    ).catch((e) => console.error('ExcelMapperService: audit sync failed', e));
+  }
+
+  async loadFromFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    try {
+      const templates = await this.syncService.pullFromFirestore<SavedMappingTemplate>(APP_NAME, 'templates');
+      if (templates.length > 0) {
+        localStorage.setItem(this.templateStorageKey, JSON.stringify(templates));
+      }
+
+      const audit = await this.syncService.pullFromFirestore<AuditEntry>(APP_NAME, 'audit');
+      if (audit.length > 0) {
+        localStorage.setItem(this.auditStorageKey, JSON.stringify(audit));
+      }
+    } catch (e) {
+      console.error('ExcelMapperService: failed to load from Firestore', e);
+    }
+  }
+
+  async syncAllToFirestore(): Promise<void> {
+    this.syncTemplatesToFirestore(this.loadTemplates());
+    this.syncAuditToFirestore(this.getAuditEntries());
   }
 }

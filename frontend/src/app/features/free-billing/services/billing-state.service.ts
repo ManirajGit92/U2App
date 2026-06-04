@@ -1,11 +1,17 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Product, Customer, Purchase, Invoice, BillingDataExport } from '../models/billing.models';
+import { FirebaseAuthService } from '../../../core/services/firebase-auth.service';
+import { FirebaseSyncService } from '../../../core/services/firebase-sync.service';
+
+const APP_NAME = 'free-billing';
 
 @Injectable({
   providedIn: 'root'
 })
 export class BillingStateService {
+  private authService = inject(FirebaseAuthService);
+  private syncService = inject(FirebaseSyncService);
   private productsSub = new BehaviorSubject<Product[]>([]);
   private customersSub = new BehaviorSubject<Customer[]>([]);
   private purchasesSub = new BehaviorSubject<Purchase[]>([]);
@@ -18,6 +24,13 @@ export class BillingStateService {
 
   constructor() {
     this.loadFromLocalStorage(); // initial backup fetch if wanted
+
+    // Auto-load from Firestore when signed in
+    this.syncService.onAuthChange((uid) => {
+      if (uid) {
+        this.loadFromFirestore();
+      }
+    });
   }
 
   get products() { return this.productsSub.getValue(); }
@@ -32,6 +45,7 @@ export class BillingStateService {
     this.purchasesSub.next(data.purchases || []);
     this.invoicesSub.next(data.invoices || []);
     this.saveToLocalStorage();
+    this.syncAllToFirestore();
   }
 
   // --- Products ---
@@ -39,18 +53,21 @@ export class BillingStateService {
     const list = [...this.products, p];
     this.productsSub.next(list);
     this.saveToLocalStorage();
+    this.syncToFirestore();
   }
 
   updateProduct(p: Product) {
     const list = this.products.map(item => item.id === p.id ? p : item);
     this.productsSub.next(list);
     this.saveToLocalStorage();
+    this.syncToFirestore();
   }
 
   deleteProduct(id: string) {
     const list = this.products.filter(item => item.id !== id);
     this.productsSub.next(list);
     this.saveToLocalStorage();
+    this.syncToFirestore();
   }
 
   // --- Customers ---
@@ -58,18 +75,21 @@ export class BillingStateService {
     const list = [...this.customers, c];
     this.customersSub.next(list);
     this.saveToLocalStorage();
+    this.syncToFirestore();
   }
 
   updateCustomer(c: Customer) {
     const list = this.customers.map(item => item.id === c.id ? c : item);
     this.customersSub.next(list);
     this.saveToLocalStorage();
+    this.syncToFirestore();
   }
 
   deleteCustomer(id: string) {
     const list = this.customers.filter(item => item.id !== id);
     this.customersSub.next(list);
     this.saveToLocalStorage();
+    this.syncToFirestore();
   }
 
   // --- Purchases ---
@@ -83,6 +103,7 @@ export class BillingStateService {
       this.updateProduct({ ...targetProduct, stock: targetProduct.stock + p.quantity });
     } else {
       this.saveToLocalStorage(); // fallback
+      this.syncToFirestore();
     }
   }
 
@@ -120,6 +141,7 @@ export class BillingStateService {
     if (customersChanged) this.customersSub.next(customerUpdates);
 
     this.saveToLocalStorage();
+    this.syncToFirestore();
   }
 
   clearData() {
@@ -155,6 +177,45 @@ export class BillingStateService {
       } catch (e) {
         console.error('Error loading backup billing data', e);
       }
+    }
+  }
+
+  // --- Firestore Sync ---
+  async syncAllToFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    const data = this.getExportData();
+    await Promise.all([
+      this.syncService.pushToFirestore(APP_NAME, 'products', data.products as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'customers', data.customers as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'purchases', data.purchases as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'invoices', data.invoices as unknown as Record<string, unknown>[]),
+    ]);
+  }
+
+  private syncToFirestore(): void {
+    // Fire-and-forget sync
+    this.syncAllToFirestore().catch((e) =>
+      console.error('BillingStateService: Firestore sync failed', e)
+    );
+  }
+
+  async loadFromFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    try {
+      const products = await this.syncService.pullFromFirestore<Product>(APP_NAME, 'products');
+      const customers = await this.syncService.pullFromFirestore<Customer>(APP_NAME, 'customers');
+      const purchases = await this.syncService.pullFromFirestore<Purchase>(APP_NAME, 'purchases');
+      const invoices = await this.syncService.pullFromFirestore<Invoice>(APP_NAME, 'invoices');
+
+      if (products.length > 0) this.productsSub.next(products);
+      if (customers.length > 0) this.customersSub.next(customers);
+      if (purchases.length > 0) this.purchasesSub.next(purchases);
+      if (invoices.length > 0) this.invoicesSub.next(invoices);
+
+      // Also update localStorage backup
+      this.saveToLocalStorage();
+    } catch (e) {
+      console.error('BillingStateService: failed to load from Firestore', e);
     }
   }
 }
