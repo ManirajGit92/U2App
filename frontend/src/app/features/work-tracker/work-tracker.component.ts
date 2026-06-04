@@ -33,7 +33,7 @@ import { DataManagerComponent } from './data-manager/data-manager.component';
   `,
   styles: [`
     .work-tracker-container {
-      padding: 2rem;
+      padding: 0.5rem;
       min-height: 100vh;
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       font-family: 'Inter', 'Segoe UI', sans-serif;
@@ -43,17 +43,17 @@ import { DataManagerComponent } from './data-manager/data-manager.component';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2rem;
+      margin-bottom: 0.5rem;
       background: rgba(255, 255, 255, 0.7);
       backdrop-filter: blur(10px);
-      padding: 1rem 2rem;
+      padding: 0.5rem;
       border-radius: 16px;
       box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.18);
     }
 
     h1 {
-      margin: 0;
+      margin: 0.5rem;
       color: #2c3e50;
       font-weight: 700;
       font-size: 1.8rem;
@@ -65,7 +65,7 @@ import { DataManagerComponent } from './data-manager/data-manager.component';
     }
 
     button {
-      padding: 0.8rem 1.5rem;
+      padding: 0.5rem;
       border: none;
       border-radius: 8px;
       background: rgba(255, 255, 255, 0.5);

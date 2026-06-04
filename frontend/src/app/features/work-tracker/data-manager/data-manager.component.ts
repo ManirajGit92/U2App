@@ -54,7 +54,7 @@ import { WorkTrackerService } from '../work-tracker.service';
       display: grid;
       gap: 2rem;
       max-width: 800px;
-      margin: 0 auto;
+      margin: 0.5rem;
     }
 
     .glass-card {
@@ -62,14 +62,14 @@ import { WorkTrackerService } from '../work-tracker.service';
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-radius: 20px;
-      padding: 2.5rem;
+      padding: 0.5rem;
       border: 1px solid rgba(255, 255, 255, 0.3);
       box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
     }
 
     h2 {
-      margin-top: 0;
-      margin-bottom: 2rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
       color: #1a202c;
       font-size: 1.5rem;
     }
@@ -77,7 +77,7 @@ import { WorkTrackerService } from '../work-tracker.service';
     .toggle-container {
       display: flex;
       gap: 1rem;
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.5rem;
     }
 
     .toggle-container button {
@@ -86,7 +86,7 @@ import { WorkTrackerService } from '../work-tracker.service';
       align-items: center;
       justify-content: center;
       gap: 0.8rem;
-      padding: 1rem;
+      padding: 0.5rem;
       border: 2px solid transparent;
       border-radius: 12px;
       background: rgba(255,255,255,0.6);
@@ -113,7 +113,7 @@ import { WorkTrackerService } from '../work-tracker.service';
       color: #718096;
       font-size: 0.95rem;
       line-height: 1.6;
-      padding: 1rem;
+      padding: 0.5rem;
       background: rgba(255,255,255,0.3);
       border-radius: 8px;
     }
@@ -129,7 +129,7 @@ import { WorkTrackerService } from '../work-tracker.service';
       align-items: center;
       justify-content: center;
       width: 100%;
-      padding: 1.2rem;
+      padding: 0.5rem;
       border: none;
       border-radius: 12px;
       font-size: 1.1rem;
@@ -154,8 +154,8 @@ import { WorkTrackerService } from '../work-tracker.service';
     }
 
     .upload-status {
-      margin-top: 1.5rem;
-      padding: 1rem;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
       border-radius: 8px;
       text-align: center;
       font-weight: 500;
@@ -173,7 +173,7 @@ import { WorkTrackerService } from '../work-tracker.service';
 
     @media (max-width: 720px) {
       .glass-card {
-        padding: 1.25rem;
+        padding: 0.5rem;
       }
 
       .toggle-container {

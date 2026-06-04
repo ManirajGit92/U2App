@@ -651,7 +651,7 @@ import { map } from 'rxjs/operators';
     }
 
     .compact-header {
-      margin-bottom: 1.2rem;
+      margin-bottom: 0.5rem;
     }
 
     .dashboard-grid {
@@ -668,14 +668,14 @@ import { map } from 'rxjs/operators';
 
     .chart-card {
       min-height: 260px;
-      padding: 1.25rem;
+      padding: 0.5rem;
       background: rgba(255,255,255,0.45);
       border: 1px solid rgba(255,255,255,0.35);
       border-radius: 12px;
     }
 
     .chart-card h3 {
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
       font-size: 1rem;
     }
 
@@ -685,7 +685,7 @@ import { map } from 'rxjs/operators';
       gap: 1rem;
       min-height: 185px;
       overflow-x: auto;
-      padding: 0.5rem 0.25rem 0;
+      padding: 0.5rem;
     }
 
     .bar-item {
@@ -795,7 +795,7 @@ import { map } from 'rxjs/operators';
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-radius: 20px;
-      padding: 2rem;
+      padding: 0.5rem;
       border: 1px solid rgba(255, 255, 255, 0.3);
       box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -805,22 +805,22 @@ import { map } from 'rxjs/operators';
     }
     
     h2, h3 {
-      margin-top: 0;
+      margin-top: 0.5rem;
       color: #1a202c;
       border-bottom: 2px solid rgba(0,0,0,0.05);
     }
     h2 {
-      margin-bottom: 2rem;
+      margin-bottom: 0.5rem;
       font-size: 1.5rem;
-      padding-bottom: 1rem;
+      padding-bottom: 0.5rem;
     }
     h3 {
       font-size: 1.2rem;
-      margin-bottom: 1.2rem;
-      padding-bottom: 0.8rem;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
     }
     .margin-top-section {
-      margin-top: 2rem;
+      margin-top: 0.5rem;
     }
 
     /* Filters Section */
@@ -842,7 +842,7 @@ import { map } from 'rxjs/operators';
       letter-spacing: 0.5px;
     }
     .filter-group select {
-      padding: 0.8rem 1rem;
+      padding: 0.5rem;
       border-radius: 8px;
       border: 1px solid rgba(0,0,0,0.1);
       background: rgba(255,255,255,0.7);
@@ -887,12 +887,12 @@ import { map } from 'rxjs/operators';
       flex-shrink: 0;
     }
     .dev-info h4 {
-      margin: 0 0 0.3rem 0;
+      margin: 0.5rem;
       color: #2d3748;
     }
     .status-badge {
       font-size: 0.75rem;
-      padding: 0.2rem 0.6rem;
+      padding: 0.5rem;
       border-radius: 12px;
       font-weight: 600;
       text-transform: uppercase;
@@ -911,7 +911,7 @@ import { map } from 'rxjs/operators';
       justify-content: space-between;
       font-size: 0.85rem;
       color: #4a5568;
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.5rem;
     }
     .progress-bar-bg {
       height: 8px;
@@ -927,7 +927,7 @@ import { map } from 'rxjs/operators';
     }
     .empty-state {
       text-align: center;
-      padding: 2rem;
+      padding: 0.5rem;
       color: #718096;
       font-style: italic;
     }
@@ -942,17 +942,17 @@ import { map } from 'rxjs/operators';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1rem;
+      padding: 0.5rem;
       background: rgba(255,255,255,0.5);
       border-radius: 12px;
     }
     .release-header h4 {
-      margin: 0 0 0.5rem 0;
+      margin: 0.5rem;
       color: #2d3748;
     }
     .stage-badge {
       font-size: 0.75rem;
-      padding: 0.2rem 0.6rem;
+      padding: 0.5rem;
       border-radius: 6px;
       font-weight: 600;
       border: 1px solid currentColor;
@@ -965,7 +965,7 @@ import { map } from 'rxjs/operators';
 
     /* Circular Chart */
     .mini-chart { width: 60px; height: 60px; flex-shrink: 0; }
-    .circular-chart { display: block; margin: 0 auto; max-width: 80%; max-height: 250px; }
+    .circular-chart { display: block; margin: 0.5rem; max-width: 80%; max-height: 250px; }
     .circle-bg { fill: none; stroke: rgba(0,0,0,0.05); stroke-width: 3.8; }
     .circle { fill: none; stroke-width: 2.8; stroke-linecap: round; animation: progress 1s ease-out forwards; }
     .percentage { fill: #4a5568; font-size: 0.5em; text-anchor: middle; font-weight: bold; }
@@ -980,7 +980,7 @@ import { map } from 'rxjs/operators';
       justify-content: space-between;
       align-items: center;
       gap: 1rem;
-      margin-bottom: 2rem;
+      margin-bottom: 0.5rem;
     }
 
     .table-actions, .inline-actions, .modal-actions {
@@ -1000,11 +1000,11 @@ import { map } from 'rxjs/operators';
     }
 
     .btn-table {
-      padding: 0.75rem 1rem;
+      padding: 0.5rem;
     }
 
     .row-button {
-      padding: 0.48rem 0.7rem;
+      padding: 0.5rem;
       font-size: 0.78rem;
     }
 
@@ -1040,7 +1040,7 @@ import { map } from 'rxjs/operators';
     .table-input {
       width: 100%;
       min-width: 140px;
-      padding: 0.65rem 0.75rem;
+      padding: 0.5rem;
       border: 1px solid rgba(0,0,0,0.12);
       border-radius: 8px;
       background: rgba(255,255,255,0.82);
@@ -1075,7 +1075,7 @@ import { map } from 'rxjs/operators';
     }
     th {
       background: rgba(0,0,0,0.03);
-      padding: 1rem;
+      padding: 0.5rem;
       text-align: left;
       font-size: 0.85rem;
       text-transform: uppercase;
@@ -1085,7 +1085,7 @@ import { map } from 'rxjs/operators';
       border-bottom: 2px solid rgba(0,0,0,0.05);
     }
     td {
-      padding: 1rem;
+      padding: 0.5rem;
       color: #2d3748;
       border-bottom: 1px solid rgba(0,0,0,0.05);
       font-size: 0.9rem;
@@ -1093,11 +1093,11 @@ import { map } from 'rxjs/operators';
     tbody tr:hover {
       background: rgba(255,255,255,0.8);
     }
-    .text-center { text-align: center; color: #718096; font-style: italic; padding: 2rem; }
+    .text-center { text-align: center; color: #718096; font-style: italic; padding: 0.5rem; }
 
     /* Tags inside table */
     .type-tag, .status-tag, .priority-tag {
-      padding: 0.2rem 0.6rem;
+      padding: 0.5rem;
       border-radius: 6px;
       font-size: 0.75rem;
       font-weight: 600;
@@ -1138,7 +1138,7 @@ import { map } from 'rxjs/operators';
       z-index: 1200;
       display: grid;
       place-items: center;
-      padding: 1.5rem;
+      padding: 0.5rem;
       background: rgba(26, 32, 44, 0.34);
     }
 
@@ -1146,7 +1146,7 @@ import { map } from 'rxjs/operators';
       width: min(640px, 100%);
       max-height: 90vh;
       overflow: auto;
-      padding: 1.5rem;
+      padding: 0.5rem;
       border: 1px solid rgba(255,255,255,0.35);
       border-radius: 12px;
       background: rgba(255, 255, 255, 0.92);
@@ -1164,11 +1164,11 @@ import { map } from 'rxjs/operators';
       display: flex;
       justify-content: space-between;
       gap: 1rem;
-      margin-bottom: 1.25rem;
+      margin-bottom: 0.5rem;
     }
 
     .modal-header h2 {
-      margin: 0;
+      margin: 0.5rem;
       border-bottom: 0;
     }
 
@@ -1202,7 +1202,7 @@ import { map } from 'rxjs/operators';
     .modal-form select,
     .modal-form textarea {
       width: 100%;
-      padding: 0.78rem 0.9rem;
+      padding: 0.5rem;
       border: 1px solid rgba(0,0,0,0.12);
       border-radius: 8px;
       background: rgba(255,255,255,0.82);
@@ -1221,13 +1221,13 @@ import { map } from 'rxjs/operators';
     }
 
     .validation-message {
-      margin: 0;
+      margin: 0.5rem;
       color: #822727;
       font-weight: 700;
     }
 
     .confirm-copy {
-      margin: 0 0 1.5rem;
+      margin: 0.5rem;
       color: #4a5568;
     }
 
