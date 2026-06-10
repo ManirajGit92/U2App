@@ -42,43 +42,142 @@ export interface Reminder {
   done: boolean;
 }
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface ChecklistGroup {
+  id: string;
+  title: string;
+  items: ChecklistItem[];
+}
+
+export interface FeedbackEntry {
+  id: string;
+  targetType: 'Employee' | 'Project';
+  targetId: string; // employee id or project id
+  subject: string;
+  message: string;
+  createdAt: string; // ISO
+}
+
 export interface StandupState {
   employees: Employee[];
   standupNotes: StandupNote[];
   projects: Project[];
   reminders: Reminder[];
+  checklistGroups: ChecklistGroup[];
+  feedbacks: FeedbackEntry[];
 }
 
 const SEED_STATE: StandupState = {
   employees: [
-    { id: 'EMP-001', name: 'Alice Johnson', position: 'Frontend Developer', team: 'UI', email: 'alice@company.com' },
-    { id: 'EMP-002', name: 'Bob Smith', position: 'Backend Developer', team: 'API', email: 'bob@company.com' },
-    { id: 'EMP-003', name: 'Carol White', position: 'QA Engineer', team: 'QA', email: 'carol@company.com' },
+    {
+      id: 'EMP-001',
+      name: 'Alice Johnson',
+      position: 'Frontend Developer',
+      team: 'UI',
+      email: 'alice@company.com',
+    },
+    {
+      id: 'EMP-002',
+      name: 'Bob Smith',
+      position: 'Backend Developer',
+      team: 'API',
+      email: 'bob@company.com',
+    },
+    {
+      id: 'EMP-003',
+      name: 'Carol White',
+      position: 'QA Engineer',
+      team: 'QA',
+      email: 'carol@company.com',
+    },
   ],
   standupNotes: [
     {
-      id: 'SN-001', employeeId: 'EMP-001', date: new Date().toISOString().split('T')[0],
+      id: 'SN-001',
+      employeeId: 'EMP-001',
+      date: new Date().toISOString().split('T')[0],
       previousWork: 'Completed dashboard UI component',
       todayPlan: 'Work on chart integration and filters',
       blockers: 'Waiting for API contract from backend',
-      notes: 'Need design review by EOD', projectId: 'PRJ-001'
+      notes: 'Need design review by EOD',
+      projectId: 'PRJ-001',
     },
     {
-      id: 'SN-002', employeeId: 'EMP-002', date: new Date().toISOString().split('T')[0],
+      id: 'SN-002',
+      employeeId: 'EMP-002',
+      date: new Date().toISOString().split('T')[0],
       previousWork: 'Fixed auth token refresh bug',
       todayPlan: 'Implement pagination endpoint',
       blockers: 'None',
-      notes: 'Will sync with Alice on API contract', projectId: 'PRJ-001'
+      notes: 'Will sync with Alice on API contract',
+      projectId: 'PRJ-001',
     },
   ],
   projects: [
-    { id: 'PRJ-001', name: 'Customer Portal v2', status: 'Active', startDate: '2026-02-01', endDate: '2026-04-30', notes: 'Major release pending QA sign-off', lead: 'Alice Johnson' },
-    { id: 'PRJ-002', name: 'Internal HR Tool', status: 'On Hold', startDate: '2026-03-01', endDate: '2026-06-30', notes: 'Blocked on stakeholder approval', lead: 'Bob Smith' },
+    {
+      id: 'PRJ-001',
+      name: 'Customer Portal v2',
+      status: 'Active',
+      startDate: '2026-02-01',
+      endDate: '2026-04-30',
+      notes: 'Major release pending QA sign-off',
+      lead: 'Alice Johnson',
+    },
+    {
+      id: 'PRJ-002',
+      name: 'Internal HR Tool',
+      status: 'On Hold',
+      startDate: '2026-03-01',
+      endDate: '2026-06-30',
+      notes: 'Blocked on stakeholder approval',
+      lead: 'Bob Smith',
+    },
   ],
   reminders: [
-    { id: 'REM-001', title: 'Sprint Review Meeting', description: 'Prepare demo and retrospective slides', deadline: '2026-03-28', priority: 'High', assignedTo: 'Alice Johnson', done: false },
-    { id: 'REM-002', title: 'Deploy to Staging', description: 'Post QA approval, push build to staging environment', deadline: '2026-03-31', priority: 'Medium', assignedTo: 'Bob Smith', done: false },
-  ]
+    {
+      id: 'REM-001',
+      title: 'Sprint Review Meeting',
+      description: 'Prepare demo and retrospective slides',
+      deadline: '2026-03-28',
+      priority: 'High',
+      assignedTo: 'Alice Johnson',
+      done: false,
+    },
+    {
+      id: 'REM-002',
+      title: 'Deploy to Staging',
+      description: 'Post QA approval, push build to staging environment',
+      deadline: '2026-03-31',
+      priority: 'Medium',
+      assignedTo: 'Bob Smith',
+      done: false,
+    },
+  ],
+  checklistGroups: [
+    {
+      id: 'CG-001',
+      title: 'Release Checklist',
+      items: [
+        { id: 'CI-001', text: 'Run unit tests', done: false },
+        { id: 'CI-002', text: 'Smoke test staging', done: false },
+      ],
+    },
+  ],
+  feedbacks: [
+    {
+      id: 'FB-001',
+      targetType: 'Employee',
+      targetId: 'EMP-001',
+      subject: 'Great work',
+      message: 'Alice did a great job on the dashboard component.',
+      createdAt: new Date().toISOString(),
+    },
+  ],
 };
 
 @Injectable({ providedIn: 'root' })
@@ -86,28 +185,58 @@ export class StandupNoteService {
   private stateSubject = new BehaviorSubject<StandupState>(SEED_STATE);
   state$ = this.stateSubject.asObservable();
 
-  get state(): StandupState { return this.stateSubject.value; }
-  private update(patch: Partial<StandupState>) { this.stateSubject.next({ ...this.state, ...patch }); }
+  get state(): StandupState {
+    return this.stateSubject.value;
+  }
+  private update(patch: Partial<StandupState>) {
+    this.stateSubject.next({ ...this.state, ...patch });
+  }
 
   // ── Employees ──────────────────────────────────────────────────────────────
-  addEmployee(emp: Employee) { this.update({ employees: [...this.state.employees, emp] }); }
-  updateEmployee(emp: Employee) { this.update({ employees: this.state.employees.map(e => e.id === emp.id ? emp : e) }); }
-  deleteEmployee(id: string) { this.update({ employees: this.state.employees.filter(e => e.id !== id) }); }
+  addEmployee(emp: Employee) {
+    this.update({ employees: [...this.state.employees, emp] });
+  }
+  updateEmployee(emp: Employee) {
+    this.update({ employees: this.state.employees.map((e) => (e.id === emp.id ? emp : e)) });
+  }
+  deleteEmployee(id: string) {
+    this.update({ employees: this.state.employees.filter((e) => e.id !== id) });
+  }
 
   // ── Standup Notes ──────────────────────────────────────────────────────────
-  addNote(note: StandupNote) { this.update({ standupNotes: [...this.state.standupNotes, note] }); }
-  updateNote(note: StandupNote) { this.update({ standupNotes: this.state.standupNotes.map(n => n.id === note.id ? note : n) }); }
-  deleteNote(id: string) { this.update({ standupNotes: this.state.standupNotes.filter(n => n.id !== id) }); }
+  addNote(note: StandupNote) {
+    this.update({ standupNotes: [...this.state.standupNotes, note] });
+  }
+  updateNote(note: StandupNote) {
+    this.update({
+      standupNotes: this.state.standupNotes.map((n) => (n.id === note.id ? note : n)),
+    });
+  }
+  deleteNote(id: string) {
+    this.update({ standupNotes: this.state.standupNotes.filter((n) => n.id !== id) });
+  }
 
   // ── Projects ───────────────────────────────────────────────────────────────
-  addProject(p: Project) { this.update({ projects: [...this.state.projects, p] }); }
-  updateProject(p: Project) { this.update({ projects: this.state.projects.map(x => x.id === p.id ? p : x) }); }
-  deleteProject(id: string) { this.update({ projects: this.state.projects.filter(p => p.id !== id) }); }
+  addProject(p: Project) {
+    this.update({ projects: [...this.state.projects, p] });
+  }
+  updateProject(p: Project) {
+    this.update({ projects: this.state.projects.map((x) => (x.id === p.id ? p : x)) });
+  }
+  deleteProject(id: string) {
+    this.update({ projects: this.state.projects.filter((p) => p.id !== id) });
+  }
 
   // ── Reminders ──────────────────────────────────────────────────────────────
-  addReminder(r: Reminder) { this.update({ reminders: [...this.state.reminders, r] }); }
-  updateReminder(r: Reminder) { this.update({ reminders: this.state.reminders.map(x => x.id === r.id ? r : x) }); }
-  deleteReminder(id: string) { this.update({ reminders: this.state.reminders.filter(r => r.id !== id) }); }
+  addReminder(r: Reminder) {
+    this.update({ reminders: [...this.state.reminders, r] });
+  }
+  updateReminder(r: Reminder) {
+    this.update({ reminders: this.state.reminders.map((x) => (x.id === r.id ? r : x)) });
+  }
+  deleteReminder(id: string) {
+    this.update({ reminders: this.state.reminders.filter((r) => r.id !== id) });
+  }
 
   // ── Excel Export ───────────────────────────────────────────────────────────
   exportExcel() {
@@ -132,25 +261,104 @@ export class StandupNoteService {
       const standupNotes: StandupNote[] = XLSX.utils.sheet_to_json(wb.Sheets['StandupNotes'] || {});
       const projects: Project[] = XLSX.utils.sheet_to_json(wb.Sheets['Projects'] || {});
       const reminders: Reminder[] = XLSX.utils.sheet_to_json(wb.Sheets['Reminders'] || {});
-      this.stateSubject.next({ employees, standupNotes, projects, reminders });
+      const checklistGroups: any[] = XLSX.utils.sheet_to_json(wb.Sheets['ChecklistGroups'] || {});
+      const feedbacks: any[] = XLSX.utils.sheet_to_json(wb.Sheets['Feedbacks'] || {});
+      this.stateSubject.next({
+        employees,
+        standupNotes,
+        projects,
+        reminders,
+        checklistGroups: checklistGroups || [],
+        feedbacks: feedbacks || [],
+      });
     };
     reader.readAsArrayBuffer(file);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   getInitials(name: string): string {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   }
 
   generateId(prefix: string, items: any[]): string {
-    const ids = items.map(i => parseInt(i.id.replace(`${prefix}-`, '')) || 0);
+    const ids = items.map((i) => parseInt(i.id.replace(`${prefix}-`, '')) || 0);
     const max = ids.length ? Math.max(...ids) : 0;
     return `${prefix}-${(max + 1).toString().padStart(3, '0')}`;
   }
 
+  // ── Checklists ───────────────────────────────────────────────────────────
+  addChecklistGroup(group: Omit<ChecklistGroup, 'id'>) {
+    const id = this.generateId('CG', this.state.checklistGroups || []);
+    this.update({ checklistGroups: [...(this.state.checklistGroups || []), { ...group, id }] });
+  }
+
+  updateChecklistGroup(group: ChecklistGroup) {
+    this.update({
+      checklistGroups: (this.state.checklistGroups || []).map((g) =>
+        g.id === group.id ? group : g,
+      ),
+    });
+  }
+
+  deleteChecklistGroup(id: string) {
+    this.update({ checklistGroups: (this.state.checklistGroups || []).filter((g) => g.id !== id) });
+  }
+
+  addChecklistItem(groupId: string, item: Omit<ChecklistItem, 'id'>) {
+    const groups = this.state.checklistGroups || [];
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return;
+    const id = this.generateId('CI', group.items || []);
+    const updated: ChecklistGroup = { ...group, items: [...(group.items || []), { ...item, id }] };
+    this.update({ checklistGroups: groups.map((g) => (g.id === groupId ? updated : g)) });
+  }
+
+  updateChecklistItem(groupId: string, item: ChecklistItem) {
+    const groups = this.state.checklistGroups || [];
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return;
+    const updated: ChecklistGroup = {
+      ...group,
+      items: group.items.map((i) => (i.id === item.id ? item : i)),
+    };
+    this.update({ checklistGroups: groups.map((g) => (g.id === groupId ? updated : g)) });
+  }
+
+  deleteChecklistItem(groupId: string, itemId: string) {
+    const groups = this.state.checklistGroups || [];
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return;
+    const updated: ChecklistGroup = { ...group, items: group.items.filter((i) => i.id !== itemId) };
+    this.update({ checklistGroups: groups.map((g) => (g.id === groupId ? updated : g)) });
+  }
+
+  // ── Feedbacks ────────────────────────────────────────────────────────────
+  addFeedback(entry: Omit<FeedbackEntry, 'id' | 'createdAt'>) {
+    const id = this.generateId('FB', this.state.feedbacks || []);
+    const createdAt = new Date().toISOString();
+    this.update({ feedbacks: [...(this.state.feedbacks || []), { ...entry, id, createdAt }] });
+  }
+
+  updateFeedback(entry: FeedbackEntry) {
+    this.update({
+      feedbacks: (this.state.feedbacks || []).map((f) => (f.id === entry.id ? entry : f)),
+    });
+  }
+
+  deleteFeedback(id: string) {
+    this.update({ feedbacks: (this.state.feedbacks || []).filter((f) => f.id !== id) });
+  }
+
   daysUntil(dateStr: string): number {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const target = new Date(dateStr); target.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(dateStr);
+    target.setHours(0, 0, 0, 0);
     return Math.round((target.getTime() - today.getTime()) / 86400000);
   }
 }

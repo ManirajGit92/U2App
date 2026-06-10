@@ -1,15 +1,18 @@
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { combineLatest } from 'rxjs';
 import { ThemeService } from '../../../core/services/theme.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
 import { FirebaseAuthService } from '../../../core/services/firebase-auth.service';
 import { FirebaseSyncService } from '../../../core/services/firebase-sync.service';
+import { NavPreferencesService } from '../../../core/services/nav-preferences.service';
 import { SyncStatusComponent } from '../sync-status/sync-status.component';
 
 interface NavItem {
   label: string;
   path: string;
   exact: boolean;
+  hidden: boolean;
 }
 
 @Component({
@@ -21,13 +24,12 @@ interface NavItem {
       <div class="navbar-inner container">
         <!-- Logo -->
         <a routerLink="/" class="navbar-logo">
-          <!-- <img src="assets/images/u2app.png" alt="Logo" class="logo-icon" /> -->
           💡<span class="logo-text"> U2 <span class="logo-highlight">Tools</span></span>
         </a>
 
         <!-- Nav Links -->
         <div class="navbar-links">
-          @for (item of navItems; track item.path) {
+          @for (item of visibleNavItems; track item.path) {
             <a
               [routerLink]="item.path"
               routerLinkActive="active"
@@ -48,6 +50,49 @@ interface NavItem {
               [tooltip]="'Cloud sync: ' + syncService.syncState()"
             />
           }
+
+          <!-- Nav Settings -->
+          <div class="nav-settings">
+            <button class="settings-toggle" type="button" (click)="toggleNavSettings()">
+              <span class="settings-icon">⋮</span>
+              Customize
+            </button>
+            @if (navSettingsOpen) {
+              <div class="nav-settings-panel animate-fade-in">
+                <div class="settings-header">
+                  <span>Tool navigation</span>
+                  <button class="settings-close" type="button" (click)="navSettingsOpen = false">
+                    ×
+                  </button>
+                </div>
+                <p class="settings-note">
+                  Drag tools to reorder. Toggle visibility to hide or show each tool.
+                </p>
+                <div class="settings-list">
+                  @for (item of toolNavItems; track item.path) {
+                    <div
+                      class="settings-item"
+                      draggable="true"
+                      (dragstart)="handleDragStart($event, item.path)"
+                      (dragover)="handleDragOver($event)"
+                      (drop)="handleDrop($event, item.path)"
+                    >
+                      <span class="drag-handle" aria-hidden="true">☰</span>
+                      <span class="item-label">{{ item.label }}</span>
+                      <label class="item-toggle">
+                        <input
+                          type="checkbox"
+                          [checked]="!item.hidden"
+                          (change)="toggleItemVisibility(item)"
+                        />
+                        <span>{{ item.hidden ? 'Hidden' : 'Shown' }}</span>
+                      </label>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
 
           <!-- Theme Toggle -->
           <button
@@ -111,17 +156,11 @@ interface NavItem {
               @if (showUserMenu) {
                 <div class="user-dropdown animate-fade-in">
                   <div class="user-info">
-                    <span class="user-name">{{
-                      firebaseAuth.user()?.displayName || 'User'
-                    }}</span>
+                    <span class="user-name">{{ firebaseAuth.user()?.displayName || 'User' }}</span>
                     <span class="user-email">{{ firebaseAuth.user()?.email }}</span>
                   </div>
                   <hr class="dropdown-divider" />
-                  <a
-                    routerLink="/profile"
-                    class="dropdown-item"
-                    (click)="showUserMenu = false"
-                  >
+                  <a routerLink="/profile" class="dropdown-item" (click)="showUserMenu = false">
                     <svg
                       width="16"
                       height="16"
@@ -135,10 +174,7 @@ interface NavItem {
                     </svg>
                     Profile & Sync
                   </a>
-                  <button
-                    class="dropdown-item"
-                    (click)="handleSignOut()"
-                  >
+                  <button class="dropdown-item" (click)="handleSignOut()">
                     <svg
                       width="16"
                       height="16"
@@ -159,10 +195,17 @@ interface NavItem {
           } @else {
             <!-- Sign In Button -->
             <a routerLink="/login" class="btn btn-primary btn-sm">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                <polyline points="10 17 15 12 10 7"/>
-                <line x1="15" y1="12" x2="3" y2="12"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
               </svg>
               Sign In
             </a>
@@ -261,6 +304,135 @@ interface NavItem {
         display: flex;
         align-items: center;
         gap: 12px;
+        position: relative;
+      }
+
+      .nav-settings {
+        position: relative;
+      }
+
+      .settings-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 10px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-color);
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+      }
+
+      .settings-toggle:hover {
+        background: var(--accent-surface);
+        color: var(--text-primary);
+      }
+
+      .settings-icon {
+        font-size: 1.1rem;
+      }
+
+      .nav-settings-panel {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 8px);
+        width: min(360px, 90vw);
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color-strong);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        padding: 1rem;
+        z-index: 1002;
+      }
+
+      .settings-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 0.75rem;
+      }
+
+      .settings-header span {
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+      }
+
+      .settings-close {
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+        cursor: pointer;
+      }
+
+      .settings-note {
+        margin: 0 0 0.75rem;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+      }
+
+      .settings-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .settings-item {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 0.65rem 0.75rem;
+        border-radius: var(--radius-sm);
+        background: var(--bg-tertiary);
+        border: 1px solid transparent;
+        cursor: grab;
+      }
+
+      .settings-item:active {
+        cursor: grabbing;
+      }
+
+      .settings-item:hover {
+        border-color: var(--border-color);
+      }
+
+      .drag-handle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+        font-size: 1rem;
+      }
+
+      .item-label {
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .item-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+      }
+
+      .item-toggle input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent-primary);
       }
 
       .theme-toggle {
@@ -402,6 +574,11 @@ interface NavItem {
         .navbar-actions {
           gap: 8px;
         }
+
+        .nav-settings-panel {
+          right: auto;
+          left: 0;
+        }
       }
     `,
   ],
@@ -412,21 +589,195 @@ export class NavbarComponent {
   firebaseAuth = inject(FirebaseAuthService);
   syncService = inject(FirebaseSyncService);
   private router = inject(Router);
+  private navPreferencesService = inject(NavPreferencesService);
+
   showUserMenu = false;
-  navItems: NavItem[] = this.router.config
-    .filter((route) => route.data?.['showInNav'] && route.data?.['navLabel'])
-    .map((route) => ({
-      label: String(route.data?.['navLabel']),
-      path: route.path ? `/${route.path}` : '/',
-      exact: route.path === '',
-    }));
+  navSettingsOpen = false;
+  toolNavItems: NavItem[] = [];
+  visibleNavItems: NavItem[] = [];
+  private draggedItemPath: string | null = null;
+  private readonly defaultToolOrder = [
+    'standup-note',
+    'work-tracker',
+    'unit-test-tracker',
+    'compare',
+    'html-viewer',
+    'estimator',
+  ];
+  private currentOrder: string[] = [];
+  private currentVisibility: Record<string, boolean> = {};
+  private readonly orderKey = 'u2app.navOrder';
+  private readonly visibilityKey = 'u2app.navVisibility';
+
+  constructor() {
+    combineLatest([
+      this.navPreferencesService.order$,
+      this.navPreferencesService.visibility$,
+    ]).subscribe(([order, visibility]) => {
+      this.currentOrder = order;
+      this.currentVisibility = visibility;
+      this.initializeNavItems(order, visibility);
+    });
+  }
 
   toggleUserMenu(): void {
     this.showUserMenu = !this.showUserMenu;
   }
 
+  toggleNavSettings(): void {
+    this.navSettingsOpen = !this.navSettingsOpen;
+  }
+
+  handleDragStart(event: DragEvent, path: string): void {
+    this.draggedItemPath = path;
+    event.dataTransfer?.setData('text/plain', path);
+    event.dataTransfer?.setDragImage(event.currentTarget as Element, 0, 0);
+  }
+
+  handleDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = 'move';
+  }
+
+  handleDrop(event: DragEvent, targetPath: string): void {
+    event.preventDefault();
+    const sourcePath = this.draggedItemPath;
+    this.draggedItemPath = null;
+    if (!sourcePath || sourcePath === targetPath) {
+      return;
+    }
+
+    const sourceIndex = this.toolNavItems.findIndex((item) => item.path === sourcePath);
+    const targetIndex = this.toolNavItems.findIndex((item) => item.path === targetPath);
+    if (sourceIndex === -1 || targetIndex === -1) {
+      return;
+    }
+
+    const [movedItem] = this.toolNavItems.splice(sourceIndex, 1);
+    this.toolNavItems.splice(targetIndex, 0, movedItem);
+
+    const order = this.toolNavItems.map((item) => item.path.replace(/^\//, ''));
+    this.navPreferencesService.setOrder(order);
+  }
+
+  toggleItemVisibility(item: NavItem): void {
+    const id = item.path.replace(/^\//, '');
+    const newVisibility = {
+      ...this.currentVisibility,
+      [id]: !item.hidden,
+    };
+
+    this.navPreferencesService.setVisibility(newVisibility);
+  }
+
   async handleSignOut(): Promise<void> {
     this.showUserMenu = false;
     await this.firebaseAuth.signOutUser();
+  }
+
+  private initializeNavItems(order: string[], visibility: Record<string, boolean>): void {
+    const allNavItems = this.router.config
+      .filter((route) => route.data?.['showInNav'] && route.data?.['navLabel'])
+      .map((route) => {
+        const path = route.path ? `/${route.path}` : '/';
+        return {
+          label: String(route.data?.['navLabel']),
+          path,
+          exact: route.path === '',
+          hidden: visibility[route.path ?? ''] ?? false,
+        };
+      });
+
+    this.toolNavItems = allNavItems
+      .filter((item) => item.path !== '/')
+      .sort((a, b) =>
+        this.navPreferencesService.compareToolOrder(
+          a.path.replace(/^\//, ''),
+          b.path.replace(/^\//, ''),
+          order,
+        ),
+      );
+
+    this.refreshVisibleNav();
+  }
+
+  private refreshVisibleNav(): void {
+    const homeItem = this.router.config
+      .filter((route) => route.data?.['showInNav'] && route.data?.['navLabel'])
+      .find((route) => route.path === '');
+
+    this.visibleNavItems = [];
+    if (homeItem) {
+      this.visibleNavItems.push({
+        label: String(homeItem.data?.['navLabel']),
+        path: '/',
+        exact: true,
+        hidden: false,
+      });
+    }
+
+    this.visibleNavItems.push(...this.toolNavItems.filter((item) => !item.hidden));
+  }
+
+  private persistNavPreferences(): void {
+    const order = this.toolNavItems.map((item) => item.path.replace(/^\//, ''));
+    const visibility = Object.fromEntries(
+      this.toolNavItems.map((item) => [item.path.replace(/^\//, ''), item.hidden]),
+    );
+
+    localStorage.setItem(this.orderKey, JSON.stringify(order));
+    localStorage.setItem(this.visibilityKey, JSON.stringify(visibility));
+  }
+
+  private loadStoredOrder(): string[] {
+    try {
+      const stored = localStorage.getItem(this.orderKey);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private loadStoredVisibility(): Record<string, boolean> {
+    try {
+      const stored = localStorage.getItem(this.visibilityKey);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private compareToolOrder(pathA: string, pathB: string, storedOrder: string[]): number {
+    const idA = pathA.replace(/^\//, '');
+    const idB = pathB.replace(/^\//, '');
+
+    const indexA = this.navIndex(idA, storedOrder);
+    const indexB = this.navIndex(idB, storedOrder);
+
+    return indexA - indexB;
+  }
+
+  private navIndex(id: string, storedOrder: string[]): number {
+    const savedIndex = storedOrder.indexOf(id);
+    if (savedIndex >= 0) {
+      return savedIndex;
+    }
+
+    const defaultIndex = this.defaultToolOrder.indexOf(id);
+    if (defaultIndex >= 0) {
+      return defaultIndex;
+    }
+
+    const extras = this.router.config
+      .filter(
+        (route) =>
+          route.data?.['showInNav'] &&
+          route.data?.['navLabel'] &&
+          route.path !== '' &&
+          !this.defaultToolOrder.includes(route.path!),
+      )
+      .map((route) => route.path!);
+    const extraIndex = extras.indexOf(id);
+    return this.defaultToolOrder.length + (extraIndex >= 0 ? extraIndex : Number.MAX_SAFE_INTEGER);
   }
 }

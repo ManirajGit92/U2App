@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { combineLatest } from 'rxjs';
+import { NavPreferencesService } from '../../core/services/nav-preferences.service';
 
 interface Tool {
   id: string;
@@ -336,7 +338,19 @@ interface Tool {
   ],
 })
 export class HomeComponent {
-  tools: Tool[] = [
+  private navPreferencesService = inject(NavPreferencesService);
+  private readonly orderKey = 'u2app.navOrder';
+  private readonly visibilityKey = 'u2app.navVisibility';
+  private readonly defaultToolOrder = [
+    'standup-note',
+    'work-tracker',
+    'unit-test-tracker',
+    'compare',
+    'html-viewer',
+    'estimator',
+  ];
+
+  private readonly allTools: Tool[] = [
     {
       id: 'excel-mapper',
       title: 'Excel-to-Excel Mapping Tool',
@@ -372,7 +386,7 @@ export class HomeComponent {
       title: 'Tax Calculator',
       description:
         'Estimate old vs new tax regimes, import Form 16 Excel data, and get deduction ideas with real-time calculations.',
-      icon: 'ðŸ§¾',
+      icon: '🧾',
       route: '/tax-calculator',
       available: true,
       color: 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(59,130,246,0.2))',
@@ -424,24 +438,6 @@ export class HomeComponent {
       available: true,
       color: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(192,132,252,0.2))',
     },
-    // {
-    //   id: 'text-to-image',
-    //   title: 'Text to Image',
-    //   description: 'Generate stunning images from text prompts using state-of-the-art AI models.',
-    //   icon: '🎨',
-    //   route: null,
-    //   available: false,
-    //   color: 'linear-gradient(135deg, rgba(244,63,94,0.2), rgba(251,113,133,0.2))',
-    // },
-    // {
-    //   id: 'mind-mapper',
-    //   title: 'Mind Mapper',
-    //   description: 'Transform your content into visual mind maps for brainstorming and organizing ideas.',
-    //   icon: '🧠',
-    //   route: null,
-    //   available: false,
-    //   color: 'linear-gradient(135deg, rgba(34,211,238,0.2), rgba(56,189,248,0.2))',
-    // },
     {
       id: 'work-tracker',
       title: 'Work Tracker',
@@ -583,4 +579,68 @@ export class HomeComponent {
       color: 'linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.2))',
     },
   ];
+
+  tools: Tool[];
+
+  constructor() {
+    this.tools = this.applyNavigationPreferences(
+      this.navPreferencesService.order$.value,
+      this.navPreferencesService.visibility$.value,
+    );
+
+    combineLatest([
+      this.navPreferencesService.order$,
+      this.navPreferencesService.visibility$,
+    ]).subscribe(([order, visibility]) => {
+      this.tools = this.applyNavigationPreferences(order, visibility);
+    });
+  }
+
+  private applyNavigationPreferences(order: string[], visibility: Record<string, boolean>): Tool[] {
+    return [...this.allTools]
+      .sort((a, b) => this.compareToolOrder(a.id, b.id, order))
+      .filter((tool) => !visibility[tool.id]);
+  }
+
+  private loadStoredOrder(): string[] {
+    try {
+      const stored = localStorage.getItem(this.orderKey);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private loadStoredVisibility(): Record<string, boolean> {
+    try {
+      const stored = localStorage.getItem(this.visibilityKey);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private compareToolOrder(idA: string, idB: string, storedOrder: string[]): number {
+    const indexA = this.navIndex(idA, storedOrder);
+    const indexB = this.navIndex(idB, storedOrder);
+    return indexA - indexB;
+  }
+
+  private navIndex(id: string, storedOrder: string[]): number {
+    const savedIndex = storedOrder.indexOf(id);
+    if (savedIndex >= 0) {
+      return savedIndex;
+    }
+
+    const defaultIndex = this.defaultToolOrder.indexOf(id);
+    if (defaultIndex >= 0) {
+      return defaultIndex;
+    }
+
+    const extras = this.allTools
+      .map((tool) => tool.id)
+      .filter((toolId) => !this.defaultToolOrder.includes(toolId));
+    const extraIndex = extras.indexOf(id);
+    return this.defaultToolOrder.length + (extraIndex >= 0 ? extraIndex : Number.MAX_SAFE_INTEGER);
+  }
 }

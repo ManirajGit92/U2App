@@ -7,14 +7,33 @@ import { StandupNotesComponent } from './standup-notes/standup-notes.component';
 import { EmployeesComponent } from './employees/employees.component';
 import { ProjectsComponent } from './projects/projects.component';
 import { RemindersComponent } from './reminders/reminders.component';
+import { ChecklistManagerComponent } from './checklist-manager/checklist-manager.component';
+import { FeedbackManagerComponent } from './feedback-manager/feedback-manager.component';
 import { ThemeService } from '../../core/services/theme.service';
 
-type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
+type Tab =
+  | 'dashboard'
+  | 'notes'
+  | 'employees'
+  | 'projects'
+  | 'reminders'
+  | 'checklists'
+  | 'feedback';
 
 @Component({
   selector: 'app-standup-note',
   standalone: true,
-  imports: [CommonModule, RouterModule, StandupDashboardComponent, StandupNotesComponent, EmployeesComponent, ProjectsComponent, RemindersComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    StandupDashboardComponent,
+    StandupNotesComponent,
+    EmployeesComponent,
+    ProjectsComponent,
+    RemindersComponent,
+    ChecklistManagerComponent,
+    FeedbackManagerComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <div class="app-shell">
@@ -25,7 +44,12 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
           <span class="logo-text">Standup Note</span>
         </div>
         <nav class="sidebar-nav">
-          <button *ngFor="let item of navItems" class="nav-item" [class.active]="activeTab === item.id" (click)="activeTab = item.id">
+          <button
+            *ngFor="let item of navItems"
+            class="nav-item"
+            [class.active]="activeTab === item.id"
+            (click)="activeTab = item.id"
+          >
             <span class="nav-icon">{{ item.icon }}</span>
             <span class="nav-label">{{ item.label }}</span>
           </button>
@@ -46,10 +70,16 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
           <div class="header-actions">
             <label class="btn btn-secondary" title="Import Excel">
               📥 Import
-              <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" hidden>
+              <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" hidden />
             </label>
-            <button class="btn btn-secondary" (click)="svc.exportExcel()" title="Export Excel">📤 Export</button>
-            <button class="btn btn-icon" (click)="themeSvc.toggle()" [title]="'Switch to ' + (themeSvc.theme() === 'dark' ? 'light' : 'dark') + ' mode'">
+            <button class="btn btn-secondary" (click)="svc.exportExcel()" title="Export Excel">
+              📤 Export
+            </button>
+            <button
+              class="btn btn-icon"
+              (click)="themeSvc.toggle()"
+              [title]="'Switch to ' + (themeSvc.theme() === 'dark' ? 'light' : 'dark') + ' mode'"
+            >
               {{ themeSvc.theme() === 'dark' ? '☀️' : '🌙' }}
             </button>
           </div>
@@ -62,91 +92,189 @@ type Tab = 'dashboard' | 'notes' | 'employees' | 'projects' | 'reminders';
           <app-employees *ngIf="activeTab === 'employees'"></app-employees>
           <app-projects *ngIf="activeTab === 'projects'"></app-projects>
           <app-reminders *ngIf="activeTab === 'reminders'"></app-reminders>
+          <app-checklist-manager *ngIf="activeTab === 'checklists'"></app-checklist-manager>
+          <app-feedback-manager *ngIf="activeTab === 'feedback'"></app-feedback-manager>
         </main>
       </div>
     </div>
   `,
-  styles: [`
-    :host { display: block; height: 100vh; }
+  styles: [
+    `
+      :host {
+        display: block;
+        height: 100vh;
+      }
 
-    .app-shell {
-      display: flex;
-      height: 100vh;
-      background: var(--bg-primary);
-      font-family: var(--font-family);
-      --sidebar-w: 220px;
-      --primary: var(--accent-primary);
-      --primary-light: var(--accent-surface);
-      --text: var(--text-primary);
-      --text-muted: var(--text-secondary);
-      --surface: var(--bg-secondary);
-      --border: var(--border-color);
-      --header-h: 60px;
-      transition: background var(--transition-normal);
-    }
+      .app-shell {
+        display: flex;
+        height: 100vh;
+        background: var(--bg-primary);
+        font-family: var(--font-family);
+        --sidebar-w: 220px;
+        --primary: var(--accent-primary);
+        --primary-light: var(--accent-surface);
+        --text: var(--text-primary);
+        --text-muted: var(--text-secondary);
+        --surface: var(--bg-secondary);
+        --border: var(--border-color);
+        --header-h: 60px;
+        transition: background var(--transition-normal);
+      }
 
-    /* Sidebar */
-    .sidebar {
-      width: var(--sidebar-w);
-      min-width: var(--sidebar-w);
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      z-index: 10;
-    }
-    .sidebar-logo {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.5rem 0.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .logo-icon { font-size: 1.5rem; }
-    .logo-text { font-weight: 700; font-size: 1rem; color: var(--primary); }
-    .sidebar-nav { flex: 1; padding: 0.5rem 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; }
-    .nav-item {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.5rem 0.5rem;
-      border: none; background: none; cursor: pointer;
-      border-radius: 8px; color: var(--text-muted);
-      font-size: 0.9rem; font-weight: 500;
-      transition: all 0.15s; text-align: left; width: 100%;
-    }
-    .nav-item:hover { background: var(--primary-light); color: var(--primary); }
-    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
-    .nav-icon { font-size: 1.1rem; }
-    .sidebar-footer { padding: 0.5rem; border-top: 1px solid var(--border); }
-    .back-link { font-size: 0.8rem; color: var(--text-muted); text-decoration: none; }
-    .back-link:hover { color: var(--primary); }
+      /* Sidebar */
+      .sidebar {
+        width: var(--sidebar-w);
+        min-width: var(--sidebar-w);
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        z-index: 10;
+      }
+      .sidebar-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .logo-icon {
+        font-size: 1.5rem;
+      }
+      .logo-text {
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--primary);
+      }
+      .sidebar-nav {
+        flex: 1;
+        padding: 0.5rem 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.5rem;
+        border: none;
+        background: none;
+        cursor: pointer;
+        border-radius: 8px;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.15s;
+        text-align: left;
+        width: 100%;
+      }
+      .nav-item:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+      }
+      .nav-item.active {
+        background: var(--primary-light);
+        color: var(--primary);
+        font-weight: 600;
+      }
+      .nav-icon {
+        font-size: 1.1rem;
+      }
+      .sidebar-footer {
+        padding: 0.5rem;
+        border-top: 1px solid var(--border);
+      }
+      .back-link {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-decoration: none;
+      }
+      .back-link:hover {
+        color: var(--primary);
+      }
 
-    /* ── Main wrapper ─────────────────────── */
-    .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+      /* ── Main wrapper ─────────────────────── */
+      .main-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
 
-    /* ── Header ──────────────────────────── */
-    .app-header {
-      display: flex; justify-content: space-between; align-items: center;
-      height: var(--header-h); padding: 0 0.5rem;
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      position: sticky; top: 0; z-index: 5;
-    }
-    .header-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.1rem; color: var(--text); }
-    .header-icon { font-size: 1.3rem; }
-    .header-actions { display: flex; align-items: center; gap: 0.75rem; }
+      /* ── Header ──────────────────────────── */
+      .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: var(--header-h);
+        padding: 0 0.5rem;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      .header-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text);
+      }
+      .header-icon {
+        font-size: 1.3rem;
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
 
-    .btn {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.5rem 0.5rem; border-radius: 8px;
-      font-size: 0.85rem; font-weight: 600; cursor: pointer;
-      border: 1px solid transparent; transition: all 0.15s;
-    }
-    .btn-secondary { background: #f1f5f9; border-color: var(--border); color: var(--text-muted); }
-    .btn-secondary:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
-    .btn-icon { background: none; border: none; font-size: 1.2rem; padding: 0.4rem; border-radius: 8px; cursor: pointer; }
-    .btn-icon:hover { background: var(--primary-light); }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: all 0.15s;
+      }
+      .btn-secondary {
+        background: #f1f5f9;
+        border-color: var(--border);
+        color: var(--text-muted);
+      }
+      .btn-secondary:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+        border-color: var(--primary);
+      }
+      .btn-icon {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        padding: 0.4rem;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .btn-icon:hover {
+        background: var(--primary-light);
+      }
 
-    /* ── Page Content ─────────────────────── */
-    .page-content { flex: 1; overflow-y: auto; padding: 0.5rem; }
-  `]
+      /* ── Page Content ─────────────────────── */
+      .page-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.5rem;
+      }
+    `,
+  ],
 })
 export class StandupNoteComponent {
   svc = inject(StandupNoteService);
@@ -159,9 +287,13 @@ export class StandupNoteComponent {
     { id: 'employees', label: 'Employees', icon: '👥' },
     { id: 'projects', label: 'Projects', icon: '🚀' },
     { id: 'reminders', label: 'Reminders', icon: '🔔' },
+    { id: 'checklists', label: 'Checklists', icon: '✅' },
+    { id: 'feedback', label: 'Feedback', icon: '💬' },
   ];
 
-  get currentNav() { return this.navItems.find(n => n.id === this.activeTab); }
+  get currentNav() {
+    return this.navItems.find((n) => n.id === this.activeTab);
+  }
 
   onImport(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
