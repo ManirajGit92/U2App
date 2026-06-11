@@ -174,6 +174,25 @@ interface NavItem {
                     </svg>
                     Profile & Sync
                   </a>
+                  @if (firebaseAuth.isAdmin()) {
+                    <a
+                      routerLink="/admin/users"
+                      class="dropdown-item"
+                      (click)="showUserMenu = false"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M12 2l3 4 5 .7-3.5 3.4.8 5-4.3-2.3L7.5 15l.8-5L4.8 6.7 10 6z" />
+                      </svg>
+                      User Management
+                    </a>
+                  }
                   <button class="dropdown-item" (click)="handleSignOut()">
                     <svg
                       width="16"

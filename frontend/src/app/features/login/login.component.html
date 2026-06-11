@@ -1,0 +1,72 @@
+<section class="login-page">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="card-aside">
+        <div class="brand">
+          <div class="logo">U2</div>
+          <div>
+            <h2>U2 Tools</h2>
+            <p class="brand-sub">Smart, secure utilities for teams and enterprises.</p>
+          </div>
+        </div>
+        <div class="aside-illustration" aria-hidden="true"></div>
+      </div>
+
+      <div class="card-main">
+        <div class="card-header">
+          <h1>Welcome back</h1>
+          <p class="muted">Sign in to continue to your dashboard</p>
+        </div>
+
+        <div *ngIf="authService.errorMessage()" class="alert error" role="alert">
+          <strong>Error:</strong>
+          <span>{{ authService.errorMessage() }}</span>
+          <button class="alert-close" (click)="authService.clearError()">✕</button>
+        </div>
+
+        <div *ngIf="authService.isLoading()" class="login-loading">
+          <div class="spinner small" aria-hidden="true"></div>
+          <span>Signing you in…</span>
+        </div>
+
+        <div *ngIf="!authService.isLoading()">
+          <div class="social-row">
+            <button class="btn social google" (click)="handleGoogleSignIn()" [disabled]="authService.isLoading()">
+              <span class="icon">G</span>
+              Sign in with Google
+            </button>
+            <button class="btn social microsoft" (click)="handleMicrosoftSignIn()" [disabled]="authService.isLoading()">
+              <span class="icon">M</span>
+              Sign in with Microsoft
+            </button>
+          </div>
+
+          <div class="divider login-divider">or continue with email</div>
+
+          <form class="form" (ngSubmit)="signInWithEmail()" #loginForm="ngForm" novalidate>
+            <div class="field">
+              <label class="field-label" for="email">Email</label>
+              <input id="email" name="email" type="email" [(ngModel)]="email" required />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="password">Password</label>
+              <input id="password" name="password" type="password" [(ngModel)]="password" required />
+            </div>
+
+            <div class="field-row">
+              <a class="forgot" routerLink="/forgot-password">Forgot?</a>
+              <button type="submit" class="primary" [disabled]="authService.isLoading()">
+                Sign in
+              </button>
+            </div>
+          </form>
+
+          <div class="login-footer register-cta">
+            New here? <a routerLink="/register">Create an account</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

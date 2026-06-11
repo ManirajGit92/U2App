@@ -63,25 +63,25 @@ export class FirestoreService {
         ref,
         (snap) => {
           subscriber.next(
-            snap.exists() ? ({ id: snap.id, ...(snap.data() as object) } as T) : null
+            snap.exists() ? ({ id: snap.id, ...(snap.data() as object) } as T) : null,
           );
         },
-        (error) => subscriber.error(error)
+        (error) => subscriber.error(error),
       );
       return () => unsub();
     });
   }
 
   /** Create or fully overwrite a document. */
-  async setDocument(path: string, data: Record<string, unknown>): Promise<void> {
+  async setDocument<T>(path: string, data: T): Promise<void> {
     const ref = doc(this.firestore, path);
-    await setDoc(ref, data, { merge: true });
+    await setDoc(ref, data as DocumentData, { merge: true });
   }
 
   /** Partially update fields on an existing document. */
-  async updateDocument(path: string, data: Record<string, unknown>): Promise<void> {
+  async updateDocument<T>(path: string, data: T): Promise<void> {
     const ref = doc(this.firestore, path);
-    await updateDoc(ref, data);
+    await updateDoc(ref, data as DocumentData);
   }
 
   /** Delete a document. */
@@ -103,7 +103,7 @@ export class FirestoreService {
   async getCollection<T>(collectionPath: string): Promise<T[]> {
     const col = collection(this.firestore, collectionPath);
     const snap = await getDocs(col);
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) } as T));
+    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as T);
   }
 
   /** Subscribe to real-time updates on a collection. */
@@ -114,10 +114,10 @@ export class FirestoreService {
       const unsub = onSnapshot(
         q,
         (snap) => {
-          const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) } as T));
+          const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as T);
           subscriber.next(items);
         },
-        (error) => subscriber.error(error)
+        (error) => subscriber.error(error),
       );
       return () => unsub();
     });
