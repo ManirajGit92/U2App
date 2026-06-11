@@ -1,6 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import * as XLSX from 'xlsx';
+import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
+import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
+
+const APP_NAME = 'unit-test-tracker';
 
 export interface TestCase {
   id: string;
@@ -38,6 +42,9 @@ export interface UnitTestState {
   providedIn: 'root'
 })
 export class UnitTestService {
+  private authService = inject(FirebaseAuthService);
+  private syncService = inject(FirebaseSyncService);
+
   private initialState: UnitTestState = {
     testCases: [
       { id: 'TC-001', module: 'Authentication', title: 'User Login valid credentials', steps: '1. Enter valid email\\n2. Enter valid password\\n3. Click Login', expectedResult: 'User accesses dashboard', priority: 'High' },
@@ -58,12 +65,54 @@ export class UnitTestService {
   private stateSubject = new BehaviorSubject<UnitTestState>(this.initialState);
   public state$: Observable<UnitTestState> = this.stateSubject.asObservable();
 
-  constructor() {}
+  constructor() {
+    this.syncService.onAuthChange((uid) => {
+      if (uid) {
+        this.loadFromFirestore();
+      }
+    });
+  }
 
   // ─── CRUD OPERATIONS ──────────────────────────────────────────
 
   updateState(partial: Partial<UnitTestState>) {
     this.stateSubject.next({ ...this.stateSubject.value, ...partial });
+    this.syncToFirestore();
+  }
+
+  // --- Firestore Sync ---
+  private async syncToFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    const data = this.stateSubject.value;
+    await Promise.all([
+      this.syncService.pushToFirestore(APP_NAME, 'testCases', data.testCases as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'executions', data.executions as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'bugs', data.bugs as unknown as Record<string, unknown>[]),
+    ]);
+  }
+
+  async loadFromFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    try {
+      const testCases = await this.syncService.pullFromFirestore<TestCase>(APP_NAME, 'testCases');
+      const executions = await this.syncService.pullFromFirestore<TestExecution>(APP_NAME, 'executions');
+      const bugs = await this.syncService.pullFromFirestore<Bug>(APP_NAME, 'bugs');
+
+      if (testCases.length > 0 || executions.length > 0 || bugs.length > 0) {
+        this.stateSubject.next({
+          ...this.stateSubject.value,
+          testCases: testCases.length > 0 ? testCases : this.stateSubject.value.testCases,
+          executions: executions.length > 0 ? executions : this.stateSubject.value.executions,
+          bugs: bugs.length > 0 ? bugs : this.stateSubject.value.bugs,
+        });
+      }
+    } catch (e) {
+      console.error('UnitTestService: failed to load from Firestore', e);
+    }
+  }
+
+  async syncAllToFirestore(): Promise<void> {
+    await this.syncToFirestore();
   }
 
   updateTableHeight(height: number) {

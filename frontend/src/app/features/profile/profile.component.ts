@@ -8,6 +8,8 @@ import { LifeTrackerService } from '../life-tracker/life-tracker.service';
 import { WorkTrackerService } from '../work-tracker/work-tracker.service';
 import { BillingStateService } from '../free-billing/services/billing-state.service';
 import { ExcelMapperService } from '../excel-mapper/excel-mapper.service';
+import { StandupNoteService } from '../standup-note/standup-note.service';
+import { UnitTestService } from '../unit-test-tracker/unit-test.service';
 
 interface SyncModule {
   key: string;
@@ -296,6 +298,8 @@ export class ProfileComponent {
   private workTrackerService = inject(WorkTrackerService);
   private billingService = inject(BillingStateService);
   private excelMapperService = inject(ExcelMapperService);
+  private standupNoteService = inject(StandupNoteService);
+  private unitTestService = inject(UnitTestService);
 
   isBusySyncing = signal(false);
 
@@ -323,6 +327,18 @@ export class ProfileComponent {
       label: 'Excel Mapper',
       icon: '🧭',
       collections: ['templates', 'audit'],
+    },
+    {
+      key: 'standup-note',
+      label: 'Standup Note',
+      icon: '📝',
+      collections: ['employees', 'standupNotes', 'projects', 'reminders', 'checklistGroups', 'feedbacks'],
+    },
+    {
+      key: 'unit-test-tracker',
+      label: 'Unit Test Tracker',
+      icon: '🧪',
+      collections: ['testCases', 'executions', 'bugs'],
     },
   ];
 
@@ -357,6 +373,12 @@ export class ProfileComponent {
           break;
         case 'excel-mapper':
           await this.excelMapperService.syncAllToFirestore();
+          break;
+        case 'standup-note':
+          await this.standupNoteService.syncAllToFirestore();
+          break;
+        case 'unit-test-tracker':
+          await this.unitTestService.syncAllToFirestore();
           break;
       }
       await this.syncService.pushDocumentToFirestore(mod.key, {

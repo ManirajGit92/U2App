@@ -1,6 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import * as XLSX from 'xlsx';
+import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
+import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
+
+const APP_NAME = 'standup-note';
 
 export interface Employee {
   id: string;
@@ -182,14 +186,76 @@ const SEED_STATE: StandupState = {
 
 @Injectable({ providedIn: 'root' })
 export class StandupNoteService {
+  private authService = inject(FirebaseAuthService);
+  private syncService = inject(FirebaseSyncService);
+
   private stateSubject = new BehaviorSubject<StandupState>(SEED_STATE);
   state$ = this.stateSubject.asObservable();
+
+  constructor() {
+    this.syncService.onAuthChange((uid) => {
+      if (uid) {
+        this.loadFromFirestore();
+      }
+    });
+  }
 
   get state(): StandupState {
     return this.stateSubject.value;
   }
   private update(patch: Partial<StandupState>) {
     this.stateSubject.next({ ...this.state, ...patch });
+    this.syncToFirestore();
+  }
+
+  // --- Firestore Sync ---
+  private async syncToFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    const data = this.state;
+    await Promise.all([
+      this.syncService.pushToFirestore(APP_NAME, 'employees', data.employees as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'standupNotes', data.standupNotes as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'projects', data.projects as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'reminders', data.reminders as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'checklistGroups', data.checklistGroups as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'feedbacks', data.feedbacks as unknown as Record<string, unknown>[]),
+    ]);
+  }
+
+  async loadFromFirestore(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    try {
+      const employees = await this.syncService.pullFromFirestore<Employee>(APP_NAME, 'employees');
+      const standupNotes = await this.syncService.pullFromFirestore<StandupNote>(APP_NAME, 'standupNotes');
+      const projects = await this.syncService.pullFromFirestore<Project>(APP_NAME, 'projects');
+      const reminders = await this.syncService.pullFromFirestore<Reminder>(APP_NAME, 'reminders');
+      const checklistGroups = await this.syncService.pullFromFirestore<ChecklistGroup>(APP_NAME, 'checklistGroups');
+      const feedbacks = await this.syncService.pullFromFirestore<FeedbackEntry>(APP_NAME, 'feedbacks');
+
+      if (
+        employees.length > 0 ||
+        standupNotes.length > 0 ||
+        projects.length > 0 ||
+        reminders.length > 0 ||
+        checklistGroups.length > 0 ||
+        feedbacks.length > 0
+      ) {
+        this.stateSubject.next({
+          employees: employees.length > 0 ? employees : this.state.employees,
+          standupNotes: standupNotes.length > 0 ? standupNotes : this.state.standupNotes,
+          projects: projects.length > 0 ? projects : this.state.projects,
+          reminders: reminders.length > 0 ? reminders : this.state.reminders,
+          checklistGroups: checklistGroups.length > 0 ? checklistGroups : this.state.checklistGroups,
+          feedbacks: feedbacks.length > 0 ? feedbacks : this.state.feedbacks,
+        });
+      }
+    } catch (e) {
+      console.error('StandupNoteService: failed to load from Firestore', e);
+    }
+  }
+
+  async syncAllToFirestore(): Promise<void> {
+    await this.syncToFirestore();
   }
 
   // ── Employees ──────────────────────────────────────────────────────────────
@@ -271,6 +337,7 @@ export class StandupNoteService {
         checklistGroups: checklistGroups || [],
         feedbacks: feedbacks || [],
       });
+      this.syncToFirestore();
     };
     reader.readAsArrayBuffer(file);
   }
