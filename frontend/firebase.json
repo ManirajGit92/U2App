@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "dist/u2-app/browser",
+    "public": "dist/U2App/browser",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
