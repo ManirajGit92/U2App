@@ -167,6 +167,12 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService } from '..
       .stats-row { grid-template-columns: repeat(2, 1fr); }
       .grid-2 { grid-template-columns: 1fr; }
     }
+
+    @media (max-width: 480px) {
+      .stats-row { grid-template-columns: 1fr; }
+      .stat-card { padding: 0.75rem; }
+      .projects-grid { grid-template-columns: 1fr; }
+    }
   `]
 })
 export class StandupDashboardComponent implements OnInit {

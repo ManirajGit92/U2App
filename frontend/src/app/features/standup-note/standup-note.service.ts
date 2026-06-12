@@ -189,7 +189,27 @@ export class StandupNoteService {
   private authService = inject(FirebaseAuthService);
   private syncService = inject(FirebaseSyncService);
 
-  private stateSubject = new BehaviorSubject<StandupState>(SEED_STATE);
+  private static loadLocalState(): StandupState {
+    try {
+      const data = localStorage.getItem('u2app.standupState');
+      if (data) {
+        const parsed = JSON.parse(data);
+        return {
+          employees: parsed.employees || SEED_STATE.employees,
+          standupNotes: parsed.standupNotes || SEED_STATE.standupNotes,
+          projects: parsed.projects || SEED_STATE.projects,
+          reminders: parsed.reminders || SEED_STATE.reminders,
+          checklistGroups: parsed.checklistGroups || SEED_STATE.checklistGroups,
+          feedbacks: parsed.feedbacks || SEED_STATE.feedbacks,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to load local standup state', e);
+    }
+    return SEED_STATE;
+  }
+
+  private stateSubject = new BehaviorSubject<StandupState>(StandupNoteService.loadLocalState());
   state$ = this.stateSubject.asObservable();
 
   constructor() {
@@ -204,7 +224,13 @@ export class StandupNoteService {
     return this.stateSubject.value;
   }
   private update(patch: Partial<StandupState>) {
-    this.stateSubject.next({ ...this.state, ...patch });
+    const newState = { ...this.state, ...patch };
+    this.stateSubject.next(newState);
+    try {
+      localStorage.setItem('u2app.standupState', JSON.stringify(newState));
+    } catch (e) {
+      console.error('Failed to save state to localStorage', e);
+    }
     this.syncToFirestore();
   }
 
@@ -240,14 +266,20 @@ export class StandupNoteService {
         checklistGroups.length > 0 ||
         feedbacks.length > 0
       ) {
-        this.stateSubject.next({
+        const newState = {
           employees: employees.length > 0 ? employees : this.state.employees,
           standupNotes: standupNotes.length > 0 ? standupNotes : this.state.standupNotes,
           projects: projects.length > 0 ? projects : this.state.projects,
           reminders: reminders.length > 0 ? reminders : this.state.reminders,
           checklistGroups: checklistGroups.length > 0 ? checklistGroups : this.state.checklistGroups,
           feedbacks: feedbacks.length > 0 ? feedbacks : this.state.feedbacks,
-        });
+        };
+        this.stateSubject.next(newState);
+        try {
+          localStorage.setItem('u2app.standupState', JSON.stringify(newState));
+        } catch (e) {
+          console.error('Failed to save firestore state to localStorage', e);
+        }
       }
     } catch (e) {
       console.error('StandupNoteService: failed to load from Firestore', e);
@@ -310,11 +342,25 @@ export class StandupNoteService {
     const ws2 = XLSX.utils.json_to_sheet(this.state.standupNotes);
     const ws3 = XLSX.utils.json_to_sheet(this.state.projects);
     const ws4 = XLSX.utils.json_to_sheet(this.state.reminders);
+
+    // Serialize checklist items
+    const serializedChecklists = (this.state.checklistGroups || []).map((group) => ({
+      id: group.id,
+      title: group.title,
+      items: JSON.stringify(group.items || []),
+    }));
+    const ws5 = XLSX.utils.json_to_sheet(serializedChecklists);
+
+    // Feedback export
+    const ws6 = XLSX.utils.json_to_sheet(this.state.feedbacks || []);
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws1, 'Employees');
     XLSX.utils.book_append_sheet(wb, ws2, 'StandupNotes');
     XLSX.utils.book_append_sheet(wb, ws3, 'Projects');
     XLSX.utils.book_append_sheet(wb, ws4, 'Reminders');
+    XLSX.utils.book_append_sheet(wb, ws5, 'ChecklistGroups');
+    XLSX.utils.book_append_sheet(wb, ws6, 'Feedbacks');
     XLSX.writeFile(wb, 'StandupNote_DB.xlsx');
   }
 
@@ -327,17 +373,33 @@ export class StandupNoteService {
       const standupNotes: StandupNote[] = XLSX.utils.sheet_to_json(wb.Sheets['StandupNotes'] || {});
       const projects: Project[] = XLSX.utils.sheet_to_json(wb.Sheets['Projects'] || {});
       const reminders: Reminder[] = XLSX.utils.sheet_to_json(wb.Sheets['Reminders'] || {});
-      const checklistGroups: any[] = XLSX.utils.sheet_to_json(wb.Sheets['ChecklistGroups'] || {});
-      const feedbacks: any[] = XLSX.utils.sheet_to_json(wb.Sheets['Feedbacks'] || {});
-      this.stateSubject.next({
-        employees,
-        standupNotes,
-        projects,
-        reminders,
+      const checklistGroupsRaw: any[] = XLSX.utils.sheet_to_json(wb.Sheets['ChecklistGroups'] || {});
+      const feedbacks: FeedbackEntry[] = XLSX.utils.sheet_to_json(wb.Sheets['Feedbacks'] || {});
+
+      const checklistGroups: ChecklistGroup[] = (checklistGroupsRaw || []).map((g: any) => {
+        let items: ChecklistItem[] = [];
+        if (g.items) {
+          try {
+            items = typeof g.items === 'string' ? JSON.parse(g.items) : g.items;
+          } catch (err) {
+            console.error('Error parsing checklist items JSON during import', err);
+          }
+        }
+        return {
+          id: g.id || '',
+          title: g.title || '',
+          items: Array.isArray(items) ? items : [],
+        };
+      });
+
+      this.update({
+        employees: employees || [],
+        standupNotes: standupNotes || [],
+        projects: projects || [],
+        reminders: reminders || [],
         checklistGroups: checklistGroups || [],
         feedbacks: feedbacks || [],
       });
-      this.syncToFirestore();
     };
     reader.readAsArrayBuffer(file);
   }

@@ -37,8 +37,11 @@ type Tab =
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <div class="app-shell">
+      <!-- Backdrop Overlay for Mobile Drawer Menu -->
+      <div class="sidebar-backdrop" [class.open]="isMobileMenuOpen" (click)="isMobileMenuOpen = false"></div>
+
       <!-- Sidebar -->
-      <aside class="sidebar">
+      <aside class="sidebar" [class.open]="isMobileMenuOpen">
         <div class="sidebar-logo">
           <span class="logo-icon">📋</span>
           <span class="logo-text">Standup Note</span>
@@ -48,7 +51,7 @@ type Tab =
             *ngFor="let item of navItems"
             class="nav-item"
             [class.active]="activeTab === item.id"
-            (click)="activeTab = item.id"
+            (click)="activeTab = item.id; isMobileMenuOpen = false"
           >
             <span class="nav-icon">{{ item.icon }}</span>
             <span class="nav-label">{{ item.label }}</span>
@@ -63,17 +66,22 @@ type Tab =
       <div class="main-wrapper">
         <!-- Fixed Header -->
         <header class="app-header">
-          <div class="header-title">
-            <span class="header-icon">{{ currentNav?.icon }}</span>
-            {{ currentNav?.label }}
+          <div class="header-title-wrapper">
+            <button class="hamburger-btn" (click)="isMobileMenuOpen = !isMobileMenuOpen" aria-label="Toggle Navigation">
+              ☰
+            </button>
+            <div class="header-title">
+              <span class="header-icon">{{ currentNav?.icon }}</span>
+              {{ currentNav?.label }}
+            </div>
           </div>
           <div class="header-actions">
             <label class="btn btn-secondary" title="Import Excel">
-              📥 Import
+              📥 <span class="btn-text">Import</span>
               <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" hidden />
             </label>
             <button class="btn btn-secondary" (click)="svc.exportExcel()" title="Export Excel">
-              📤 Export
+              📤 <span class="btn-text">Export</span>
             </button>
             <button
               class="btn btn-icon"
@@ -121,6 +129,24 @@ type Tab =
         transition: background var(--transition-normal);
       }
 
+      /* Sidebar Backdrop */
+      .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 15, 26, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 90;
+        opacity: 0;
+        transition: opacity var(--transition-normal);
+        pointer-events: none;
+      }
+
+      .sidebar-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
       /* Sidebar */
       .sidebar {
         width: var(--sidebar-w);
@@ -129,7 +155,8 @@ type Tab =
         border-right: 1px solid var(--border);
         display: flex;
         flex-direction: column;
-        z-index: 10;
+        z-index: 100;
+        transition: transform var(--transition-normal);
       }
       .sidebar-logo {
         display: flex;
@@ -216,6 +243,29 @@ type Tab =
         top: 0;
         z-index: 5;
       }
+      
+      .header-title-wrapper {
+        display: flex;
+        align-items: center;
+      }
+
+      .hamburger-btn {
+        display: none;
+        background: none;
+        border: none;
+        font-size: 1.4rem;
+        color: var(--text);
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 6px;
+        margin-right: 0.5rem;
+        line-height: 1;
+      }
+      
+      .hamburger-btn:hover {
+        background: var(--primary-light);
+      }
+
       .header-title {
         display: flex;
         align-items: center;
@@ -255,6 +305,12 @@ type Tab =
         color: var(--primary);
         border-color: var(--primary);
       }
+      
+      body.theme-dark .btn-secondary {
+        background: var(--bg-input);
+        color: var(--text-primary);
+      }
+
       .btn-icon {
         background: none;
         border: none;
@@ -273,6 +329,41 @@ type Tab =
         overflow-y: auto;
         padding: 0.5rem;
       }
+
+      /* Mobile styling overrides */
+      @media (max-width: 768px) {
+        .sidebar-backdrop {
+          display: block;
+        }
+        
+        .hamburger-btn {
+          display: block;
+        }
+
+        .sidebar {
+          position: fixed;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          height: 100vh;
+          transform: translateX(-100%);
+          z-index: 100;
+          box-shadow: var(--shadow-lg);
+        }
+
+        .sidebar.open {
+          transform: translateX(0);
+        }
+      }
+
+      @media (max-width: 576px) {
+        .btn-text {
+          display: none;
+        }
+        .btn-secondary {
+          padding: 0.5rem 0.6rem;
+        }
+      }
     `,
   ],
 })
@@ -280,6 +371,8 @@ export class StandupNoteComponent {
   svc = inject(StandupNoteService);
   themeSvc = inject(ThemeService);
   activeTab: Tab = 'dashboard';
+  isMobileMenuOpen = false;
+
 
   navItems: { id: Tab; label: string; icon: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },

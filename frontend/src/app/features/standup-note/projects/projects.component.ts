@@ -139,6 +139,34 @@ import { Project, StandupNoteService } from '../standup-note.service';
     .form-row label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
     .form-row .input-field { width: 100%; box-sizing: border-box; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    @media (max-width: 576px) {
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        padding: 0.75rem;
+      }
+      .input-field {
+        width: 100% !important;
+      }
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .pc-header {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .pc-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .form-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+    }
   `]
 })
 export class ProjectsComponent implements OnInit {

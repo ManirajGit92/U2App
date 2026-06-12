@@ -174,7 +174,7 @@ import { StandupNoteService, FeedbackEntry } from '../standup-note.service';
       }
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 18px;
       }
       .feedback-card {
@@ -381,6 +381,22 @@ import { StandupNoteService, FeedbackEntry } from '../standup-note.service';
         }
         .field-grid {
           grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 576px) {
+        .feedback-card {
+          padding: 16px;
+        }
+        .modal-body {
+          padding: 16px;
+        }
+        .modal-actions {
+          flex-direction: column-reverse;
+          gap: 8px;
+          align-items: stretch;
+        }
+        .modal-actions button {
+          width: 100%;
         }
       }
     `,

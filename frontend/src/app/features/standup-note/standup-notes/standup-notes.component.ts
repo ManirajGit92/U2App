@@ -164,6 +164,31 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
     .form-row label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
     .form-row .input-field { width: 100%; box-sizing: border-box; }
     textarea.input-field { resize: vertical; font-family: inherit; }
+
+    @media (max-width: 768px) {
+      .notes-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 576px) {
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding: 0.75rem;
+      }
+      .toolbar-left {
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+      }
+      .input-field {
+        width: 100% !important;
+      }
+      .toolbar button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
   `]
 })
 export class StandupNotesComponent implements OnInit {

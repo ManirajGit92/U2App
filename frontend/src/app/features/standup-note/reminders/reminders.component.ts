@@ -143,6 +143,39 @@ import { Reminder, StandupNoteService } from '../standup-note.service';
     .form-row label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
     .form-row .input-field { width: 100%; box-sizing: border-box; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    @media (max-width: 576px) {
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        padding: 0.75rem;
+      }
+      .input-field {
+        width: 100% !important;
+      }
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .reminder-card {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+      }
+      .rc-right {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--border-color);
+        padding-top: 0.5rem;
+        width: 100%;
+      }
+      .form-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+    }
   `]
 })
 export class RemindersComponent implements OnInit {

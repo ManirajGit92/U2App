@@ -17,6 +17,11 @@ import { NavbarComponent } from './shared/components/navbar/navbar.component';
       padding-top: 5rem;
       min-height: 100vh;
     }
+    @media (max-width: 768px) {
+      .main-content {
+        padding-top: 6rem;
+      }
+    }
   `],
 })
 export class App {}

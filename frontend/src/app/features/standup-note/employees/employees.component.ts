@@ -112,6 +112,25 @@ import { Employee, StandupNoteService } from '../standup-note.service';
     .form-row { display: flex; flex-direction: column; gap: 0.4rem; }
     .form-row label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
     .form-row .input-field { width: 100%; box-sizing: border-box; }
+
+    @media (max-width: 576px) {
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        padding: 0.75rem;
+      }
+      .input-field {
+        width: 100% !important;
+      }
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .emp-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   `]
 })
 export class EmployeesComponent implements OnInit {

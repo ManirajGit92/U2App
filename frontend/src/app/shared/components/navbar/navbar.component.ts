@@ -21,20 +21,24 @@ interface NavItem {
   imports: [RouterLink, RouterLinkActive, SyncStatusComponent],
   template: `
     <nav class="navbar">
+      @if (isMobileMenuOpen) {
+        <div class="mobile-menu-backdrop animate-fade-in" (click)="isMobileMenuOpen = false"></div>
+      }
       <div class="navbar-inner container">
         <!-- Logo -->
-        <a routerLink="/" class="navbar-logo">
+        <a routerLink="/" class="navbar-logo" (click)="isMobileMenuOpen = false">
           💡<span class="logo-text"> U2 <span class="logo-highlight">Tools</span></span>
         </a>
 
         <!-- Nav Links -->
-        <div class="navbar-links">
+        <div class="navbar-links" [class.mobile-open]="isMobileMenuOpen">
           @for (item of visibleNavItems; track item.path) {
             <a
               [routerLink]="item.path"
               routerLinkActive="active"
               [routerLinkActiveOptions]="{ exact: item.exact }"
               class="nav-link"
+              (click)="isMobileMenuOpen = false"
             >
               {{ item.label }}
             </a>
@@ -160,7 +164,7 @@ interface NavItem {
                     <span class="user-email">{{ firebaseAuth.user()?.email }}</span>
                   </div>
                   <hr class="dropdown-divider" />
-                  <a routerLink="/profile" class="dropdown-item" (click)="showUserMenu = false">
+                  <a routerLink="/profile" class="dropdown-item" (click)="showUserMenu = false; isMobileMenuOpen = false">
                     <svg
                       width="16"
                       height="16"
@@ -178,7 +182,7 @@ interface NavItem {
                     <a
                       routerLink="/admin/users"
                       class="dropdown-item"
-                      (click)="showUserMenu = false"
+                      (click)="showUserMenu = false; isMobileMenuOpen = false"
                     >
                       <svg
                         width="16"
@@ -193,7 +197,7 @@ interface NavItem {
                       User Management
                     </a>
                   }
-                  <button class="dropdown-item" (click)="handleSignOut()">
+                  <button class="dropdown-item" (click)="handleSignOut(); isMobileMenuOpen = false">
                     <svg
                       width="16"
                       height="16"
@@ -213,7 +217,7 @@ interface NavItem {
             </div>
           } @else {
             <!-- Sign In Button -->
-            <a routerLink="/login" class="btn btn-primary btn-sm">
+            <a routerLink="/login" class="btn btn-primary btn-sm" (click)="isMobileMenuOpen = false">
               <svg
                 width="16"
                 height="16"
@@ -229,6 +233,18 @@ interface NavItem {
               Sign In
             </a>
           }
+
+          <!-- Hamburger Toggle (Mobile Only) -->
+          <button
+            class="mobile-menu-toggle"
+            type="button"
+            (click)="toggleMobileMenu()"
+            [attr.aria-label]="isMobileMenuOpen ? 'Close Menu' : 'Open Menu'"
+          >
+            <span class="hamburger-bar" [class.open]="isMobileMenuOpen"></span>
+            <span class="hamburger-bar" [class.open]="isMobileMenuOpen"></span>
+            <span class="hamburger-bar" [class.open]="isMobileMenuOpen"></span>
+          </button>
         </div>
       </div>
     </nav>
@@ -398,6 +414,9 @@ interface NavItem {
       .settings-list {
         display: grid;
         gap: 8px;
+        max-height: 260px;
+        overflow-y: auto;
+        padding-right: 4px;
       }
 
       .settings-item {
@@ -559,29 +578,107 @@ interface NavItem {
         color: var(--accent-primary);
       }
 
+      .mobile-menu-toggle {
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 24px;
+        height: 18px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 1001;
+      }
+
+      .hamburger-bar {
+        width: 100%;
+        height: 2.5px;
+        background-color: var(--text-primary);
+        border-radius: 2px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .mobile-menu-backdrop {
+        display: none;
+      }
+
       @media (max-width: 768px) {
+        .mobile-menu-toggle {
+          display: flex;
+        }
+
+        /* Hamburger bars animation */
+        .hamburger-bar.open:nth-child(1) {
+          transform: translateY(7.5px) rotate(45deg);
+        }
+        .hamburger-bar.open:nth-child(2) {
+          opacity: 0;
+        }
+        .hamburger-bar.open:nth-child(3) {
+          transform: translateY(-7.5px) rotate(-45deg);
+        }
+
+        .mobile-menu-backdrop {
+          display: block;
+          position: fixed;
+          top: 64px;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(15, 15, 26, 0.4);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          z-index: 998;
+        }
+
         .navbar-inner {
-          height: auto;
+          height: 64px;
           min-height: 64px;
-          padding-top: 0.5rem;
-          padding-bottom: 0.5rem;
-          flex-wrap: wrap;
+          padding-top: 0;
+          padding-bottom: 0;
+          flex-wrap: nowrap;
         }
 
         .navbar-links {
-          order: 3;
-          width: 100%;
-          overflow-x: auto;
-          padding-bottom: 2px;
-          scrollbar-width: none;
+          display: none;
+          position: absolute;
+          top: 64px;
+          left: 0;
+          right: 0;
+          background: var(--bg-secondary);
+          border-bottom: 1px solid var(--border-color-strong);
+          flex-direction: column;
+          align-items: stretch;
+          padding: 1rem 1.5rem;
+          gap: 8px;
+          box-shadow: var(--shadow-lg);
+          max-height: calc(100vh - 64px);
+          overflow-y: auto;
+          z-index: 999;
         }
 
-        .navbar-links::-webkit-scrollbar {
-          display: none;
+        @keyframes slideDownMenu {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .navbar-links.mobile-open {
+          display: flex;
+          animation: slideDownMenu 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
 
         .nav-link {
-          flex: 0 0 auto;
+          width: 100%;
+          padding: 12px 1rem;
+          font-size: 0.95rem;
+          border-radius: var(--radius-sm);
         }
       }
 
@@ -612,6 +709,11 @@ export class NavbarComponent {
 
   showUserMenu = false;
   navSettingsOpen = false;
+  isMobileMenuOpen = false;
+
+  toggleMobileMenu(): void {
+    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+  }
   toolNavItems: NavItem[] = [];
   visibleNavItems: NavItem[] = [];
   private draggedItemPath: string | null = null;

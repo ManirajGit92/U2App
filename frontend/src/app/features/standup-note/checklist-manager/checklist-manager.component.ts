@@ -199,7 +199,7 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
       }
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 18px;
       }
       .card {
@@ -406,6 +406,34 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         }
         .cards {
           grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 576px) {
+        .quick-add {
+          flex-direction: column;
+          align-items: stretch;
+          padding: 12px;
+        }
+        .quick-add input {
+          min-width: unset;
+          width: 100%;
+        }
+        .quick-add button {
+          width: 100%;
+        }
+        .add-item {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .add-item input {
+          min-width: unset;
+          width: 100%;
+        }
+        .add-item button {
+          width: 100%;
+        }
+        .card {
+          padding: 16px;
         }
       }
     `,
