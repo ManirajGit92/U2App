@@ -67,6 +67,21 @@ export interface FeedbackEntry {
   createdAt: string; // ISO
 }
 
+export interface CalendarCategory {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // YYYY-MM-DD
+  time?: string; // HH:MM
+  categoryId: string;
+}
+
 export interface StandupState {
   employees: Employee[];
   standupNotes: StandupNote[];
@@ -74,6 +89,8 @@ export interface StandupState {
   reminders: Reminder[];
   checklistGroups: ChecklistGroup[];
   feedbacks: FeedbackEntry[];
+  calendarCategories?: CalendarCategory[];
+  calendarEvents?: CalendarEvent[];
 }
 
 const SEED_STATE: StandupState = {
@@ -182,6 +199,22 @@ const SEED_STATE: StandupState = {
       createdAt: new Date().toISOString(),
     },
   ],
+  calendarCategories: [
+    { id: 'CAT-001', name: 'Meeting', color: '#6366f1' },
+    { id: 'CAT-002', name: 'Holiday', color: '#10b981' },
+    { id: 'CAT-003', name: 'Deadline', color: '#ef4444' },
+    { id: 'CAT-004', name: 'General', color: '#ec4899' },
+  ],
+  calendarEvents: [
+    {
+      id: 'EVT-001',
+      title: 'Sprint Planning',
+      description: 'Align on upcoming sprint goals',
+      date: new Date().toISOString().split('T')[0],
+      time: '10:00',
+      categoryId: 'CAT-001',
+    },
+  ],
 };
 
 @Injectable({ providedIn: 'root' })
@@ -201,6 +234,8 @@ export class StandupNoteService {
           reminders: parsed.reminders || SEED_STATE.reminders,
           checklistGroups: parsed.checklistGroups || SEED_STATE.checklistGroups,
           feedbacks: parsed.feedbacks || SEED_STATE.feedbacks,
+          calendarCategories: parsed.calendarCategories || SEED_STATE.calendarCategories,
+          calendarEvents: parsed.calendarEvents || SEED_STATE.calendarEvents,
         };
       }
     } catch (e) {
@@ -245,6 +280,8 @@ export class StandupNoteService {
       this.syncService.pushToFirestore(APP_NAME, 'reminders', data.reminders as unknown as Record<string, unknown>[]),
       this.syncService.pushToFirestore(APP_NAME, 'checklistGroups', data.checklistGroups as unknown as Record<string, unknown>[]),
       this.syncService.pushToFirestore(APP_NAME, 'feedbacks', data.feedbacks as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'calendarCategories', (data.calendarCategories || []) as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(APP_NAME, 'calendarEvents', (data.calendarEvents || []) as unknown as Record<string, unknown>[]),
     ]);
   }
 
@@ -257,6 +294,8 @@ export class StandupNoteService {
       const reminders = await this.syncService.pullFromFirestore<Reminder>(APP_NAME, 'reminders');
       const checklistGroups = await this.syncService.pullFromFirestore<ChecklistGroup>(APP_NAME, 'checklistGroups');
       const feedbacks = await this.syncService.pullFromFirestore<FeedbackEntry>(APP_NAME, 'feedbacks');
+      const calendarCategories = await this.syncService.pullFromFirestore<CalendarCategory>(APP_NAME, 'calendarCategories');
+      const calendarEvents = await this.syncService.pullFromFirestore<CalendarEvent>(APP_NAME, 'calendarEvents');
 
       if (
         employees.length > 0 ||
@@ -264,7 +303,9 @@ export class StandupNoteService {
         projects.length > 0 ||
         reminders.length > 0 ||
         checklistGroups.length > 0 ||
-        feedbacks.length > 0
+        feedbacks.length > 0 ||
+        calendarCategories.length > 0 ||
+        calendarEvents.length > 0
       ) {
         const newState = {
           employees: employees.length > 0 ? employees : this.state.employees,
@@ -273,6 +314,8 @@ export class StandupNoteService {
           reminders: reminders.length > 0 ? reminders : this.state.reminders,
           checklistGroups: checklistGroups.length > 0 ? checklistGroups : this.state.checklistGroups,
           feedbacks: feedbacks.length > 0 ? feedbacks : this.state.feedbacks,
+          calendarCategories: calendarCategories.length > 0 ? calendarCategories : this.state.calendarCategories,
+          calendarEvents: calendarEvents.length > 0 ? calendarEvents : this.state.calendarEvents,
         };
         this.stateSubject.next(newState);
         try {
@@ -354,6 +397,10 @@ export class StandupNoteService {
     // Feedback export
     const ws6 = XLSX.utils.json_to_sheet(this.state.feedbacks || []);
 
+    // Calendar export
+    const ws7 = XLSX.utils.json_to_sheet(this.state.calendarCategories || []);
+    const ws8 = XLSX.utils.json_to_sheet(this.state.calendarEvents || []);
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws1, 'Employees');
     XLSX.utils.book_append_sheet(wb, ws2, 'StandupNotes');
@@ -361,6 +408,8 @@ export class StandupNoteService {
     XLSX.utils.book_append_sheet(wb, ws4, 'Reminders');
     XLSX.utils.book_append_sheet(wb, ws5, 'ChecklistGroups');
     XLSX.utils.book_append_sheet(wb, ws6, 'Feedbacks');
+    XLSX.utils.book_append_sheet(wb, ws7, 'CalendarCategories');
+    XLSX.utils.book_append_sheet(wb, ws8, 'CalendarEvents');
     XLSX.writeFile(wb, 'StandupNote_DB.xlsx');
   }
 
@@ -375,6 +424,8 @@ export class StandupNoteService {
       const reminders: Reminder[] = XLSX.utils.sheet_to_json(wb.Sheets['Reminders'] || {});
       const checklistGroupsRaw: any[] = XLSX.utils.sheet_to_json(wb.Sheets['ChecklistGroups'] || {});
       const feedbacks: FeedbackEntry[] = XLSX.utils.sheet_to_json(wb.Sheets['Feedbacks'] || {});
+      const calendarCategories: CalendarCategory[] = XLSX.utils.sheet_to_json(wb.Sheets['CalendarCategories'] || {});
+      const calendarEvents: CalendarEvent[] = XLSX.utils.sheet_to_json(wb.Sheets['CalendarEvents'] || {});
 
       const checklistGroups: ChecklistGroup[] = (checklistGroupsRaw || []).map((g: any) => {
         let items: ChecklistItem[] = [];
@@ -399,9 +450,45 @@ export class StandupNoteService {
         reminders: reminders || [],
         checklistGroups: checklistGroups || [],
         feedbacks: feedbacks || [],
+        calendarCategories: calendarCategories || [],
+        calendarEvents: calendarEvents || [],
       });
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  // ── Calendar Categories ───────────────────────────────────────────────────
+  addCalendarCategory(cat: CalendarCategory) {
+    this.update({ calendarCategories: [...(this.state.calendarCategories || []), cat] });
+  }
+  updateCalendarCategory(cat: CalendarCategory) {
+    this.update({
+      calendarCategories: (this.state.calendarCategories || []).map((c) =>
+        c.id === cat.id ? cat : c
+      ),
+    });
+  }
+  deleteCalendarCategory(id: string) {
+    const categories = (this.state.calendarCategories || []).filter((c) => c.id !== id);
+    const events = (this.state.calendarEvents || []).filter((e) => e.categoryId !== id);
+    this.update({ calendarCategories: categories, calendarEvents: events });
+  }
+
+  // ── Calendar Events ────────────────────────────────────────────────────────
+  addCalendarEvent(evt: CalendarEvent) {
+    this.update({ calendarEvents: [...(this.state.calendarEvents || []), evt] });
+  }
+  updateCalendarEvent(evt: CalendarEvent) {
+    this.update({
+      calendarEvents: (this.state.calendarEvents || []).map((e) =>
+        e.id === evt.id ? evt : e
+      ),
+    });
+  }
+  deleteCalendarEvent(id: string) {
+    this.update({
+      calendarEvents: (this.state.calendarEvents || []).filter((e) => e.id !== id),
+    });
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

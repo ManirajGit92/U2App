@@ -55,14 +55,24 @@ export class HomeCarouselService {
   private authService = inject(FirebaseAuthService);
   private syncService = inject(FirebaseSyncService);
 
-  private readonly storageKey = 'u2app.homeSlides';
-  private slidesSubject = new BehaviorSubject<CarouselSlide[]>(this.loadLocalSlides());
+  private getStorageKey(uid?: string | null): string {
+    const activeUid = uid || this.authService.user()?.uid;
+    return activeUid ? `u2app.homeSlides.${activeUid}` : 'u2app.homeSlides';
+  }
+
+  private slidesSubject = new BehaviorSubject<CarouselSlide[]>([]);
   slides$ = this.slidesSubject.asObservable();
 
   constructor() {
     this.syncService.onAuthChange((uid) => {
       if (uid) {
+        // User signed in (or switched): load local cache first, then fetch from Firestore
+        const local = this.loadLocalSlides(uid);
+        this.slidesSubject.next(local);
         this.loadFromFirestore();
+      } else {
+        // User signed out: revert to DEFAULT_SLIDES
+        this.slidesSubject.next([...DEFAULT_SLIDES]);
       }
     });
   }
@@ -74,20 +84,24 @@ export class HomeCarouselService {
   updateSlides(slides: CarouselSlide[]) {
     const sorted = [...slides].sort((a, b) => a.displayOrder - b.displayOrder);
     this.slidesSubject.next(sorted);
+    
+    const uid = this.authService.user()?.uid;
+    const key = this.getStorageKey(uid);
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(sorted));
+      localStorage.setItem(key, JSON.stringify(sorted));
     } catch (e) {
       console.error('Failed to save slides to localStorage', e);
     }
     this.syncToFirestore();
   }
 
-  private loadLocalSlides(): CarouselSlide[] {
+  private loadLocalSlides(uid?: string | null): CarouselSlide[] {
     try {
-      const stored = localStorage.getItem(this.storageKey);
+      const key = this.getStorageKey(uid);
+      const stored = localStorage.getItem(key);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed.sort((a, b) => a.displayOrder - b.displayOrder);
         }
       }
@@ -111,7 +125,8 @@ export class HomeCarouselService {
   }
 
   async loadFromFirestore(): Promise<void> {
-    if (!this.authService.isAuthenticated()) return;
+    const uid = this.authService.user()?.uid;
+    if (!uid) return;
     try {
       const remoteSlides = await this.syncService.pullFromFirestore<CarouselSlide>(
         'home-carousel',
@@ -120,7 +135,12 @@ export class HomeCarouselService {
       if (remoteSlides && remoteSlides.length > 0) {
         const sorted = remoteSlides.sort((a, b) => a.displayOrder - b.displayOrder);
         this.slidesSubject.next(sorted);
-        localStorage.setItem(this.storageKey, JSON.stringify(sorted));
+        localStorage.setItem(this.getStorageKey(uid), JSON.stringify(sorted));
+      } else if (this.syncService.syncState() !== 'error') {
+        // No remote slides found (meaning either a new user or they cleared all slides)
+        // Set the slides to empty and save it so they fall back to DEFAULT_SLIDES
+        this.slidesSubject.next([]);
+        localStorage.setItem(this.getStorageKey(uid), JSON.stringify([]));
       }
     } catch (e) {
       console.error('Failed to pull slides from Firestore', e);
