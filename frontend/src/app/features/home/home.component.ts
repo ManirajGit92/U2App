@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { combineLatest } from 'rxjs';
 import { NavPreferencesService } from '../../core/services/nav-preferences.service';
+import { HomeCarouselService, CarouselSlide } from '../../core/services/home-carousel.service';
 
 interface Tool {
   id: string;
@@ -18,52 +19,117 @@ interface Tool {
   standalone: true,
   imports: [RouterLink],
   template: `
-    <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-bg"></div>
-      <div class="hero-content container">
-        <span class="hero-badge">⚡ Multi-Purpose Toolkit</span>
-        <h1 class="hero-title">
-          All Your <span class="gradient-text">Developer Tools</span><br />
-          In One Place
-        </h1>
-        <p class="hero-subtitle">
-          Compare text, process images, create content, and more — powerful utilities designed for
-          developers and creators.
-        </p>
-        <div class="hero-actions">
-          <a routerLink="/excel-mapper" class="btn btn-primary btn-lg">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M12 3v18m-7-7l7 7 7-7" />
-            </svg>
-            Get Started
-          </a>
-          <a href="#tools" class="btn btn-secondary btn-lg"> Explore Tools </a>
-        </div>
-        <div class="hero-stats">
-          <div class="stat">
-            <span class="stat-number">20+</span>
-            <span class="stat-label">Tools</span>
+    <!-- Hero Section Carousel -->
+    <section class="hero-carousel"
+             (mouseenter)="pauseAutoplay()"
+             (mouseleave)="resumeAutoplay()"
+             (touchstart)="onTouchStart($event)"
+             (touchend)="onTouchEnd($event)">
+      
+      <div class="carousel-track">
+        @for (slide of activeSlides; track slide.id; let idx = $index) {
+          <div class="carousel-slide" 
+               [class.active]="idx === currentSlideIndex"
+               [class.overlay-light]="slide.overlayType === 'light'"
+               [class.overlay-dark]="slide.overlayType === 'dark'"
+               [style.background-image]="slide.bgImage && (idx === currentSlideIndex || isPreload(idx)) ? 'url(' + slide.bgImage + ')' : 'none'">
+            
+            <!-- Dynamic Overlay Shade & Opacity -->
+            @if (slide.overlayType !== 'none') {
+              <div class="carousel-overlay" 
+                   [class.has-image]="!!slide.bgImage"
+                   [style.background]="slide.overlayType === 'dark' ? 'linear-gradient(to bottom, rgba(15, 23, 42, ' + (slide.overlayOpacity ?? 75)/100 + ') 0%, rgba(15, 23, 42, ' + (slide.overlayOpacity ?? 75)/100 * 0.8 + ') 50%, rgba(15, 23, 42, ' + (slide.overlayOpacity ?? 75)/100 + ') 100%)' : 'linear-gradient(to bottom, rgba(255, 255, 255, ' + (slide.overlayOpacity ?? 75)/100 + ') 0%, rgba(255, 255, 255, ' + (slide.overlayOpacity ?? 75)/100 * 0.8 + ') 50%, rgba(255, 255, 255, ' + (slide.overlayOpacity ?? 75)/100 + ') 100%)'">
+              </div>
+            } @else if (!slide.bgImage) {
+              <!-- Fallback overlay for default gradient background slider -->
+              <div class="carousel-overlay"></div>
+            }
+            
+            <div class="hero-content container">
+              @if (slide.badgeText) {
+                <span class="hero-badge">{{ slide.badgeText }}</span>
+              }
+              <h1 class="hero-title" [innerHTML]="slide.title"></h1>
+              <p class="hero-subtitle">{{ slide.description }}</p>
+              
+              <div class="hero-actions">
+                @if (slide.primaryBtnText) {
+                  @if (isExternalRoute(slide.primaryBtnRoute)) {
+                    <a [href]="slide.primaryBtnRoute" class="btn btn-primary btn-lg">
+                      @if (slide.primaryBtnRoute === '/excel-mapper' || slide.primaryBtnRoute === 'excel-mapper') {
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M12 3v18m-7-7l7 7 7-7" />
+                        </svg>
+                      }
+                      {{ slide.primaryBtnText }}
+                    </a>
+                  } @else {
+                    <a [routerLink]="slide.primaryBtnRoute" class="btn btn-primary btn-lg">
+                      @if (slide.primaryBtnRoute === '/excel-mapper' || slide.primaryBtnRoute === 'excel-mapper') {
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M12 3v18m-7-7l7 7 7-7" />
+                        </svg>
+                      }
+                      {{ slide.primaryBtnText }}
+                    </a>
+                  }
+                }
+                
+                @if (slide.secondaryBtnText) {
+                  @if (isExternalRoute(slide.secondaryBtnRoute)) {
+                    <a [href]="slide.secondaryBtnRoute" class="btn btn-secondary btn-lg">
+                      {{ slide.secondaryBtnText }}
+                    </a>
+                  } @else {
+                    <a [routerLink]="slide.secondaryBtnRoute" class="btn btn-secondary btn-lg">
+                      {{ slide.secondaryBtnText }}
+                    </a>
+                  }
+                }
+              </div>
+              
+              @if (slide.statistics && slide.statistics.length > 0) {
+                <div class="hero-stats">
+                  @for (stat of slide.statistics; track $index; let sIdx = $index) {
+                    @if (sIdx > 0) {
+                      <div class="stat-divider"></div>
+                    }
+                    <div class="stat">
+                      <span class="stat-number">{{ stat.number }}</span>
+                      <span class="stat-label">{{ stat.label }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
           </div>
-          <div class="stat-divider"></div>
-          <div class="stat">
-            <span class="stat-number">Free</span>
-            <span class="stat-label">To Use</span>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat">
-            <span class="stat-number">Fast</span>
-            <span class="stat-label">& Secure</span>
-          </div>
-        </div>
+        }
       </div>
+
+      <!-- Arrow Controls -->
+      @if (activeSlides.length > 1) {
+        <button class="carousel-arrow prev" (click)="prevSlide()" aria-label="Previous Slide">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <button class="carousel-arrow next" (click)="nextSlide()" aria-label="Next Slide">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+
+        <!-- Pagination Indicators -->
+        <div class="carousel-indicators">
+          @for (slide of activeSlides; track slide.id; let idx = $index) {
+            <button class="indicator-dot" 
+                    [class.active]="idx === currentSlideIndex" 
+                    (click)="goToSlide(idx)"
+                    [attr.aria-label]="'Go to slide ' + (idx + 1)">
+            </button>
+          }
+        </div>
+      }
     </section>
 
     <!-- Tools Grid -->
@@ -105,25 +171,57 @@ interface Tool {
   `,
   styles: [
     `
-      /* ───── Hero ───── */
-      .hero {
+      /* ───── Hero Carousel ───── */
+      .hero-carousel {
         position: relative;
-        padding: 0.5rem 0 0.5rem;
         overflow: hidden;
+        min-height: 75vh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        background: var(--bg-primary);
+      }
+
+      .carousel-track {
+        position: relative;
+        width: 100%;
         min-height: 75vh;
         display: flex;
         align-items: center;
       }
 
-      .hero-bg {
+      .carousel-slide {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+                    visibility 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 0;
+        padding: 4rem 2rem;
+      }
+
+      .carousel-slide.active {
+        opacity: 1;
+        visibility: visible;
+        z-index: 1;
+      }
+
+      .carousel-overlay {
         position: absolute;
         inset: 0;
         background: var(--hero-gradient);
         opacity: 0.12;
-        z-index: 0;
+        z-index: 1;
       }
 
-      .hero-bg::after {
+      .carousel-overlay::after {
         content: '';
         position: absolute;
         inset: 0;
@@ -132,23 +230,42 @@ interface Tool {
           radial-gradient(circle at 70% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
       }
 
+      /* Dark gradient overlay for readability on custom images */
+      .carousel-overlay.has-image {
+        opacity: 1;
+        background: linear-gradient(
+          to bottom,
+          rgba(15, 23, 42, 0.75) 0%,
+          rgba(15, 23, 42, 0.6) 50%,
+          rgba(15, 23, 42, 0.85) 100%
+        );
+      }
+      .carousel-overlay.has-image::after {
+        display: none;
+      }
+
       .hero-content {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         text-align: center;
         max-width: 800px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
       }
 
       .hero-badge {
         display: inline-block;
-        padding: 8px 0.5rem;
+        padding: 8px 16px;
         font-size: 0.85rem;
         font-weight: 600;
         color: var(--accent-primary);
         background: var(--accent-surface);
         border: 1px solid var(--accent-primary);
         border-radius: 50px;
-        margin-bottom: 0.5rem;
+        margin-bottom: 1rem;
         animation: fadeInUp 0.5s ease-out;
       }
 
@@ -157,8 +274,7 @@ interface Tool {
         font-weight: 900;
         line-height: 1.1;
         letter-spacing: -1.5px;
-        margin-bottom: 0.5rem;
-        animation: fadeInUp 0.5s ease-out 0.1s both;
+        margin-bottom: 1rem;
       }
 
       .gradient-text {
@@ -172,9 +288,8 @@ interface Tool {
         font-size: 1.15rem;
         color: var(--text-secondary);
         max-width: 560px;
-        margin: 0 auto 0.5rem;
+        margin: 0 auto 1.5rem;
         line-height: 1.7;
-        animation: fadeInUp 0.5s ease-out 0.2s both;
       }
 
       .hero-actions {
@@ -182,8 +297,7 @@ interface Tool {
         align-items: center;
         justify-content: center;
         gap: 16px;
-        margin-bottom: 0.5rem;
-        animation: fadeInUp 0.5s ease-out 0.3s both;
+        margin-bottom: 2rem;
       }
 
       .hero-stats {
@@ -191,7 +305,6 @@ interface Tool {
         align-items: center;
         justify-content: center;
         gap: 32px;
-        animation: fadeInUp 0.5s ease-out 0.4s both;
       }
 
       .stat {
@@ -216,6 +329,118 @@ interface Tool {
         width: 1px;
         height: 32px;
         background: var(--border-color-strong);
+      }
+
+      /* Force white text on custom background images with dark overlay */
+      .carousel-slide.overlay-dark .hero-title,
+      .carousel-slide.overlay-dark .hero-subtitle,
+      .carousel-slide.overlay-dark .stat-label,
+      .carousel-slide[style*="url"]:not(.overlay-light) .hero-title,
+      .carousel-slide[style*="url"]:not(.overlay-light) .hero-subtitle,
+      .carousel-slide[style*="url"]:not(.overlay-light) .stat-label {
+        color: #f8fafc;
+      }
+
+      /* Force dark text on custom background images with light overlay */
+      .carousel-slide.overlay-light .hero-title,
+      .carousel-slide.overlay-light .hero-subtitle,
+      .carousel-slide.overlay-light .stat-number,
+      .carousel-slide.overlay-light .stat-label {
+        color: #0f0f1a !important;
+      }
+
+      .carousel-slide.overlay-light .stat-divider {
+        background: rgba(15, 15, 26, 0.15) !important;
+      }
+
+      .carousel-slide.overlay-light .hero-badge {
+        background: rgba(99, 102, 241, 0.1) !important;
+        border-color: var(--accent-primary) !important;
+        color: var(--accent-primary) !important;
+      }
+
+      /* Micro-animations inside active slide */
+      .carousel-slide.active .hero-badge {
+        animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+      
+      .carousel-slide.active .hero-title {
+        animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+      }
+      
+      .carousel-slide.active .hero-subtitle {
+        animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+      }
+      
+      .carousel-slide.active .hero-actions {
+        animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+      }
+      
+      .carousel-slide.active .hero-stats {
+        animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
+      }
+
+      /* Carousel Controls */
+      .carousel-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(26, 26, 46, 0.5);
+        border: 1px solid var(--border-color-strong);
+        color: var(--text-primary);
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        transition: all var(--transition-fast);
+        outline: none;
+      }
+
+      .carousel-arrow:hover {
+        background: var(--accent-primary);
+        color: #fff;
+        border-color: var(--accent-primary);
+        transform: translateY(-50%) scale(1.1);
+        box-shadow: var(--shadow-glow);
+      }
+
+      .carousel-arrow.prev {
+        left: 20px;
+      }
+
+      .carousel-arrow.next {
+        right: 20px;
+      }
+
+      .carousel-indicators {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 8px;
+        z-index: 10;
+      }
+
+      .indicator-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        border: none;
+        cursor: pointer;
+        transition: all var(--transition-normal);
+        padding: 0;
+      }
+
+      .indicator-dot.active {
+        background: var(--accent-primary);
+        width: 24px;
+        border-radius: 4px;
       }
 
       /* ───── Tools Section ───── */
@@ -337,8 +562,9 @@ interface Tool {
     `,
   ],
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit, OnDestroy {
   private navPreferencesService = inject(NavPreferencesService);
+  private homeCarouselService = inject(HomeCarouselService);
   private readonly orderKey = 'u2app.navOrder';
   private readonly visibilityKey = 'u2app.navVisibility';
   private readonly defaultToolOrder = [
@@ -349,6 +575,12 @@ export class HomeComponent {
     'html-viewer',
     'estimator',
   ];
+
+  activeSlides: CarouselSlide[] = [];
+  currentSlideIndex = 0;
+  private autoplayIntervalId: any = null;
+  private touchStartX = 0;
+  private touchEndX = 0;
 
   private readonly allTools: Tool[] = [
     {
@@ -594,6 +826,127 @@ export class HomeComponent {
     ]).subscribe(([order, visibility]) => {
       this.tools = this.applyNavigationPreferences(order, visibility);
     });
+
+    this.homeCarouselService.slides$.subscribe(allSlides => {
+      const active = allSlides.filter(s => s.isActive);
+      if (active.length > 0) {
+        this.activeSlides = active;
+      } else {
+        this.activeSlides = [{
+          id: 'default-slide-1',
+          bgImage: '',
+          badgeText: '⚡ Multi-Purpose Toolkit',
+          title: 'All Your <span class="gradient-text">Developer Tools</span><br />In One Place',
+          description: 'Compare text, process images, create content, and more — powerful utilities designed for developers and creators.',
+          primaryBtnText: 'Get Started',
+          primaryBtnRoute: '/excel-mapper',
+          secondaryBtnText: 'Explore Tools',
+          secondaryBtnRoute: '#tools',
+          statistics: [
+            { number: '20+', label: 'Tools' },
+            { number: 'Free', label: 'To Use' },
+            { number: 'Fast', label: '& Secure' }
+          ],
+          displayOrder: 1,
+          isActive: true
+        }];
+      }
+      if (this.currentSlideIndex >= this.activeSlides.length) {
+        this.currentSlideIndex = 0;
+      }
+      this.resetAutoplay();
+    });
+  }
+
+  ngOnInit() {
+    this.startAutoplay();
+  }
+
+  ngOnDestroy() {
+    this.stopAutoplay();
+  }
+
+  startAutoplay() {
+    this.stopAutoplay();
+    if (this.activeSlides.length <= 1) return;
+    
+    const currentSlide = this.activeSlides[this.currentSlideIndex];
+    const durationSec = currentSlide.duration || 6;
+
+    if (typeof window !== 'undefined') {
+      this.autoplayIntervalId = setTimeout(() => {
+        this.nextSlide();
+      }, durationSec * 1000);
+    }
+  }
+
+  stopAutoplay() {
+    if (this.autoplayIntervalId) {
+      clearTimeout(this.autoplayIntervalId);
+      this.autoplayIntervalId = null;
+    }
+  }
+
+  resetAutoplay() {
+    this.startAutoplay();
+  }
+
+  pauseAutoplay() {
+    this.stopAutoplay();
+  }
+
+  resumeAutoplay() {
+    this.startAutoplay();
+  }
+
+  nextSlide() {
+    if (this.activeSlides.length <= 1) return;
+    this.currentSlideIndex = (this.currentSlideIndex + 1) % this.activeSlides.length;
+    this.startAutoplay();
+  }
+
+  prevSlide() {
+    if (this.activeSlides.length <= 1) return;
+    this.currentSlideIndex = (this.currentSlideIndex - 1 + this.activeSlides.length) % this.activeSlides.length;
+    this.startAutoplay();
+  }
+
+  goToSlide(index: number) {
+    this.currentSlideIndex = index;
+    this.resetAutoplay();
+  }
+
+  onTouchStart(event: TouchEvent) {
+    this.touchStartX = event.touches[0].clientX;
+  }
+
+  onTouchEnd(event: TouchEvent) {
+    this.touchEndX = event.changedTouches[0].clientX;
+    this.handleSwipe();
+  }
+
+  private handleSwipe() {
+    const swipeThreshold = 50;
+    const deltaX = this.touchEndX - this.touchStartX;
+    if (Math.abs(deltaX) > swipeThreshold) {
+      if (deltaX > 0) {
+        this.prevSlide();
+      } else {
+        this.nextSlide();
+      }
+      this.resetAutoplay();
+    }
+  }
+
+  isPreload(idx: number): boolean {
+    if (this.activeSlides.length <= 1) return false;
+    const nextIdx = (this.currentSlideIndex + 1) % this.activeSlides.length;
+    const prevIdx = (this.currentSlideIndex - 1 + this.activeSlides.length) % this.activeSlides.length;
+    return idx === nextIdx || idx === prevIdx;
+  }
+
+  isExternalRoute(route: string): boolean {
+    return !route || route.startsWith('http') || route.startsWith('#');
   }
 
   private applyNavigationPreferences(order: string[], visibility: Record<string, boolean>): Tool[] {
