@@ -790,16 +790,16 @@ export class HomeComponent implements OnInit, OnDestroy {
       available: true,
       color: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.2))',
     },
-    {
-      id: 'number-chess-battle',
-      title: 'Number Chess Battle',
-      description:
-        'Strategic board game combining chess mechanics with mathematics. Move pieces, perform arithmetic attacks, and capture the enemy king to win!',
-      icon: '♟️',
-      route: '/real-life-steps/number-chess-battle',
-      available: true,
-      color: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(168,85,247,0.2))',
-    },
+    // {
+    //   id: 'number-chess-battle',
+    //   title: 'Number Chess Battle',
+    //   description:
+    //     'Strategic board game combining chess mechanics with mathematics. Move pieces, perform arithmetic attacks, and capture the enemy king to win!',
+    //   icon: '♟️',
+    //   route: '/real-life-steps/number-chess-battle',
+    //   available: true,
+    //   color: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(168,85,247,0.2))',
+    // },
     {
       id: 'flip-book',
       title: 'Flip Book Viewer',
@@ -869,7 +869,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   startAutoplay() {
     this.stopAutoplay();
     if (this.activeSlides.length <= 1) return;
-    
+
     const currentSlide = this.activeSlides[this.currentSlideIndex];
     const durationSec = currentSlide.duration || 6;
 
