@@ -104,9 +104,25 @@ export class ExcelMapperService {
   private authService = inject(FirebaseAuthService);
   private syncService = inject(FirebaseSyncService);
 
+  private currentUid: string | null = null;
   private readonly maxFileSizeMb = 10;
-  private readonly templateStorageKey = 'u2.excelMapper.templates';
-  private readonly auditStorageKey = 'u2.excelMapper.audit';
+  private readonly templateStorageKeyPrefix = 'u2.excelMapper.templates';
+  private readonly auditStorageKeyPrefix = 'u2.excelMapper.audit';
+
+  constructor() {
+    this.syncService.onAuthChange((uid) => {
+      this.currentUid = uid;
+      if (uid) {
+        this.loadFromFirestore().catch((e) =>
+          console.error('ExcelMapperService: failed to refresh user state on auth change', e),
+        );
+      }
+    });
+  }
+
+  private getStorageKey(prefix: string): string {
+    return this.currentUid ? `${prefix}.${this.currentUid}` : prefix;
+  }
 
   validateExcelFile(file: File | null | undefined): string[] {
     if (!file) {
@@ -116,9 +132,7 @@ export class ExcelMapperService {
     const issues: string[] = [];
     const validExtensions = ['.xlsx', '.xls'];
     const lowerName = file.name.toLowerCase();
-    const hasValidExtension = validExtensions.some((extension) =>
-      lowerName.endsWith(extension)
-    );
+    const hasValidExtension = validExtensions.some((extension) => lowerName.endsWith(extension));
 
     if (!hasValidExtension) {
       issues.push('Only .xlsx and .xls files are allowed.');
@@ -151,14 +165,10 @@ export class ExcelMapperService {
     };
   }
 
-  createRules(
-    sourceColumns: ParsedColumn[],
-    targetColumns: string[]
-  ): MappingRule[] {
+  createRules(sourceColumns: ParsedColumn[], targetColumns: string[]): MappingRule[] {
     return targetColumns.map((targetColumn) => {
       const matchedSource = sourceColumns.find(
-        (column) =>
-          column.name.trim().toLowerCase() === targetColumn.trim().toLowerCase()
+        (column) => column.name.trim().toLowerCase() === targetColumn.trim().toLowerCase(),
       );
 
       return {
@@ -177,7 +187,7 @@ export class ExcelMapperService {
     sourceRows: Record<string, unknown>[],
     rules: MappingRule[],
     sourceColumns: ParsedColumn[],
-    progress?: (value: number) => void
+    progress?: (value: number) => void,
   ): Promise<ProcessedWorkbook> {
     const warnings = this.collectWarnings(rules, sourceColumns);
     const issues: RowIssue[] = [];
@@ -194,11 +204,9 @@ export class ExcelMapperService {
         let rowHasError = false;
 
         rules.forEach((rule) => {
-          const sourceValues = rule.sourceColumns.map(
-            (column) => row[column] ?? ''
-          );
+          const sourceValues = rule.sourceColumns.map((column) => row[column] ?? '');
           const missingColumns = rule.sourceColumns.filter(
-            (column) => !sourceColumnNames.has(column)
+            (column) => !sourceColumnNames.has(column),
           );
 
           if (missingColumns.length > 0) {
@@ -280,10 +288,7 @@ export class ExcelMapperService {
     };
   }
 
-  previewRule(
-    rule: MappingRule,
-    sampleRow: Record<string, unknown> | null
-  ): string {
+  previewRule(rule: MappingRule, sampleRow: Record<string, unknown> | null): string {
     if (!sampleRow) {
       return '';
     }
@@ -316,18 +321,21 @@ export class ExcelMapperService {
   }
 
   loadTemplates(): SavedMappingTemplate[] {
-    return this.readJson<SavedMappingTemplate[]>(this.templateStorageKey, []);
+    return this.readJson<SavedMappingTemplate[]>(
+      this.getStorageKey(this.templateStorageKeyPrefix),
+      [],
+    );
   }
 
   saveTemplate(
     name: string,
     sourceColumns: string[],
     targetColumns: string[],
-    rules: MappingRule[]
+    rules: MappingRule[],
   ): SavedMappingTemplate[] {
     const templates = this.loadTemplates();
     const existing = templates.find(
-      (template) => template.name.trim().toLowerCase() === name.trim().toLowerCase()
+      (template) => template.name.trim().toLowerCase() === name.trim().toLowerCase(),
     );
     const now = new Date().toISOString();
 
@@ -348,7 +356,10 @@ export class ExcelMapperService {
       });
     }
 
-    localStorage.setItem(this.templateStorageKey, JSON.stringify(templates));
+    localStorage.setItem(
+      this.getStorageKey(this.templateStorageKeyPrefix),
+      JSON.stringify(templates),
+    );
     // Sync templates to Firestore
     this.syncTemplatesToFirestore(templates);
     return templates;
@@ -356,13 +367,16 @@ export class ExcelMapperService {
 
   deleteTemplate(templateId: string): SavedMappingTemplate[] {
     const templates = this.loadTemplates().filter((template) => template.id !== templateId);
-    localStorage.setItem(this.templateStorageKey, JSON.stringify(templates));
+    localStorage.setItem(
+      this.getStorageKey(this.templateStorageKeyPrefix),
+      JSON.stringify(templates),
+    );
     this.syncTemplatesToFirestore(templates);
     return templates;
   }
 
   getAuditEntries(): AuditEntry[] {
-    return this.readJson<AuditEntry[]>(this.auditStorageKey, []);
+    return this.readJson<AuditEntry[]>(this.getStorageKey(this.auditStorageKeyPrefix), []);
   }
 
   recordAudit(user: string, action: string, details: string): AuditEntry[] {
@@ -374,7 +388,10 @@ export class ExcelMapperService {
       details,
       timestamp: new Date().toISOString(),
     });
-    localStorage.setItem(this.auditStorageKey, JSON.stringify(entries.slice(0, 50)));
+    localStorage.setItem(
+      this.getStorageKey(this.auditStorageKeyPrefix),
+      JSON.stringify(entries.slice(0, 50)),
+    );
     this.syncAuditToFirestore(entries.slice(0, 50));
     return entries.slice(0, 50);
   }
@@ -468,15 +485,15 @@ export class ExcelMapperService {
 
     const stringValues = values.map((value) => this.stringifyValue(value).trim());
 
-    const isBoolean = stringValues.every(
-      (value) => ['true', 'false', 'yes', 'no', '1', '0'].includes(value.toLowerCase())
+    const isBoolean = stringValues.every((value) =>
+      ['true', 'false', 'yes', 'no', '1', '0'].includes(value.toLowerCase()),
     );
     if (isBoolean) {
       return 'boolean';
     }
 
     const isNumber = stringValues.every(
-      (value) => value !== '' && !Number.isNaN(Number(value.replace(/,/g, '')))
+      (value) => value !== '' && !Number.isNaN(Number(value.replace(/,/g, ''))),
     );
     if (isNumber) {
       return 'number';
@@ -493,13 +510,10 @@ export class ExcelMapperService {
     return 'string';
   }
 
-  private collectWarnings(
-    rules: MappingRule[],
-    sourceColumns: ParsedColumn[]
-  ): string[] {
+  private collectWarnings(rules: MappingRule[], sourceColumns: ParsedColumn[]): string[] {
     const warnings: string[] = [];
     const sourceColumnMap = new Map(
-      sourceColumns.map((column) => [column.name, column.detectedType] as const)
+      sourceColumns.map((column) => [column.name, column.detectedType] as const),
     );
 
     rules.forEach((rule) => {
@@ -510,7 +524,7 @@ export class ExcelMapperService {
       rule.sourceColumns.forEach((sourceColumn) => {
         if (!sourceColumnMap.has(sourceColumn)) {
           warnings.push(
-            `Target column "${rule.targetColumn}" references missing source column "${sourceColumn}".`
+            `Target column "${rule.targetColumn}" references missing source column "${sourceColumn}".`,
           );
           return;
         }
@@ -518,7 +532,7 @@ export class ExcelMapperService {
         const sourceType = sourceColumnMap.get(sourceColumn);
         if (sourceType && sourceType !== rule.targetType && rule.sourceColumns.length === 1) {
           warnings.push(
-            `Possible type mismatch: "${sourceColumn}" (${sourceType}) -> "${rule.targetColumn}" (${rule.targetType}).`
+            `Possible type mismatch: "${sourceColumn}" (${sourceType}) -> "${rule.targetColumn}" (${rule.targetType}).`,
           );
         }
       });
@@ -530,11 +544,11 @@ export class ExcelMapperService {
   private applyRule(
     rule: MappingRule,
     row: Record<string, unknown>,
-    sourceValues: unknown[]
+    sourceValues: unknown[],
   ): { value: unknown } {
     let value: unknown =
       sourceValues.length <= 1
-        ? sourceValues[0] ?? ''
+        ? (sourceValues[0] ?? '')
         : sourceValues.map((item) => this.stringifyValue(item)).join(' ');
 
     rule.operations.forEach((operation) => {
@@ -548,7 +562,7 @@ export class ExcelMapperService {
     operation: MappingOperation,
     currentValue: unknown,
     row: Record<string, unknown>,
-    sourceValues: unknown[]
+    sourceValues: unknown[],
   ): unknown {
     switch (operation.type) {
       case 'uppercase':
@@ -597,7 +611,7 @@ export class ExcelMapperService {
         const comparisonValue = this.stringifyValue(operation.config['comparisonValue'] ?? '');
         const trueValue = this.stringifyValue(operation.config['trueValue'] ?? '{{value}}');
         const falseValue = this.stringifyValue(operation.config['falseValue'] ?? '');
-        const left = compareColumn ? row[compareColumn] ?? '' : currentValue;
+        const left = compareColumn ? (row[compareColumn] ?? '') : currentValue;
         const matched = this.evaluateCondition(left, comparisonValue, operator);
 
         return this.resolveTemplate(matched ? trueValue : falseValue, row, currentValue);
@@ -613,7 +627,7 @@ export class ExcelMapperService {
 
   private coerceValue(
     value: unknown,
-    targetType: DataType
+    targetType: DataType,
   ): { value: unknown; valid: boolean; message: string } {
     if (this.isEmptyValue(value)) {
       return { value: '', valid: true, message: '' };
@@ -714,7 +728,7 @@ export class ExcelMapperService {
   private resolveTemplate(
     template: string,
     row: Record<string, unknown>,
-    currentValue: unknown
+    currentValue: unknown,
   ): string {
     return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_, token: string) => {
       const normalizedToken = token.trim();
@@ -794,31 +808,35 @@ export class ExcelMapperService {
   // --- Firestore Sync ---
   private syncTemplatesToFirestore(templates: SavedMappingTemplate[]): void {
     if (!this.authService.isAuthenticated()) return;
-    this.syncService.pushToFirestore(
-      APP_NAME, 'templates',
-      templates as unknown as Record<string, unknown>[]
-    ).catch((e) => console.error('ExcelMapperService: template sync failed', e));
+    this.syncService
+      .pushToFirestore(APP_NAME, 'templates', templates as unknown as Record<string, unknown>[])
+      .catch((e) => console.error('ExcelMapperService: template sync failed', e));
   }
 
   private syncAuditToFirestore(entries: AuditEntry[]): void {
     if (!this.authService.isAuthenticated()) return;
-    this.syncService.pushToFirestore(
-      APP_NAME, 'audit',
-      entries as unknown as Record<string, unknown>[]
-    ).catch((e) => console.error('ExcelMapperService: audit sync failed', e));
+    this.syncService
+      .pushToFirestore(APP_NAME, 'audit', entries as unknown as Record<string, unknown>[])
+      .catch((e) => console.error('ExcelMapperService: audit sync failed', e));
   }
 
   async loadFromFirestore(): Promise<void> {
     if (!this.authService.isAuthenticated()) return;
     try {
-      const templates = await this.syncService.pullFromFirestore<SavedMappingTemplate>(APP_NAME, 'templates');
+      const templates = await this.syncService.pullFromFirestore<SavedMappingTemplate>(
+        APP_NAME,
+        'templates',
+      );
       if (templates.length > 0) {
-        localStorage.setItem(this.templateStorageKey, JSON.stringify(templates));
+        localStorage.setItem(
+          this.getStorageKey(this.templateStorageKeyPrefix),
+          JSON.stringify(templates),
+        );
       }
 
       const audit = await this.syncService.pullFromFirestore<AuditEntry>(APP_NAME, 'audit');
       if (audit.length > 0) {
-        localStorage.setItem(this.auditStorageKey, JSON.stringify(audit));
+        localStorage.setItem(this.getStorageKey(this.auditStorageKeyPrefix), JSON.stringify(audit));
       }
     } catch (e) {
       console.error('ExcelMapperService: failed to load from Firestore', e);

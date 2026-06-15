@@ -39,7 +39,7 @@ export interface UnitTestState {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UnitTestService {
   private authService = inject(FirebaseAuthService);
@@ -47,19 +47,58 @@ export class UnitTestService {
 
   private initialState: UnitTestState = {
     testCases: [
-      { id: 'TC-001', module: 'Authentication', title: 'User Login valid credentials', steps: '1. Enter valid email\\n2. Enter valid password\\n3. Click Login', expectedResult: 'User accesses dashboard', priority: 'High' },
-      { id: 'TC-002', module: 'Authentication', title: 'User Login invalid password', steps: '1. Enter valid email\\n2. Enter invalid password\\n3. Click Login', expectedResult: 'Error message shown', priority: 'High' },
-      { id: 'TC-003', module: 'Cart', title: 'Add item to cart', steps: '1. Go to details page\\n2. Click Add to Cart', expectedResult: 'Item should increment in cart badge', priority: 'Medium' }
+      {
+        id: 'TC-001',
+        module: 'Authentication',
+        title: 'User Login valid credentials',
+        steps: '1. Enter valid email\\n2. Enter valid password\\n3. Click Login',
+        expectedResult: 'User accesses dashboard',
+        priority: 'High',
+      },
+      {
+        id: 'TC-002',
+        module: 'Authentication',
+        title: 'User Login invalid password',
+        steps: '1. Enter valid email\\n2. Enter invalid password\\n3. Click Login',
+        expectedResult: 'Error message shown',
+        priority: 'High',
+      },
+      {
+        id: 'TC-003',
+        module: 'Cart',
+        title: 'Add item to cart',
+        steps: '1. Go to details page\\n2. Click Add to Cart',
+        expectedResult: 'Item should increment in cart badge',
+        priority: 'Medium',
+      },
     ],
     executions: [
-      { id: 'TC-001', status: 'Pass', testerName: 'Alice', comments: 'Worked smoothly', executionDate: new Date().toISOString().split('T')[0] },
-      { id: 'TC-002', status: 'Fail', testerName: 'Alice', comments: 'No error message displayed', executionDate: new Date().toISOString().split('T')[0] },
-      { id: 'TC-003', status: 'Pending', testerName: '', comments: '', executionDate: '' }
+      {
+        id: 'TC-001',
+        status: 'Pass',
+        testerName: 'Alice',
+        comments: 'Worked smoothly',
+        executionDate: new Date().toISOString().split('T')[0],
+      },
+      {
+        id: 'TC-002',
+        status: 'Fail',
+        testerName: 'Alice',
+        comments: 'No error message displayed',
+        executionDate: new Date().toISOString().split('T')[0],
+      },
+      { id: 'TC-003', status: 'Pending', testerName: '', comments: '', executionDate: '' },
     ],
     bugs: [
-      { id: 'BUG-001', testCaseId: 'TC-002', severity: 'High', status: 'Open', assignedTo: 'DevTeam Alpha' }
+      {
+        id: 'BUG-001',
+        testCaseId: 'TC-002',
+        severity: 'High',
+        status: 'Open',
+        assignedTo: 'DevTeam Alpha',
+      },
     ],
-    tableHeight: 450
+    tableHeight: 450,
   };
 
   private stateSubject = new BehaviorSubject<UnitTestState>(this.initialState);
@@ -69,8 +108,14 @@ export class UnitTestService {
     this.syncService.onAuthChange((uid) => {
       if (uid) {
         this.loadFromFirestore();
+      } else {
+        this.resetState();
       }
     });
+  }
+
+  private resetState() {
+    this.stateSubject.next(this.initialState);
   }
 
   // ─── CRUD OPERATIONS ──────────────────────────────────────────
@@ -85,9 +130,21 @@ export class UnitTestService {
     if (!this.authService.isAuthenticated()) return;
     const data = this.stateSubject.value;
     await Promise.all([
-      this.syncService.pushToFirestore(APP_NAME, 'testCases', data.testCases as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'executions', data.executions as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'bugs', data.bugs as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'testCases',
+        data.testCases as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'executions',
+        data.executions as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'bugs',
+        data.bugs as unknown as Record<string, unknown>[],
+      ),
     ]);
   }
 
@@ -95,7 +152,10 @@ export class UnitTestService {
     if (!this.authService.isAuthenticated()) return;
     try {
       const testCases = await this.syncService.pullFromFirestore<TestCase>(APP_NAME, 'testCases');
-      const executions = await this.syncService.pullFromFirestore<TestExecution>(APP_NAME, 'executions');
+      const executions = await this.syncService.pullFromFirestore<TestExecution>(
+        APP_NAME,
+        'executions',
+      );
       const bugs = await this.syncService.pullFromFirestore<Bug>(APP_NAME, 'bugs');
 
       if (testCases.length > 0 || executions.length > 0 || bugs.length > 0) {
@@ -124,28 +184,37 @@ export class UnitTestService {
     const currentState = this.stateSubject.value;
     const testCases = [...currentState.testCases, tc];
     // Also create a "Pending" execution slot
-    const executions = [...currentState.executions, { id: tc.id, status: 'Pending', testerName: '', comments: '', executionDate: '' } as TestExecution];
+    const executions = [
+      ...currentState.executions,
+      {
+        id: tc.id,
+        status: 'Pending',
+        testerName: '',
+        comments: '',
+        executionDate: '',
+      } as TestExecution,
+    ];
     this.updateState({ testCases, executions });
   }
 
   updateTestCase(tc: TestCase) {
     const currentState = this.stateSubject.value;
-    const testCases = currentState.testCases.map(t => t.id === tc.id ? tc : t);
+    const testCases = currentState.testCases.map((t) => (t.id === tc.id ? tc : t));
     this.updateState({ testCases });
   }
 
   deleteTestCase(id: string) {
     const currentState = this.stateSubject.value;
-    const testCases = currentState.testCases.filter(t => t.id !== id);
-    const executions = currentState.executions.filter(e => e.id !== id);
-    const bugs = currentState.bugs.filter(b => b.testCaseId !== id);
+    const testCases = currentState.testCases.filter((t) => t.id !== id);
+    const executions = currentState.executions.filter((e) => e.id !== id);
+    const bugs = currentState.bugs.filter((b) => b.testCaseId !== id);
     this.updateState({ testCases, executions, bugs });
   }
 
   // --- Executions ---
   updateExecution(exec: TestExecution) {
     const currentState = this.stateSubject.value;
-    const executions = currentState.executions.map(e => e.id === exec.id ? exec : e);
+    const executions = currentState.executions.map((e) => (e.id === exec.id ? exec : e));
     this.updateState({ executions });
   }
 
@@ -156,7 +225,7 @@ export class UnitTestService {
   }
 
   updateBug(bug: Bug) {
-    const bugs = this.stateSubject.value.bugs.map(b => b.id === bug.id ? bug : b);
+    const bugs = this.stateSubject.value.bugs.map((b) => (b.id === bug.id ? bug : b));
     this.updateState({ bugs });
   }
 
@@ -198,7 +267,7 @@ export class UnitTestService {
           reject(error);
         }
       };
-      reader.onerror = error => reject(error);
+      reader.onerror = (error) => reject(error);
       reader.readAsArrayBuffer(file);
     });
   }

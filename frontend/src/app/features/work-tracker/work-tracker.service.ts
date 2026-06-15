@@ -67,7 +67,7 @@ export interface WorkTrackerData {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class WorkTrackerService {
   private authService = inject(FirebaseAuthService);
@@ -75,49 +75,147 @@ export class WorkTrackerService {
   private initialState: WorkTrackerData = {
     developerTasks: [
       {
-        taskId: 'T-001', week: 'W1', resourceName: 'Alice Smith', projectName: 'E-Commerce', module: 'Auth',
-        taskTitle: 'Implement OAuth', taskDescription: 'Add Google login', taskType: 'Feature', status: 'In Progress',
-        priority: 'High', size: 'M', startDate: '2026-03-20', dueDate: '2026-03-25', completedDate: '',
-        progress: 50, tags: 'backend, auth', comments: '', isVisible: true
+        taskId: 'T-001',
+        week: 'W1',
+        resourceName: 'Alice Smith',
+        projectName: 'E-Commerce',
+        module: 'Auth',
+        taskTitle: 'Implement OAuth',
+        taskDescription: 'Add Google login',
+        taskType: 'Feature',
+        status: 'In Progress',
+        priority: 'High',
+        size: 'M',
+        startDate: '2026-03-20',
+        dueDate: '2026-03-25',
+        completedDate: '',
+        progress: 50,
+        tags: 'backend, auth',
+        comments: '',
+        isVisible: true,
       },
       {
-        taskId: 'T-002', week: 'W1', resourceName: 'Bob Jones', projectName: 'E-Commerce', module: 'Cart',
-        taskTitle: 'Fix cart bug', taskDescription: 'Items drop on refresh', taskType: 'Bug', status: 'Blocked',
-        priority: 'Critical', size: 'S', startDate: '2026-03-21', dueDate: '2026-03-22', completedDate: '',
-        progress: 10, tags: 'frontend, bug', comments: 'Waiting on API changes', isVisible: true
+        taskId: 'T-002',
+        week: 'W1',
+        resourceName: 'Bob Jones',
+        projectName: 'E-Commerce',
+        module: 'Cart',
+        taskTitle: 'Fix cart bug',
+        taskDescription: 'Items drop on refresh',
+        taskType: 'Bug',
+        status: 'Blocked',
+        priority: 'Critical',
+        size: 'S',
+        startDate: '2026-03-21',
+        dueDate: '2026-03-22',
+        completedDate: '',
+        progress: 10,
+        tags: 'frontend, bug',
+        comments: 'Waiting on API changes',
+        isVisible: true,
       },
       {
-        taskId: 'T-003', week: 'W1', resourceName: 'Charlie Day', projectName: 'Internal Tool', module: 'Dashboard',
-        taskTitle: 'Create filters', taskDescription: 'Add UI for data filtering', taskType: 'Feature', status: 'Completed',
-        priority: 'Medium', size: 'L', startDate: '2026-03-15', dueDate: '2026-03-19', completedDate: '2026-03-18',
-        progress: 100, tags: 'ui', comments: 'Done early', isVisible: true
-      }
+        taskId: 'T-003',
+        week: 'W1',
+        resourceName: 'Charlie Day',
+        projectName: 'Internal Tool',
+        module: 'Dashboard',
+        taskTitle: 'Create filters',
+        taskDescription: 'Add UI for data filtering',
+        taskType: 'Feature',
+        status: 'Completed',
+        priority: 'Medium',
+        size: 'L',
+        startDate: '2026-03-15',
+        dueDate: '2026-03-19',
+        completedDate: '2026-03-18',
+        progress: 100,
+        tags: 'ui',
+        comments: 'Done early',
+        isVisible: true,
+      },
     ],
     releaseTracks: [
       {
-        id: 'R-100', title: 'User Authentication', category: 'Core', module: 'Auth', type: 'Feature',
-        priority: 'High', status: 'Released', prdStatus: 'Approved', assignedTo: 'Alice Smith',
-        createdDate: '2026-01-10', targetDate: '2026-02-15', completedDate: '2026-02-14',
-        progress: 100, remarks: 'Deployed successfully', sourceSheet: 'Sheet 1', dependency: 'None', tags: 'security', isVisible: true
+        id: 'R-100',
+        title: 'User Authentication',
+        category: 'Core',
+        module: 'Auth',
+        type: 'Feature',
+        priority: 'High',
+        status: 'Released',
+        prdStatus: 'Approved',
+        assignedTo: 'Alice Smith',
+        createdDate: '2026-01-10',
+        targetDate: '2026-02-15',
+        completedDate: '2026-02-14',
+        progress: 100,
+        remarks: 'Deployed successfully',
+        sourceSheet: 'Sheet 1',
+        dependency: 'None',
+        tags: 'security',
+        isVisible: true,
       },
       {
-        id: 'R-101', title: 'Payment Gateway', category: 'Integration', module: 'Billing', type: 'Feature',
-        priority: 'Critical', status: 'Staging', prdStatus: 'Approved', assignedTo: 'Bob Jones',
-        createdDate: '2026-02-20', targetDate: '2026-03-30', completedDate: '',
-        progress: 85, remarks: 'Final testing', sourceSheet: 'Sheet 1', dependency: 'Auth', tags: 'billing', isVisible: true
+        id: 'R-101',
+        title: 'Payment Gateway',
+        category: 'Integration',
+        module: 'Billing',
+        type: 'Feature',
+        priority: 'Critical',
+        status: 'Staging',
+        prdStatus: 'Approved',
+        assignedTo: 'Bob Jones',
+        createdDate: '2026-02-20',
+        targetDate: '2026-03-30',
+        completedDate: '',
+        progress: 85,
+        remarks: 'Final testing',
+        sourceSheet: 'Sheet 1',
+        dependency: 'Auth',
+        tags: 'billing',
+        isVisible: true,
       },
       {
-        id: 'R-102', title: 'New Landing Page', category: 'UI/UX', module: 'Frontpage', type: 'Enhancement',
-        priority: 'Medium', status: 'Testing', prdStatus: 'In Review', assignedTo: 'Charlie Day',
-        createdDate: '2026-03-01', targetDate: '2026-04-05', completedDate: '',
-        progress: 60, remarks: 'A/B testing soon', sourceSheet: 'Sheet 1', dependency: 'None', tags: 'marketing', isVisible: true
+        id: 'R-102',
+        title: 'New Landing Page',
+        category: 'UI/UX',
+        module: 'Frontpage',
+        type: 'Enhancement',
+        priority: 'Medium',
+        status: 'Testing',
+        prdStatus: 'In Review',
+        assignedTo: 'Charlie Day',
+        createdDate: '2026-03-01',
+        targetDate: '2026-04-05',
+        completedDate: '',
+        progress: 60,
+        remarks: 'A/B testing soon',
+        sourceSheet: 'Sheet 1',
+        dependency: 'None',
+        tags: 'marketing',
+        isVisible: true,
       },
       {
-        id: 'R-103', title: 'Analytics Dashboard', category: 'Reporting', module: 'Dashboard', type: 'Feature',
-        priority: 'Low', status: 'Development', prdStatus: 'Draft', assignedTo: 'Alice Smith',
-        createdDate: '2026-03-10', targetDate: '2026-05-20', completedDate: '',
-        progress: 20, remarks: 'Initial setup', sourceSheet: 'Sheet 1', dependency: 'DB Upgrade', tags: 'data', isVisible: true
-      }
+        id: 'R-103',
+        title: 'Analytics Dashboard',
+        category: 'Reporting',
+        module: 'Dashboard',
+        type: 'Feature',
+        priority: 'Low',
+        status: 'Development',
+        prdStatus: 'Draft',
+        assignedTo: 'Alice Smith',
+        createdDate: '2026-03-10',
+        targetDate: '2026-05-20',
+        completedDate: '',
+        progress: 20,
+        remarks: 'Initial setup',
+        sourceSheet: 'Sheet 1',
+        dependency: 'DB Upgrade',
+        tags: 'data',
+        isVisible: true,
+      },
     ],
     hourlyUpdates: [
       {
@@ -126,7 +224,7 @@ export class WorkTrackerService {
         hour: '09:00',
         taskDescription: 'OAuth provider callback validation',
         status: 'Completed',
-        isVisible: true
+        isVisible: true,
       },
       {
         id: 'HU-002',
@@ -134,7 +232,7 @@ export class WorkTrackerService {
         hour: '11:00',
         taskDescription: 'Cart refresh defect reproduction',
         status: 'In Progress',
-        isVisible: true
+        isVisible: true,
       },
       {
         id: 'HU-003',
@@ -142,10 +240,10 @@ export class WorkTrackerService {
         hour: '14:00',
         taskDescription: 'Dashboard filter polish',
         status: 'Pending',
-        isVisible: true
-      }
+        isVisible: true,
+      },
     ],
-    storageMode: 'local'
+    storageMode: 'local',
   };
 
   private dataSubject = new BehaviorSubject<WorkTrackerData>(this.initialState);
@@ -156,8 +254,14 @@ export class WorkTrackerService {
     this.syncService.onAuthChange((uid) => {
       if (uid) {
         this.loadFromFirestore();
+      } else {
+        this.resetState();
       }
     });
+  }
+
+  private resetState() {
+    this.dataSubject.next(this.initialState);
   }
 
   updateData(newData: Partial<WorkTrackerData>) {
@@ -170,28 +274,32 @@ export class WorkTrackerService {
       ...this.dataSubject.value.developerTasks,
       {
         ...task,
-        taskId: task.taskId?.trim() || this.createId('T', this.dataSubject.value.developerTasks.length + 1),
-        isVisible: task.isVisible ?? true
-      }
+        taskId:
+          task.taskId?.trim() ||
+          this.createId('T', this.dataSubject.value.developerTasks.length + 1),
+        isVisible: task.isVisible ?? true,
+      },
     ];
     this.updateData({ developerTasks });
   }
 
   updateDeveloperTask(taskId: string, changes: Partial<DeveloperTask>) {
-    const developerTasks = this.dataSubject.value.developerTasks.map(task =>
-      task.taskId === taskId ? { ...task, ...changes, taskId } : task
+    const developerTasks = this.dataSubject.value.developerTasks.map((task) =>
+      task.taskId === taskId ? { ...task, ...changes, taskId } : task,
     );
     this.updateData({ developerTasks });
   }
 
   deleteDeveloperTask(taskId: string) {
-    const developerTasks = this.dataSubject.value.developerTasks.filter(task => task.taskId !== taskId);
+    const developerTasks = this.dataSubject.value.developerTasks.filter(
+      (task) => task.taskId !== taskId,
+    );
     this.updateData({ developerTasks });
   }
 
   toggleDeveloperTaskVisibility(taskId: string) {
-    const developerTasks = this.dataSubject.value.developerTasks.map(task =>
-      task.taskId === taskId ? { ...task, isVisible: !(task.isVisible ?? true) } : task
+    const developerTasks = this.dataSubject.value.developerTasks.map((task) =>
+      task.taskId === taskId ? { ...task, isVisible: !(task.isVisible ?? true) } : task,
     );
     this.updateData({ developerTasks });
   }
@@ -201,28 +309,29 @@ export class WorkTrackerService {
       ...this.dataSubject.value.releaseTracks,
       {
         ...track,
-        id: track.id?.trim() || this.createId('R', this.dataSubject.value.releaseTracks.length + 100),
-        isVisible: track.isVisible ?? true
-      }
+        id:
+          track.id?.trim() || this.createId('R', this.dataSubject.value.releaseTracks.length + 100),
+        isVisible: track.isVisible ?? true,
+      },
     ];
     this.updateData({ releaseTracks });
   }
 
   updateReleaseTrack(id: string, changes: Partial<ReleaseTrack>) {
-    const releaseTracks = this.dataSubject.value.releaseTracks.map(track =>
-      track.id === id ? { ...track, ...changes, id } : track
+    const releaseTracks = this.dataSubject.value.releaseTracks.map((track) =>
+      track.id === id ? { ...track, ...changes, id } : track,
     );
     this.updateData({ releaseTracks });
   }
 
   deleteReleaseTrack(id: string) {
-    const releaseTracks = this.dataSubject.value.releaseTracks.filter(track => track.id !== id);
+    const releaseTracks = this.dataSubject.value.releaseTracks.filter((track) => track.id !== id);
     this.updateData({ releaseTracks });
   }
 
   toggleReleaseTrackVisibility(id: string) {
-    const releaseTracks = this.dataSubject.value.releaseTracks.map(track =>
-      track.id === id ? { ...track, isVisible: !(track.isVisible ?? true) } : track
+    const releaseTracks = this.dataSubject.value.releaseTracks.map((track) =>
+      track.id === id ? { ...track, isVisible: !(track.isVisible ?? true) } : track,
     );
     this.updateData({ releaseTracks });
   }
@@ -232,28 +341,29 @@ export class WorkTrackerService {
       ...this.dataSubject.value.hourlyUpdates,
       {
         ...update,
-        id: update.id?.trim() || this.createId('HU', this.dataSubject.value.hourlyUpdates.length + 1),
-        isVisible: update.isVisible ?? true
-      }
+        id:
+          update.id?.trim() || this.createId('HU', this.dataSubject.value.hourlyUpdates.length + 1),
+        isVisible: update.isVisible ?? true,
+      },
     ];
     this.updateData({ hourlyUpdates });
   }
 
   updateHourlyUpdate(id: string, changes: Partial<HourlyWorkUpdate>) {
-    const hourlyUpdates = this.dataSubject.value.hourlyUpdates.map(update =>
-      update.id === id ? { ...update, ...changes, id } : update
+    const hourlyUpdates = this.dataSubject.value.hourlyUpdates.map((update) =>
+      update.id === id ? { ...update, ...changes, id } : update,
     );
     this.updateData({ hourlyUpdates });
   }
 
   deleteHourlyUpdate(id: string) {
-    const hourlyUpdates = this.dataSubject.value.hourlyUpdates.filter(update => update.id !== id);
+    const hourlyUpdates = this.dataSubject.value.hourlyUpdates.filter((update) => update.id !== id);
     this.updateData({ hourlyUpdates });
   }
 
   toggleHourlyUpdateVisibility(id: string) {
-    const hourlyUpdates = this.dataSubject.value.hourlyUpdates.map(update =>
-      update.id === id ? { ...update, isVisible: !(update.isVisible ?? true) } : update
+    const hourlyUpdates = this.dataSubject.value.hourlyUpdates.map((update) =>
+      update.id === id ? { ...update, isVisible: !(update.isVisible ?? true) } : update,
     );
     this.updateData({ hourlyUpdates });
   }
@@ -269,13 +379,13 @@ export class WorkTrackerService {
         try {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
-          
+
           // Parse Developer Tasks
           const devSheetName = workbook.SheetNames[0];
           const devWorksheet = workbook.Sheets[devSheetName];
           const devData: any[] = XLSX.utils.sheet_to_json(devWorksheet);
-          
-          const developerTasks: DeveloperTask[] = devData.map(row => ({
+
+          const developerTasks: DeveloperTask[] = devData.map((row) => ({
             taskId: row['Task_ID'] || '',
             week: row['Week'] || '',
             resourceName: row['Resource_Name'] || '',
@@ -293,7 +403,10 @@ export class WorkTrackerService {
             progress: Number(row['Progress_%']) || 0,
             tags: row['Tags'] || '',
             comments: row['Comments'] || '',
-            isVisible: row['Visible'] === undefined ? true : String(row['Visible']).toLowerCase() !== 'false'
+            isVisible:
+              row['Visible'] === undefined
+                ? true
+                : String(row['Visible']).toLowerCase() !== 'false',
           }));
 
           // Parse Release Track
@@ -302,8 +415,8 @@ export class WorkTrackerService {
             const releaseSheetName = workbook.SheetNames[1];
             const releaseWorksheet = workbook.Sheets[releaseSheetName];
             const releaseData: any[] = XLSX.utils.sheet_to_json(releaseWorksheet);
-            
-            releaseTracks = releaseData.map(row => ({
+
+            releaseTracks = releaseData.map((row) => ({
               id: row['ID'] || '',
               title: row['Title'] || '',
               category: row['Category'] || '',
@@ -321,7 +434,10 @@ export class WorkTrackerService {
               sourceSheet: row['Source Sheet'] || '',
               dependency: row['Dependency'] || '',
               tags: row['Tags'] || '',
-              isVisible: row['Visible'] === undefined ? true : String(row['Visible']).toLowerCase() !== 'false'
+              isVisible:
+                row['Visible'] === undefined
+                  ? true
+                  : String(row['Visible']).toLowerCase() !== 'false',
             }));
           }
 
@@ -337,7 +453,10 @@ export class WorkTrackerService {
               hour: row['Hour'] || '',
               taskDescription: row['Task Description'] || '',
               status: row['Status'] || 'Pending',
-              isVisible: row['Visible'] === undefined ? true : String(row['Visible']).toLowerCase() !== 'false'
+              isVisible:
+                row['Visible'] === undefined
+                  ? true
+                  : String(row['Visible']).toLowerCase() !== 'false',
             }));
           }
 
@@ -356,60 +475,60 @@ export class WorkTrackerService {
 
   downloadTemplate(): void {
     const currentData = this.dataSubject.value;
-    
+
     // Create Developer Tasks Sheet
-    const devSheetData = currentData.developerTasks.map(task => ({
-      'Task_ID': task.taskId,
-      'Week': task.week,
-      'Resource_Name': task.resourceName,
-      'Project_Name': task.projectName,
-      'Module': task.module,
-      'Task_Title': task.taskTitle,
-      'Task_Description': task.taskDescription,
-      'Task_Type': task.taskType,
-      'Status': task.status,
-      'Priority': task.priority,
-      'Size': task.size,
-      'Start_Date': task.startDate,
-      'Due_Date': task.dueDate,
-      'Completed_Date': task.completedDate,
+    const devSheetData = currentData.developerTasks.map((task) => ({
+      Task_ID: task.taskId,
+      Week: task.week,
+      Resource_Name: task.resourceName,
+      Project_Name: task.projectName,
+      Module: task.module,
+      Task_Title: task.taskTitle,
+      Task_Description: task.taskDescription,
+      Task_Type: task.taskType,
+      Status: task.status,
+      Priority: task.priority,
+      Size: task.size,
+      Start_Date: task.startDate,
+      Due_Date: task.dueDate,
+      Completed_Date: task.completedDate,
       'Progress_%': task.progress,
-      'Tags': task.tags,
-      'Comments': task.comments,
-      'Visible': task.isVisible ?? true
+      Tags: task.tags,
+      Comments: task.comments,
+      Visible: task.isVisible ?? true,
     }));
     const devWs = XLSX.utils.json_to_sheet(devSheetData);
 
     // Create Release Sheet
-    const releaseSheetData = currentData.releaseTracks.map(track => ({
-      'ID': track.id,
-      'Title': track.title,
-      'Category': track.category,
-      'Module': track.module,
-      'Type': track.type,
-      'Priority': track.priority,
-      'Status': track.status,
+    const releaseSheetData = currentData.releaseTracks.map((track) => ({
+      ID: track.id,
+      Title: track.title,
+      Category: track.category,
+      Module: track.module,
+      Type: track.type,
+      Priority: track.priority,
+      Status: track.status,
       'PRD Status': track.prdStatus,
       'Assigned To': track.assignedTo,
       'Created Date': track.createdDate,
       'Target Date': track.targetDate,
       'Completed Date': track.completedDate,
       'Progress %': track.progress,
-      'Remarks': track.remarks,
+      Remarks: track.remarks,
       'Source Sheet': track.sourceSheet,
-      'Dependency': track.dependency,
-      'Tags': track.tags,
-      'Visible': track.isVisible ?? true
+      Dependency: track.dependency,
+      Tags: track.tags,
+      Visible: track.isVisible ?? true,
     }));
     const releaseWs = XLSX.utils.json_to_sheet(releaseSheetData);
 
-    const hourlySheetData = currentData.hourlyUpdates.map(update => ({
-      'ID': update.id,
-      'Date': update.date,
-      'Hour': update.hour,
+    const hourlySheetData = currentData.hourlyUpdates.map((update) => ({
+      ID: update.id,
+      Date: update.date,
+      Hour: update.hour,
       'Task Description': update.taskDescription,
-      'Status': update.status,
-      'Visible': update.isVisible ?? true
+      Status: update.status,
+      Visible: update.isVisible ?? true,
     }));
     const hourlyWs = XLSX.utils.json_to_sheet(hourlySheetData);
 
@@ -425,9 +544,9 @@ export class WorkTrackerService {
 
   private createId(prefix: string, seed: number): string {
     const existingIds = new Set([
-      ...this.dataSubject.value.developerTasks.map(task => task.taskId),
-      ...this.dataSubject.value.releaseTracks.map(track => track.id),
-      ...this.dataSubject.value.hourlyUpdates.map(update => update.id)
+      ...this.dataSubject.value.developerTasks.map((task) => task.taskId),
+      ...this.dataSubject.value.releaseTracks.map((track) => track.id),
+      ...this.dataSubject.value.hourlyUpdates.map((update) => update.id),
     ]);
     let next = seed;
     let candidate = `${prefix}-${String(next).padStart(3, '0')}`;
@@ -443,25 +562,49 @@ export class WorkTrackerService {
     if (!this.authService.isAuthenticated()) return;
     const data = this.dataSubject.value;
     await Promise.all([
-      this.syncService.pushToFirestore(APP_NAME, 'developerTasks', data.developerTasks as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'releaseTracks', data.releaseTracks as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'hourlyUpdates', data.hourlyUpdates as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'developerTasks',
+        data.developerTasks as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'releaseTracks',
+        data.releaseTracks as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'hourlyUpdates',
+        data.hourlyUpdates as unknown as Record<string, unknown>[],
+      ),
     ]);
   }
 
   async loadFromFirestore(): Promise<void> {
     if (!this.authService.isAuthenticated()) return;
     try {
-      const developerTasks = await this.syncService.pullFromFirestore<DeveloperTask>(APP_NAME, 'developerTasks');
-      const releaseTracks = await this.syncService.pullFromFirestore<ReleaseTrack>(APP_NAME, 'releaseTracks');
-      const hourlyUpdates = await this.syncService.pullFromFirestore<HourlyWorkUpdate>(APP_NAME, 'hourlyUpdates');
+      const developerTasks = await this.syncService.pullFromFirestore<DeveloperTask>(
+        APP_NAME,
+        'developerTasks',
+      );
+      const releaseTracks = await this.syncService.pullFromFirestore<ReleaseTrack>(
+        APP_NAME,
+        'releaseTracks',
+      );
+      const hourlyUpdates = await this.syncService.pullFromFirestore<HourlyWorkUpdate>(
+        APP_NAME,
+        'hourlyUpdates',
+      );
 
       if (developerTasks.length > 0 || releaseTracks.length > 0 || hourlyUpdates.length > 0) {
         this.dataSubject.next({
           ...this.dataSubject.value,
-          developerTasks: developerTasks.length > 0 ? developerTasks : this.dataSubject.value.developerTasks,
-          releaseTracks: releaseTracks.length > 0 ? releaseTracks : this.dataSubject.value.releaseTracks,
-          hourlyUpdates: hourlyUpdates.length > 0 ? hourlyUpdates : this.dataSubject.value.hourlyUpdates,
+          developerTasks:
+            developerTasks.length > 0 ? developerTasks : this.dataSubject.value.developerTasks,
+          releaseTracks:
+            releaseTracks.length > 0 ? releaseTracks : this.dataSubject.value.releaseTracks,
+          hourlyUpdates:
+            hourlyUpdates.length > 0 ? hourlyUpdates : this.dataSubject.value.hourlyUpdates,
         });
       }
     } catch (e) {

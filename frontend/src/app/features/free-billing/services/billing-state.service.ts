@@ -7,7 +7,7 @@ import { FirebaseSyncService } from '../../../core/services/firebase-sync.servic
 const APP_NAME = 'free-billing';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class BillingStateService {
   private authService = inject(FirebaseAuthService);
@@ -29,14 +29,24 @@ export class BillingStateService {
     this.syncService.onAuthChange((uid) => {
       if (uid) {
         this.loadFromFirestore();
+      } else {
+        this.clearData();
       }
     });
   }
 
-  get products() { return this.productsSub.getValue(); }
-  get customers() { return this.customersSub.getValue(); }
-  get purchases() { return this.purchasesSub.getValue(); }
-  get invoices() { return this.invoicesSub.getValue(); }
+  get products() {
+    return this.productsSub.getValue();
+  }
+  get customers() {
+    return this.customersSub.getValue();
+  }
+  get purchases() {
+    return this.purchasesSub.getValue();
+  }
+  get invoices() {
+    return this.invoicesSub.getValue();
+  }
 
   // Overwrites all data (used when Excel is uploaded)
   initializeData(data: BillingDataExport) {
@@ -57,14 +67,14 @@ export class BillingStateService {
   }
 
   updateProduct(p: Product) {
-    const list = this.products.map(item => item.id === p.id ? p : item);
+    const list = this.products.map((item) => (item.id === p.id ? p : item));
     this.productsSub.next(list);
     this.saveToLocalStorage();
     this.syncToFirestore();
   }
 
   deleteProduct(id: string) {
-    const list = this.products.filter(item => item.id !== id);
+    const list = this.products.filter((item) => item.id !== id);
     this.productsSub.next(list);
     this.saveToLocalStorage();
     this.syncToFirestore();
@@ -79,14 +89,14 @@ export class BillingStateService {
   }
 
   updateCustomer(c: Customer) {
-    const list = this.customers.map(item => item.id === c.id ? c : item);
+    const list = this.customers.map((item) => (item.id === c.id ? c : item));
     this.customersSub.next(list);
     this.saveToLocalStorage();
     this.syncToFirestore();
   }
 
   deleteCustomer(id: string) {
-    const list = this.customers.filter(item => item.id !== id);
+    const list = this.customers.filter((item) => item.id !== id);
     this.customersSub.next(list);
     this.saveToLocalStorage();
     this.syncToFirestore();
@@ -96,9 +106,9 @@ export class BillingStateService {
   addPurchase(p: Purchase) {
     const list = [...this.purchases, p];
     this.purchasesSub.next(list);
-    
+
     // Automatically augment the targeted product's stock
-    const targetProduct = this.products.find(x => x.id === p.productId);
+    const targetProduct = this.products.find((x) => x.id === p.productId);
     if (targetProduct) {
       this.updateProduct({ ...targetProduct, stock: targetProduct.stock + p.quantity });
     } else {
@@ -120,19 +130,22 @@ export class BillingStateService {
     const customerUpdates = [...this.customers];
     let customersChanged = false;
 
-    inv.items.forEach(item => {
-      const idx = productUpdates.findIndex(p => p.id === item.productId);
+    inv.items.forEach((item) => {
+      const idx = productUpdates.findIndex((p) => p.id === item.productId);
       if (idx !== -1) {
-        productUpdates[idx] = { ...productUpdates[idx], stock: productUpdates[idx].stock - item.quantity };
+        productUpdates[idx] = {
+          ...productUpdates[idx],
+          stock: productUpdates[idx].stock - item.quantity,
+        };
         productsChanged = true;
       }
     });
 
-    const cIdx = customerUpdates.findIndex(c => c.id === inv.customerId);
+    const cIdx = customerUpdates.findIndex((c) => c.id === inv.customerId);
     if (cIdx !== -1) {
-      customerUpdates[cIdx] = { 
-        ...customerUpdates[cIdx], 
-        totalPurchasedAmount: (customerUpdates[cIdx].totalPurchasedAmount || 0) + inv.grandTotal
+      customerUpdates[cIdx] = {
+        ...customerUpdates[cIdx],
+        totalPurchasedAmount: (customerUpdates[cIdx].totalPurchasedAmount || 0) + inv.grandTotal,
       };
       customersChanged = true;
     }
@@ -157,7 +170,7 @@ export class BillingStateService {
       products: this.products,
       customers: this.customers,
       purchases: this.purchases,
-      invoices: this.invoices
+      invoices: this.invoices,
     };
   }
 
@@ -185,17 +198,33 @@ export class BillingStateService {
     if (!this.authService.isAuthenticated()) return;
     const data = this.getExportData();
     await Promise.all([
-      this.syncService.pushToFirestore(APP_NAME, 'products', data.products as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'customers', data.customers as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'purchases', data.purchases as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'invoices', data.invoices as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'products',
+        data.products as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'customers',
+        data.customers as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'purchases',
+        data.purchases as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'invoices',
+        data.invoices as unknown as Record<string, unknown>[],
+      ),
     ]);
   }
 
   private syncToFirestore(): void {
     // Fire-and-forget sync
     this.syncAllToFirestore().catch((e) =>
-      console.error('BillingStateService: Firestore sync failed', e)
+      console.error('BillingStateService: Firestore sync failed', e),
     );
   }
 

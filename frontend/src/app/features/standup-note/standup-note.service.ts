@@ -222,9 +222,19 @@ export class StandupNoteService {
   private authService = inject(FirebaseAuthService);
   private syncService = inject(FirebaseSyncService);
 
-  private static loadLocalState(): StandupState {
+  private static readonly STORAGE_KEY_PREFIX = 'u2app.standupState';
+  private static readonly LEGACY_STORAGE_KEY = 'u2app.standupState';
+
+  private static getStorageKey(uid?: string | null): string {
+    return uid
+      ? `${StandupNoteService.STORAGE_KEY_PREFIX}.${uid}`
+      : StandupNoteService.STORAGE_KEY_PREFIX;
+  }
+
+  private static loadLocalState(uid?: string | null): StandupState {
+    const key = StandupNoteService.getStorageKey(uid);
     try {
-      const data = localStorage.getItem('u2app.standupState');
+      const data = localStorage.getItem(key);
       if (data) {
         const parsed = JSON.parse(data);
         return {
@@ -244,13 +254,22 @@ export class StandupNoteService {
     return SEED_STATE;
   }
 
-  private stateSubject = new BehaviorSubject<StandupState>(StandupNoteService.loadLocalState());
+  private currentUid: string | null = null;
+  private stateSubject = new BehaviorSubject<StandupState>(
+    StandupNoteService.loadLocalState(this.authService.user()?.uid),
+  );
   state$ = this.stateSubject.asObservable();
 
   constructor() {
     this.syncService.onAuthChange((uid) => {
       if (uid) {
+        this.currentUid = uid;
+        const localState = StandupNoteService.loadLocalState(uid);
+        this.stateSubject.next(localState);
         this.loadFromFirestore();
+      } else {
+        this.currentUid = null;
+        this.resetState();
       }
     });
   }
@@ -262,11 +281,21 @@ export class StandupNoteService {
     const newState = { ...this.state, ...patch };
     this.stateSubject.next(newState);
     try {
-      localStorage.setItem('u2app.standupState', JSON.stringify(newState));
+      const key = StandupNoteService.getStorageKey(this.authService.user()?.uid);
+      localStorage.setItem(key, JSON.stringify(newState));
     } catch (e) {
       console.error('Failed to save state to localStorage', e);
     }
     this.syncToFirestore();
+  }
+
+  private resetState(): void {
+    this.stateSubject.next(SEED_STATE);
+    try {
+      localStorage.removeItem(StandupNoteService.LEGACY_STORAGE_KEY);
+    } catch (e) {
+      console.error('StandupNoteService: failed to clear legacy localStorage key', e);
+    }
   }
 
   // --- Firestore Sync ---
@@ -274,14 +303,46 @@ export class StandupNoteService {
     if (!this.authService.isAuthenticated()) return;
     const data = this.state;
     await Promise.all([
-      this.syncService.pushToFirestore(APP_NAME, 'employees', data.employees as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'standupNotes', data.standupNotes as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'projects', data.projects as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'reminders', data.reminders as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'checklistGroups', data.checklistGroups as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'feedbacks', data.feedbacks as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'calendarCategories', (data.calendarCategories || []) as unknown as Record<string, unknown>[]),
-      this.syncService.pushToFirestore(APP_NAME, 'calendarEvents', (data.calendarEvents || []) as unknown as Record<string, unknown>[]),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'employees',
+        data.employees as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'standupNotes',
+        data.standupNotes as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'projects',
+        data.projects as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'reminders',
+        data.reminders as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'checklistGroups',
+        data.checklistGroups as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'feedbacks',
+        data.feedbacks as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'calendarCategories',
+        (data.calendarCategories || []) as unknown as Record<string, unknown>[],
+      ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'calendarEvents',
+        (data.calendarEvents || []) as unknown as Record<string, unknown>[],
+      ),
     ]);
   }
 
@@ -289,13 +350,28 @@ export class StandupNoteService {
     if (!this.authService.isAuthenticated()) return;
     try {
       const employees = await this.syncService.pullFromFirestore<Employee>(APP_NAME, 'employees');
-      const standupNotes = await this.syncService.pullFromFirestore<StandupNote>(APP_NAME, 'standupNotes');
+      const standupNotes = await this.syncService.pullFromFirestore<StandupNote>(
+        APP_NAME,
+        'standupNotes',
+      );
       const projects = await this.syncService.pullFromFirestore<Project>(APP_NAME, 'projects');
       const reminders = await this.syncService.pullFromFirestore<Reminder>(APP_NAME, 'reminders');
-      const checklistGroups = await this.syncService.pullFromFirestore<ChecklistGroup>(APP_NAME, 'checklistGroups');
-      const feedbacks = await this.syncService.pullFromFirestore<FeedbackEntry>(APP_NAME, 'feedbacks');
-      const calendarCategories = await this.syncService.pullFromFirestore<CalendarCategory>(APP_NAME, 'calendarCategories');
-      const calendarEvents = await this.syncService.pullFromFirestore<CalendarEvent>(APP_NAME, 'calendarEvents');
+      const checklistGroups = await this.syncService.pullFromFirestore<ChecklistGroup>(
+        APP_NAME,
+        'checklistGroups',
+      );
+      const feedbacks = await this.syncService.pullFromFirestore<FeedbackEntry>(
+        APP_NAME,
+        'feedbacks',
+      );
+      const calendarCategories = await this.syncService.pullFromFirestore<CalendarCategory>(
+        APP_NAME,
+        'calendarCategories',
+      );
+      const calendarEvents = await this.syncService.pullFromFirestore<CalendarEvent>(
+        APP_NAME,
+        'calendarEvents',
+      );
 
       if (
         employees.length > 0 ||
@@ -312,14 +388,17 @@ export class StandupNoteService {
           standupNotes: standupNotes.length > 0 ? standupNotes : this.state.standupNotes,
           projects: projects.length > 0 ? projects : this.state.projects,
           reminders: reminders.length > 0 ? reminders : this.state.reminders,
-          checklistGroups: checklistGroups.length > 0 ? checklistGroups : this.state.checklistGroups,
+          checklistGroups:
+            checklistGroups.length > 0 ? checklistGroups : this.state.checklistGroups,
           feedbacks: feedbacks.length > 0 ? feedbacks : this.state.feedbacks,
-          calendarCategories: calendarCategories.length > 0 ? calendarCategories : this.state.calendarCategories,
+          calendarCategories:
+            calendarCategories.length > 0 ? calendarCategories : this.state.calendarCategories,
           calendarEvents: calendarEvents.length > 0 ? calendarEvents : this.state.calendarEvents,
         };
         this.stateSubject.next(newState);
         try {
-          localStorage.setItem('u2app.standupState', JSON.stringify(newState));
+          const key = StandupNoteService.getStorageKey(this.authService.user()?.uid);
+          localStorage.setItem(key, JSON.stringify(newState));
         } catch (e) {
           console.error('Failed to save firestore state to localStorage', e);
         }
@@ -422,10 +501,16 @@ export class StandupNoteService {
       const standupNotes: StandupNote[] = XLSX.utils.sheet_to_json(wb.Sheets['StandupNotes'] || {});
       const projects: Project[] = XLSX.utils.sheet_to_json(wb.Sheets['Projects'] || {});
       const reminders: Reminder[] = XLSX.utils.sheet_to_json(wb.Sheets['Reminders'] || {});
-      const checklistGroupsRaw: any[] = XLSX.utils.sheet_to_json(wb.Sheets['ChecklistGroups'] || {});
+      const checklistGroupsRaw: any[] = XLSX.utils.sheet_to_json(
+        wb.Sheets['ChecklistGroups'] || {},
+      );
       const feedbacks: FeedbackEntry[] = XLSX.utils.sheet_to_json(wb.Sheets['Feedbacks'] || {});
-      const calendarCategories: CalendarCategory[] = XLSX.utils.sheet_to_json(wb.Sheets['CalendarCategories'] || {});
-      const calendarEvents: CalendarEvent[] = XLSX.utils.sheet_to_json(wb.Sheets['CalendarEvents'] || {});
+      const calendarCategories: CalendarCategory[] = XLSX.utils.sheet_to_json(
+        wb.Sheets['CalendarCategories'] || {},
+      );
+      const calendarEvents: CalendarEvent[] = XLSX.utils.sheet_to_json(
+        wb.Sheets['CalendarEvents'] || {},
+      );
 
       const checklistGroups: ChecklistGroup[] = (checklistGroupsRaw || []).map((g: any) => {
         let items: ChecklistItem[] = [];
@@ -464,7 +549,7 @@ export class StandupNoteService {
   updateCalendarCategory(cat: CalendarCategory) {
     this.update({
       calendarCategories: (this.state.calendarCategories || []).map((c) =>
-        c.id === cat.id ? cat : c
+        c.id === cat.id ? cat : c,
       ),
     });
   }
@@ -480,9 +565,7 @@ export class StandupNoteService {
   }
   updateCalendarEvent(evt: CalendarEvent) {
     this.update({
-      calendarEvents: (this.state.calendarEvents || []).map((e) =>
-        e.id === evt.id ? evt : e
-      ),
+      calendarEvents: (this.state.calendarEvents || []).map((e) => (e.id === evt.id ? evt : e)),
     });
   }
   deleteCalendarEvent(id: string) {
