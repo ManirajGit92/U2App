@@ -15,6 +15,16 @@ import { Employee, StandupNoteService } from '../standup-note.service';
           <option value="">All Teams</option>
           <option *ngFor="let t of teams" [value]="t">{{ t }}</option>
         </select>
+        <select [(ngModel)]="sortField" (ngModelChange)="onSortChange()" class="input-field">
+          <option value="id">Sort by ID</option>
+          <option value="name">Sort by Name</option>
+          <option value="position">Sort by Position</option>
+          <option value="team">Sort by Team</option>
+        </select>
+        <select [(ngModel)]="sortOrder" (ngModelChange)="onSortChange()" class="input-field">
+          <option value="asc">Ascending 🔼</option>
+          <option value="desc">Descending 🔽</option>
+        </select>
         <button class="btn btn-primary" (click)="openAdd()">+ Add Employee</button>
       </div>
 
@@ -140,6 +150,8 @@ export class EmployeesComponent implements OnInit {
   teams: string[] = [];
   search = '';
   filterTeam = '';
+  sortField: 'id' | 'name' | 'position' | 'team' = 'name';
+  sortOrder: 'asc' | 'desc' = 'asc';
   showModal = false;
   editMode = false;
   form!: Employee;
@@ -147,6 +159,15 @@ export class EmployeesComponent implements OnInit {
   readonly COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
 
   ngOnInit() {
+    const savedField = localStorage.getItem('u2app.standup.employeesSortField');
+    if (savedField === 'id' || savedField === 'name' || savedField === 'position' || savedField === 'team') {
+      this.sortField = savedField;
+    }
+    const savedOrder = localStorage.getItem('u2app.standup.employeesSortOrder');
+    if (savedOrder === 'asc' || savedOrder === 'desc') {
+      this.sortOrder = savedOrder;
+    }
+
     this.svc.state$.subscribe(s => {
       this.all = s.employees;
       this.teams = [...new Set(s.employees.map(e => e.team))];
@@ -154,10 +175,24 @@ export class EmployeesComponent implements OnInit {
     });
   }
 
+  onSortChange() {
+    localStorage.setItem('u2app.standup.employeesSortField', this.sortField);
+    localStorage.setItem('u2app.standup.employeesSortOrder', this.sortOrder);
+    this.applyFilters();
+  }
+
   applyFilters() {
     let d = [...this.all];
     if (this.search) { const t = this.search.toLowerCase(); d = d.filter(e => e.name.toLowerCase().includes(t) || e.position.toLowerCase().includes(t)); }
     if (this.filterTeam) d = d.filter(e => e.team === this.filterTeam);
+
+    d.sort((a, b) => {
+      const valA = (a[this.sortField] || '').toString().trim();
+      const valB = (b[this.sortField] || '').toString().trim();
+      const comparison = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+      return this.sortOrder === 'asc' ? comparison : -comparison;
+    });
+
     this.filtered = d;
   }
 
