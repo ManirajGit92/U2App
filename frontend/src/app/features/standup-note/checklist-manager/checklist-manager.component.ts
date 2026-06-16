@@ -76,24 +76,80 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
 
           <div class="card-body" [class.collapsed]="isCollapsed(g.id)">
             <ul class="items">
-              <li *ngFor="let it of g.items" class="item">
-                <label class="item-label">
-                  <input
-                    type="checkbox"
-                    [(ngModel)]="it.done"
-                    (change)="toggleItemDone(g.id, it)"
-                  />
-                  <span class="checkbox-custom"></span>
-                  <input
-                    [(ngModel)]="it.text"
-                    (blur)="updateItem(g.id, it)"
-                    class="item-text"
-                    placeholder="Checklist item"
-                  />
-                </label>
-                <button class="icon-btn" title="Remove item" (click)="removeItem(g.id, it.id)">
-                  ✕
-                </button>
+              <li
+                *ngFor="let it of g.items; let i = index"
+                class="item"
+                [draggable]="editingItemId !== it.id"
+                (dragstart)="onDragStart($event, g.id, i)"
+                (dragover)="onDragOver($event, i)"
+                (drop)="onDrop($event, g.id, i)"
+                (dragend)="onDragEnd()"
+                [class.dragging]="draggedGroupId === g.id && draggedItemIndex === i"
+              >
+                <div class="item-left">
+                  <span class="drag-handle" title="Drag to reorder">☰</span>
+                  <label class="item-label">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="it.done"
+                      (change)="toggleItemDone(g.id, it)"
+                    />
+                    <span class="checkbox-custom"></span>
+                    
+                    <!-- Display Mode -->
+                    <span
+                      *ngIf="editingItemId !== it.id"
+                      class="item-text-display"
+                      [class.done-text]="it.done"
+                    >
+                      {{ it.text }}
+                    </span>
+                    
+                    <!-- Edit Mode -->
+                    <input
+                      *ngIf="editingItemId === it.id"
+                      [(ngModel)]="editItemText"
+                      (keyup.enter)="saveItemEdit(g.id, it)"
+                      class="item-text-edit-input"
+                      #editInput
+                    />
+                  </label>
+                </div>
+                
+                <div class="item-actions">
+                  <button
+                    *ngIf="editingItemId !== it.id"
+                    class="icon-btn-sm"
+                    title="Edit item"
+                    (click)="startEditItem(it)"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    *ngIf="editingItemId === it.id"
+                    class="icon-btn-sm save"
+                    title="Save item"
+                    (click)="saveItemEdit(g.id, it)"
+                  >
+                    💾
+                  </button>
+                  <button
+                    *ngIf="editingItemId === it.id"
+                    class="icon-btn-sm cancel"
+                    title="Cancel edit"
+                    (click)="cancelEditItem()"
+                  >
+                    ✕
+                  </button>
+                  <button
+                    *ngIf="editingItemId !== it.id"
+                    class="icon-btn-sm danger"
+                    title="Remove item"
+                    (click)="removeItem(g.id, it.id)"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </li>
             </ul>
 
@@ -305,20 +361,50 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         gap: 12px;
       }
       .item {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 12px;
+        display: flex;
+        justify-content: space-between;
         align-items: center;
+        gap: 12px;
         padding: 12px 14px;
         border-radius: 16px;
         background: rgba(148, 163, 184, 0.06);
         border: 1px solid rgba(148, 163, 184, 0.15);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .item.dragging {
+        opacity: 0.4;
+        border: 1px dashed var(--accent-primary);
+        background: var(--bg-tertiary);
+      }
+      .item-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        min-width: 0;
+      }
+      .drag-handle {
+        cursor: grab;
+        color: var(--text-secondary);
+        font-size: 1rem;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+      }
+      .drag-handle:hover {
+        opacity: 1;
+      }
+      .drag-handle:active {
+        cursor: grabbing;
       }
       .item-label {
         display: flex;
         align-items: center;
         gap: 12px;
-        width: 100%;
+        flex: 1;
+        min-width: 0;
         margin: 0;
       }
       .item-label input[type='checkbox'] {
@@ -333,6 +419,7 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         transition:
           background 0.2s ease,
           border-color 0.2s ease;
+        flex-shrink: 0;
       }
       .item-label input[type='checkbox']:checked {
         background: rgba(59, 130, 246, 0.96);
@@ -349,15 +436,66 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
       .checkbox-custom {
         display: none;
       }
-      .item-text {
-        width: 100%;
-        border: none;
-        background: transparent;
+      .item-text-display {
         font-size: 0.95rem;
         color: var(--text-primary);
+        flex: 1;
+        min-width: 0;
+        word-break: break-word;
       }
-      .item-text:focus {
+      .item-text-display.done-text {
+        text-decoration: line-through;
+        color: var(--text-secondary);
+        opacity: 0.75;
+      }
+      .item-text-edit-input {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--accent-primary);
+        background: var(--bg-input);
+        color: var(--text-primary);
+        font-size: 0.95rem;
         outline: none;
+      }
+      .item-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .icon-btn-sm {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: rgba(148, 163, 184, 0.12);
+        border: none;
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: transform 0.2s, background 0.2s;
+      }
+      .icon-btn-sm:hover {
+        transform: scale(1.05);
+        background: rgba(99, 102, 241, 0.15);
+      }
+      .icon-btn-sm.save {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+      }
+      .icon-btn-sm.cancel {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+      }
+      .icon-btn-sm.danger {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+      }
+      .icon-btn-sm.danger:hover {
+        background: rgba(239, 68, 68, 0.25);
       }
       .add-item {
         display: flex;
@@ -447,6 +585,12 @@ export class ChecklistManagerComponent {
   pendingItem: Record<string, string> = {};
   collapsedGroups: Record<string, boolean> = {};
 
+  // Edit & Drag-and-Drop states
+  editingItemId = '';
+  editItemText = '';
+  draggedGroupId: string | null = null;
+  draggedItemIndex: number | null = null;
+
   constructor() {
     this.svc.state$.subscribe((s) => {
       this.groups = s.checklistGroups || [];
@@ -481,6 +625,61 @@ export class ChecklistManagerComponent {
   updateItem(groupId: string, item: ChecklistItem) {
     if (!item.text.trim()) return;
     this.svc.updateChecklistItem(groupId, item);
+  }
+
+  startEditItem(item: ChecklistItem) {
+    this.editingItemId = item.id;
+    this.editItemText = item.text;
+  }
+
+  saveItemEdit(groupId: string, item: ChecklistItem) {
+    if (this.editingItemId !== item.id) return;
+    const text = this.editItemText.trim();
+    if (text && text !== item.text) {
+      this.svc.updateChecklistItem(groupId, { ...item, text });
+    }
+    this.editingItemId = '';
+  }
+
+  cancelEditItem() {
+    this.editingItemId = '';
+    this.editItemText = '';
+  }
+
+  onDragStart(event: DragEvent, groupId: string, index: number) {
+    this.draggedGroupId = groupId;
+    this.draggedItemIndex = index;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', index.toString());
+    }
+  }
+
+  onDragOver(event: DragEvent, index: number) {
+    event.preventDefault();
+  }
+
+  onDrop(event: DragEvent, groupId: string, targetIndex: number) {
+    event.preventDefault();
+    if (this.draggedGroupId !== groupId || this.draggedItemIndex === null || this.draggedItemIndex === targetIndex) {
+      return;
+    }
+    const group = this.groups.find((g) => g.id === groupId);
+    if (!group) return;
+
+    const items = [...group.items];
+    const [removed] = items.splice(this.draggedItemIndex, 1);
+    items.splice(targetIndex, 0, removed);
+
+    this.svc.updateChecklistGroup({ ...group, items });
+
+    this.draggedGroupId = null;
+    this.draggedItemIndex = null;
+  }
+
+  onDragEnd() {
+    this.draggedGroupId = null;
+    this.draggedItemIndex = null;
   }
 
   removeItem(groupId: string, itemId: string) {

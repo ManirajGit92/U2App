@@ -361,7 +361,7 @@ export class StandupDashboardComponent implements OnInit {
       const today = new Date().toISOString().split('T')[0];
       this.todayNotes = state.standupNotes.filter(n => n.date === today);
       this.projects = state.projects;
-      this.urgentReminders = state.reminders.filter(r => !r.done).sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()).slice(0, 5);
+      this.urgentReminders = state.reminders.filter(r => !r.done).sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
       this.categories = state.calendarCategories || [];
       this.allEvents = state.calendarEvents || [];
 

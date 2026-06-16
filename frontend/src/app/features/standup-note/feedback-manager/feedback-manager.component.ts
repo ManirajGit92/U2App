@@ -33,9 +33,7 @@ import { StandupNoteService, FeedbackEntry } from '../standup-note.service';
             <span class="date">{{ f.createdAt | date: 'mediumDate' }}</span>
           </div>
           <h3 class="feedback-subject">{{ f.subject }}</h3>
-          <p class="feedback-preview">
-            {{ f.message | slice: 0 : 160 }}{{ f.message.length > 160 ? '…' : '' }}
-          </p>
+          <p class="feedback-preview" [innerHTML]="f.message"></p>
           <div class="card-meta">
             <span class="meta-label">{{ getTargetName(f) }}</span>
           </div>
@@ -189,6 +187,9 @@ import { StandupNoteService, FeedbackEntry } from '../standup-note.service';
         transition:
           transform 0.24s ease,
           border-color 0.24s ease;
+        height: 55vh;
+        min-height: 320px;
+        box-sizing: border-box;
       }
       .feedback-card:hover {
         transform: translateY(-2px);
@@ -224,7 +225,9 @@ import { StandupNoteService, FeedbackEntry } from '../standup-note.service';
         margin: 0;
         color: var(--text-secondary);
         line-height: 1.7;
-        min-height: 4.5rem;
+        white-space: pre-wrap;
+        flex: 1;
+        overflow-y: auto;
       }
       .card-meta {
         display: flex;

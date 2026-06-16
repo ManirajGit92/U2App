@@ -44,19 +44,19 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
           <div class="card-body">
             <div class="note-row" *ngIf="note.previousWork">
               <div class="note-label yesterday">✅ Yesterday</div>
-              <div class="note-text">{{ note.previousWork }}</div>
+              <div class="note-text" [innerHTML]="note.previousWork"></div>
             </div>
             <div class="note-row" *ngIf="note.todayPlan">
               <div class="note-label today">📌 Today</div>
-              <div class="note-text">{{ note.todayPlan }}</div>
+              <div class="note-text" [innerHTML]="note.todayPlan"></div>
             </div>
             <div class="note-row" *ngIf="note.blockers && note.blockers !== 'None'">
               <div class="note-label blocker">🚧 Blockers</div>
-              <div class="note-text">{{ note.blockers }}</div>
+              <div class="note-text" [innerHTML]="note.blockers"></div>
             </div>
             <div class="note-row" *ngIf="note.notes">
               <div class="note-label misc">💬 Notes</div>
-              <div class="note-text">{{ note.notes }}</div>
+              <div class="note-text" [innerHTML]="note.notes"></div>
             </div>
           </div>
         </div>
@@ -68,7 +68,7 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
       </div>
 
       <!-- Modal -->
-      <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+      <div class="modal-overlay" *ngIf="showModal">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>{{ editMode ? 'Edit' : 'Add' }} Standup Note</h3>
@@ -141,7 +141,7 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
     .note-label.today { background: var(--accent-surface); color: var(--accent-primary); }
     .note-label.blocker { background: rgba(239,68,68,0.15); color: #ef4444; }
     .note-label.misc { background: rgba(59,130,246,0.15); color: #3b82f6; }
-    .note-text { font-size: 0.83rem; color: var(--text-primary); line-height: 1.5; }
+    .note-text { font-size: 0.83rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
 
     .empty-state { text-align: center; padding: 0.5rem; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 1rem; }
     .empty-icon { font-size: 3rem; }

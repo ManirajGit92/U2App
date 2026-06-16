@@ -40,7 +40,7 @@ import { Employee, StandupNoteService } from '../standup-note.service';
       <div class="empty-state" *ngIf="filtered.length === 0"><span class="empty-icon">👥</span><div>No employees found.</div></div>
 
       <!-- Modal -->
-      <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+      <div class="modal-overlay" *ngIf="showModal">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>{{ editMode ? 'Edit' : 'Add' }} Employee</h3>
