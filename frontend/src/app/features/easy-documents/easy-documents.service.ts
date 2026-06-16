@@ -1,15 +1,25 @@
-
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal, effect } from '@angular/core';
 import { read, utils, writeFile } from 'xlsx';
 import { Packer, Document, Paragraph, TextRun, HeadingLevel } from 'docx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
+import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
 
 export interface DocSection {
   id: string;
-  heading: string;
-  subheading: string;
+  uniqueId: string;
+  heading?: string;
+  subheading?: string;
+  category?: string;
+  subcategory?: string;
   content: string;
+  carouselImage?: string;
+  code?: string;
+  note?: string;
+  iframe?: string;
+  
+  // Legacy support
   codeBlock?: string;
   notes?: string;
   mediaUrl?: string;
@@ -29,10 +39,35 @@ export interface DocConfig {
   lastUpdated?: string;
 }
 
+export interface ColumnMapping {
+  uniqueId: string;
+  category: string;
+  subcategory: string;
+  content: string;
+  carouselImage: string;
+  code: string;
+  note: string;
+  iframe: string;
+}
+
+const DEFAULT_MAPPING: ColumnMapping = {
+  uniqueId: 'uniqueId',
+  category: 'category',
+  subcategory: 'subcategory',
+  content: 'content',
+  carouselImage: 'carouselImage',
+  code: 'code',
+  note: 'note',
+  iframe: 'iframe'
+};
+
 @Injectable({
   providedIn: 'root',
 })
 export class EasyDocumentsService {
+  private authService = inject(FirebaseAuthService);
+  private syncService = inject(FirebaseSyncService);
+
   config = signal<DocConfig | null>(null);
   pages = signal<DocPage[]>([]);
   currentPageIndex = signal<number>(0);
@@ -42,6 +77,12 @@ export class EasyDocumentsService {
 
   filteredPages = signal<DocPage[]>([]);
   isSidebarOpenMobile = signal<boolean>(false);
+
+  // States
+  isLoading = signal<boolean>(false);
+  errorMessage = signal<string | null>(null);
+  parsingErrors = signal<string[]>([]);
+  syncStatus = signal<'offline' | 'syncing' | 'synced' | 'failed'>('offline');
 
   private translations: Record<string, Record<'en' | 'ta', string>> = {
     'Search...': { en: 'Search...', ta: 'தேடல்...' },
@@ -67,7 +108,29 @@ export class EasyDocumentsService {
   private synth = window.speechSynthesis;
 
   constructor() {
-    this.loadDefaultContent();
+    // 1. Initial Load: Load local storage if present
+    const loadedLocal = this.loadLocalState();
+    if (!loadedLocal) {
+      this.loadDefaultContent();
+    }
+
+    // 2. Auth state reactions
+    this.syncService.onAuthChange((uid) => {
+      if (uid) {
+        this.syncStatus.set('syncing');
+        this.loadFromFirestore(uid).catch((err) => {
+          console.error('EasyDocumentsService: Failed to pull cloud sync', err);
+          this.syncStatus.set('failed');
+        });
+      } else {
+        this.syncStatus.set('offline');
+      }
+    });
+
+    // 3. Save local changes automatically
+    effect(() => {
+      this.saveLocalState();
+    });
   }
 
   loadDefaultContent() {
@@ -76,18 +139,26 @@ export class EasyDocumentsService {
       sections: [
         {
           id: 'welcome-1',
+          uniqueId: 'welcome-1',
           heading: 'Welcome to Easy Documents',
+          category: 'Welcome to Easy Documents',
           subheading: 'Get Started with your documentation',
+          subcategory: 'Get Started',
           content: 'This application allows you to transform Excel files into interactive, high-quality documentation. <br><br> To begin, <b>Download the Template</b> from the upload screen, fill in your content, and upload it back!',
+          note: 'You can also export your documentation to PDF and Word anytime.',
           notes: 'You can also export your documentation to PDF and Word anytime.',
           mermaid: 'graph TD\nA[Excel File] -->|Upload| B(Easy Docs)\nB --> C[Interactive UI]\nB --> D[PDF/Word Export]'
         },
         {
           id: 'welcome-2',
+          uniqueId: 'welcome-2',
           heading: 'Core Features',
+          category: 'Core Features',
           subheading: 'What you can do',
+          subcategory: 'Features',
           content: 'The application supports rich text, code snippets, diagrams, and multimedia embeds.',
           codeBlock: '// Example Code Snippet\nfunction helloWorld() {\n  console.log("Welcome to Easy Docs!");\n}',
+          code: '// Example Code Snippet\nfunction helloWorld() {\n  console.log("Welcome to Easy Docs!");\n}',
         }
       ]
     };
@@ -95,71 +166,260 @@ export class EasyDocumentsService {
     this.config.set({
       title: 'Easy Documents',
       purpose: 'Generate professional documentation from Excel files',
-      version: '1.0.0'
+      version: '1.0.0',
+      lastUpdated: new Date().toISOString()
     });
     this.pages.set([defaultPage]);
     this.filteredPages.set([defaultPage]);
     this.currentPageIndex.set(0);
   }
 
+  private loadLocalState(): boolean {
+    try {
+      const data = localStorage.getItem('u2app.easyDocsState');
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (parsed.config) this.config.set(parsed.config);
+        if (parsed.pages) {
+          this.pages.set(parsed.pages);
+          this.filteredPages.set(parsed.pages);
+        }
+        if (parsed.currentPageIndex !== undefined) this.currentPageIndex.set(parsed.currentPageIndex);
+        if (parsed.currentLanguage) this.currentLanguage.set(parsed.currentLanguage);
+        if (parsed.isDarkMode !== undefined) this.isDarkMode.set(parsed.isDarkMode);
+        return true;
+      }
+    } catch (e) {
+      console.error('Failed to load local storage state', e);
+    }
+    return false;
+  }
+
+  saveLocalState() {
+    try {
+      const state = {
+        config: this.config(),
+        pages: this.pages(),
+        currentPageIndex: this.currentPageIndex(),
+        currentLanguage: this.currentLanguage(),
+        isDarkMode: this.isDarkMode()
+      };
+      localStorage.setItem('u2app.easyDocsState', JSON.stringify(state));
+    } catch (e) {
+      console.error('Failed to save state to localStorage', e);
+    }
+  }
+
+  async syncToFirebase() {
+    const uid = this.syncService.getUid();
+    if (!uid) {
+      this.syncStatus.set('offline');
+      return;
+    }
+    this.syncStatus.set('syncing');
+    try {
+      const appDoc = {
+        config: this.config(),
+        currentPageIndex: this.currentPageIndex(),
+        currentLanguage: this.currentLanguage(),
+        isDarkMode: this.isDarkMode(),
+        lastUpdated: new Date().toISOString()
+      };
+      await this.syncService.pushDocumentToFirestore('easy-documents', appDoc as any);
+      await this.syncService.pushToFirestore('easy-documents', 'pages', this.pages() as any);
+      this.syncStatus.set('synced');
+    } catch (e) {
+      console.error('EasyDocumentsService: pushToFirestore failed', e);
+      this.syncStatus.set('failed');
+    }
+  }
+
+  async loadFromFirestore(uid: string) {
+    try {
+      const appDocPath = `users/${uid}/apps/easy-documents`;
+      const cloudAppDoc = await this.syncService.pullFromFirestore<any>('easy-documents', 'config_meta') as any; // fallback check or direct
+      const cloudConfig = await this.authService['firestoreService'].getDocument<any>(appDocPath);
+
+      if (cloudConfig) {
+        // Resolve potential conflicts using timestamp merge
+        const localLastUpdated = this.config()?.lastUpdated ? new Date(this.config()!.lastUpdated!).getTime() : 0;
+        const cloudLastUpdated = cloudConfig.lastUpdated ? new Date(cloudConfig.lastUpdated).getTime() : 0;
+
+        if (cloudLastUpdated >= localLastUpdated) {
+          const pages = await this.syncService.pullFromFirestore<DocPage>('easy-documents', 'pages');
+          if (pages.length > 0) {
+            this.config.set(cloudConfig.config);
+            this.pages.set(pages);
+            this.filteredPages.set(pages);
+            this.currentPageIndex.set(cloudConfig.currentPageIndex || 0);
+            this.currentLanguage.set(cloudConfig.currentLanguage || 'en');
+            this.isDarkMode.set(cloudConfig.isDarkMode || false);
+            this.saveLocalState();
+            this.syncStatus.set('synced');
+            console.log('EasyDocumentsService: restored cloud state');
+            return;
+          }
+        }
+      }
+
+      // If cloud is empty/older but we have local pages, push them to Firestore
+      if (this.pages().length > 0) {
+        await this.syncToFirebase();
+      } else {
+        this.syncStatus.set('synced');
+      }
+    } catch (err) {
+      console.error('EasyDocumentsService: Failed to pull cloud data', err);
+      this.syncStatus.set('failed');
+    }
+  }
+
   async parseExcel(file: File): Promise<void> {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    this.parsingErrors.set([]);
+
     try {
       const data = await file.arrayBuffer();
       const workbook = read(data);
 
-      const pages: DocPage[] = [];
-      let config: DocConfig | null = null;
+      if (workbook.SheetNames.length === 0) {
+        throw new Error('Excel workbook is empty.');
+      }
 
-      workbook.SheetNames.forEach((sheetName, index) => {
-        const sheet = workbook.Sheets[sheetName];
-        const jsonData = utils.sheet_to_json(sheet) as any[];
+      const errors: string[] = [];
 
-        if (index === 0) {
-          // First sheet is Config
-          const firstRow = jsonData[0] || {};
-          config = {
-            title: sheetName,
-            purpose: this.getRowVal(firstRow, ['Sheet purpose', 'purpose']) || 'Documentation',
-            author: this.getRowVal(firstRow, ['Author']),
-            version: this.getRowVal(firstRow, ['Version']),
-            lastUpdated: this.getRowVal(firstRow, ['Last Updated']),
-          };
-        } else {
-          // Other sheets are documentation pages
-          const sections: DocSection[] = jsonData.map((row, i) => ({
-            id: `sec-${index}-${i}`,
-            heading: this.getRowVal(row, ['Heading']),
-            subheading: this.getRowVal(row, ['Subheading']),
-            content: this.getRowVal(row, ['Content']),
-            codeBlock: this.getRowVal(row, ['Code block']),
-            notes: this.getRowVal(row, ['Notes', 'Highlights']),
-            mediaUrl: this.getRowVal(row, ['Image', 'Video', 'URL']),
-            mermaid: this.getRowVal(row, ['Flowchart', 'Mind Map', 'Mermaid']),
-          }));
+      // The first sheet is configuration
+      const firstSheetName = workbook.SheetNames[0];
+      const firstSheet = workbook.Sheets[firstSheetName];
+      const configJson = utils.sheet_to_json(firstSheet) as any[];
 
-          const filteredSections = sections.filter(s => s.heading || s.subheading || s.content);
-          if (filteredSections.length > 0) {
-            pages.push({
-              name: sheetName,
-              sections: filteredSections,
-            });
+      const firstRow = configJson[0] || {};
+      const config: DocConfig = {
+        title: firstSheetName,
+        purpose: this.getRowVal(firstRow, ['Sheet purpose', 'purpose', 'description']) || 'Documentation',
+        author: this.getRowVal(firstRow, ['Author']),
+        version: this.getRowVal(firstRow, ['Version']),
+        lastUpdated: new Date().toISOString()
+      };
+
+      // Extract referenced sheet mappings and list
+      const mappings: Record<string, ColumnMapping> = {};
+      const referencedSheets: string[] = [];
+
+      configJson.forEach((row, i) => {
+        let sheetNameVal = '';
+        Object.keys(row).forEach(k => {
+          const val = String(row[k]).trim();
+          if (workbook.SheetNames.includes(val) && val !== firstSheetName) {
+            sheetNameVal = val;
           }
+        });
+
+        if (sheetNameVal) {
+          if (!referencedSheets.includes(sheetNameVal)) {
+            referencedSheets.push(sheetNameVal);
+          }
+          mappings[sheetNameVal] = {
+            uniqueId: this.getRowVal(row, ['uniqueId', 'id_col', 'id']),
+            category: this.getRowVal(row, ['category', 'category_col', 'cat']),
+            subcategory: this.getRowVal(row, ['subcategory', 'subcategory_col', 'subcat']),
+            content: this.getRowVal(row, ['content', 'content_col', 'text']),
+            carouselImage: this.getRowVal(row, ['carouselImage', 'images_col', 'images', 'carousel']),
+            code: this.getRowVal(row, ['code', 'code_col', 'codeBlock']),
+            note: this.getRowVal(row, ['note', 'notes_col', 'notes', 'highlights']),
+            iframe: this.getRowVal(row, ['iframe', 'iframe_col', 'url', 'mediaUrl'])
+          };
         }
       });
+
+      // Default sheets to process
+      const sheetsToProcess = referencedSheets.length > 0 ? referencedSheets : workbook.SheetNames.slice(1);
+
+      const pages: DocPage[] = [];
+
+      sheetsToProcess.forEach((sheetName, index) => {
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) {
+          errors.push(`Referenced sheet "${sheetName}" does not exist in the workbook.`);
+          return;
+        }
+
+        const jsonData = utils.sheet_to_json(sheet) as any[];
+        const mapping = mappings[sheetName] || DEFAULT_MAPPING;
+        const ids = new Set<string>();
+
+        // Validate structure
+        jsonData.forEach((row, rowIndex) => {
+          const rowNum = rowIndex + 2; // 1-indexed header + 1
+          const uniqueId = this.getMappedVal(row, mapping, 'uniqueId', ['uniqueId', 'id']);
+          
+          if (!uniqueId) {
+            errors.push(`Sheet "${sheetName}", Row ${rowNum}: Missing required "uniqueId" value.`);
+          } else if (ids.has(uniqueId)) {
+            errors.push(`Sheet "${sheetName}", Row ${rowNum}: Duplicate "uniqueId" value "${uniqueId}" found.`);
+          } else {
+            ids.add(uniqueId);
+          }
+        });
+
+        if (errors.length === 0) {
+          const sections: DocSection[] = jsonData.map((row, i) => {
+            const uniqueId = this.getMappedVal(row, mapping, 'uniqueId', ['uniqueId', 'id']);
+            const category = this.getMappedVal(row, mapping, 'category', ['category', 'heading']);
+            const subcategory = this.getMappedVal(row, mapping, 'subcategory', ['subcategory', 'subheading']);
+            const content = this.getMappedVal(row, mapping, 'content', ['content']);
+            const carouselImage = this.getMappedVal(row, mapping, 'carouselImage', ['carouselImage', 'images']);
+            const code = this.getMappedVal(row, mapping, 'code', ['code', 'codeBlock']);
+            const note = this.getMappedVal(row, mapping, 'note', ['note', 'notes', 'highlights']);
+            const iframe = this.getMappedVal(row, mapping, 'iframe', ['iframe', 'url', 'mediaUrl']);
+
+            return {
+              id: uniqueId,
+              uniqueId,
+              heading: category,
+              subheading: subcategory,
+              category,
+              subcategory,
+              content,
+              carouselImage,
+              code,
+              note,
+              iframe,
+              codeBlock: code,
+              notes: note,
+              mediaUrl: iframe
+            };
+          });
+
+          pages.push({
+            name: sheetName,
+            sections
+          });
+        }
+      });
+
+      if (errors.length > 0) {
+        this.parsingErrors.set(errors);
+        throw new Error('Workbook structure validation failed.');
+      }
 
       if (pages.length > 0) {
         this.config.set(config);
         this.pages.set(pages);
         this.filteredPages.set(pages);
         this.currentPageIndex.set(0);
-        console.log('Excel parsed successfully:', pages.length, 'pages found');
+        this.saveLocalState();
+        await this.syncToFirebase();
+        console.log('Excel parsed and synced successfully.');
       } else {
-        console.warn('No valid pages found in Excel file');
-        alert('No valid content found in the Excel file. Please ensure you are using the correct template.');
+        throw new Error('No valid content sheets found in Excel file.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error parsing Excel file:', error);
-      alert('Failed to parse Excel file. Please check if the file is corrupted.');
+      this.errorMessage.set(error.message || 'Failed to parse Excel file.');
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
@@ -169,6 +429,14 @@ export class EasyDocumentsService {
       targetKeys.some(tk => k.toLowerCase().trim() === tk.toLowerCase())
     );
     return foundKey ? String(row[foundKey]).trim() : '';
+  }
+
+  private getMappedVal(row: any, mapping: ColumnMapping, field: keyof ColumnMapping, fallbacks: string[]): string {
+    const customKey = mapping[field];
+    if (customKey && row[customKey] !== undefined) {
+      return String(row[customKey]).trim();
+    }
+    return this.getRowVal(row, fallbacks);
   }
 
   setSearchQuery(query: string) {
@@ -181,9 +449,10 @@ export class EasyDocumentsService {
     const filtered = this.pages().map(page => ({
       ...page,
       sections: page.sections.filter(s =>
-        s.heading.toLowerCase().includes(query.toLowerCase()) ||
-        s.subheading.toLowerCase().includes(query.toLowerCase()) ||
-        s.content.toLowerCase().includes(query.toLowerCase())
+        (s.category && s.category.toLowerCase().includes(query.toLowerCase())) ||
+        (s.subcategory && s.subcategory.toLowerCase().includes(query.toLowerCase())) ||
+        (s.content && s.content.toLowerCase().includes(query.toLowerCase())) ||
+        (s.note && s.note.toLowerCase().includes(query.toLowerCase()))
       )
     })).filter(p => p.sections.length > 0);
 
@@ -193,44 +462,72 @@ export class EasyDocumentsService {
   downloadTemplate() {
     const wb = utils.book_new();
 
-    // Instructions Sheet
-    const instructionsWS = utils.json_to_sheet([
-      { 'Column': 'Heading', 'Requirement': 'Required', 'Description': 'Main section title' },
-      { 'Column': 'Subheading', 'Requirement': 'Optional', 'Description': 'Small title under heading' },
-      { 'Column': 'Content', 'Requirement': 'Recommended', 'Description': 'Main text (supports HTML like <b>)' },
-      { 'Column': 'Code block', 'Requirement': 'Optional', 'Description': 'Technical code snippets' },
-      { 'Column': 'Mermaid', 'Requirement': 'Optional', 'Description': 'Diagram code (graph TD...)' },
-      { 'Column': 'URL', 'Requirement': 'Optional', 'Description': 'Image or YouTube embed link' },
-      { 'Column': 'Notes', 'Requirement': 'Optional', 'Description': 'Highlights or tips' }
-    ]);
-    utils.book_append_sheet(wb, instructionsWS, 'Instructions');
-
-    // Config Sheet
+    // Configuration sheet with custom mapping schema
     const configWS = utils.json_to_sheet([
       {
-        'Sheet purpose': 'Easy Documents Template',
-        'Author': 'User',
+        'Sheet purpose': 'Demo Dynamic Website Generator',
+        'Author': 'Administrator',
         'Version': '1.0',
-        'Last Updated': new Date().toLocaleDateString()
-      }
-    ]);
-    utils.book_append_sheet(wb, configWS, 'Config');
-
-    // Sample Content Sheet
-    const contentWS = utils.json_to_sheet([
+        'Last Updated': new Date().toLocaleDateString(),
+        'Page Reference': 'Website View',
+        'uniqueId': 'ID',
+        'category': 'Section',
+        'subcategory': 'Sub-Section',
+        'content': 'Page Content',
+        'carouselImage': 'Carousel Images',
+        'code': 'Code Snippet',
+        'note': 'Highlight Notes',
+        'iframe': 'Media Frame'
+      },
       {
-        'Heading': 'Getting Started',
-        'Subheading': 'Introduction',
-        'Content': 'Welcome to <b>Easy Documents</b>. This is a sample documentation row.',
-        'Code block': 'console.log("Hello World");',
-        'Notes': 'You can use rich text in the content column.',
-        'URL': 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-        'Mermaid': 'graph TD\nA[Start] --> B[Implementation]\nB --> C[Export]'
+        'Sheet purpose': 'Demo Dynamic Website Generator',
+        'Author': 'Administrator',
+        'Version': '1.0',
+        'Last Updated': new Date().toLocaleDateString(),
+        'Page Reference': 'API Docs',
+        'uniqueId': 'uniqueId',
+        'category': 'category',
+        'subcategory': 'subcategory',
+        'content': 'content',
+        'carouselImage': 'carouselImage',
+        'code': 'code',
+        'note': 'note',
+        'iframe': 'iframe'
       }
     ]);
-    utils.book_append_sheet(wb, contentWS, 'Module 1');
+    utils.book_append_sheet(wb, configWS, 'Configuration');
 
-    writeFile(wb, `EasyDocs_Template_${new Date().toLocaleDateString()}.xlsx`);
+    // Dynamic Sheet 1: Website View (uses custom mappings from Configuration Row 1)
+    const viewWS = utils.json_to_sheet([
+      {
+        'ID': 'id-1',
+        'Section': 'Overview',
+        'Sub-Section': 'Introduction',
+        'Page Content': 'Welcome to the <b>Excel-Driven Dynamic Portal</b>. This site is completely configured by the Excel sheets.',
+        'Carousel Images': 'https://picsum.photos/id/1/800/400,https://picsum.photos/id/2/800/400',
+        'Code Snippet': 'const app = "Dynamic App";',
+        'Highlight Notes': '[Success] Dynamic Website successfully parsed from Excel sheets!',
+        'Media Frame': 'https://www.youtube.com/embed/dQw4w9WgXcQ'
+      }
+    ]);
+    utils.book_append_sheet(wb, viewWS, 'Website View');
+
+    // Dynamic Sheet 2: API Docs (uses standard mapping columns)
+    const apiWS = utils.json_to_sheet([
+      {
+        'uniqueId': 'api-auth',
+        'category': 'Authentication',
+        'subcategory': 'API Key',
+        'content': 'To authenticate requests, pass the <code>X-API-Key</code> header with your requests.',
+        'carouselImage': '',
+        'code': 'curl -H "X-API-Key: custom_key" https://api.site.com/docs',
+        'note': '[Warning] Keep your API Key secure. Do not share it.',
+        'iframe': ''
+      }
+    ]);
+    utils.book_append_sheet(wb, apiWS, 'API Docs');
+
+    writeFile(wb, `EasyDocs_Config_Template.xlsx`);
   }
 
   toggleSidebarMobile() {
@@ -258,10 +555,10 @@ export class EasyDocumentsService {
 
       page.sections.forEach((section) => {
         const bodyContent = [
-          [section.heading || ''],
-          [section.subheading || ''],
+          [section.category || section.heading || ''],
+          [section.subcategory || section.subheading || ''],
           [section.content.replace(/<[^>]*>/g, '') || ''],
-          [section.notes ? `Note: ${section.notes}` : '']
+          [section.note ? `Note: ${section.note}` : '']
         ].filter(r => r[0] !== '');
 
         autoTable(doc, {
@@ -298,16 +595,18 @@ export class EasyDocumentsService {
       );
 
       page.sections.forEach(sec => {
-        if (sec.heading) {
+        const title = sec.category || sec.heading;
+        const sub = sec.subcategory || sec.subheading;
+        if (title) {
           sections.push(new Paragraph({
-            text: sec.heading,
+            text: title,
             heading: HeadingLevel.HEADING_2,
             spacing: { before: 200, after: 100 }
           }));
         }
-        if (sec.subheading) {
+        if (sub) {
           sections.push(new Paragraph({
-            text: sec.subheading,
+            text: sub,
             heading: HeadingLevel.HEADING_3,
             spacing: { before: 100, after: 100 }
           }));
@@ -321,11 +620,11 @@ export class EasyDocumentsService {
           ],
           spacing: { after: 200 }
         }));
-        if (sec.notes) {
+        if (sec.note) {
           sections.push(new Paragraph({
             children: [
               new TextRun({
-                text: `Note: ${sec.notes}`,
+                text: `Note: ${sec.note}`,
                 italics: true,
                 color: '666666'
               })
@@ -333,11 +632,11 @@ export class EasyDocumentsService {
             spacing: { after: 200 }
           }));
         }
-        if (sec.codeBlock) {
+        if (sec.code) {
           sections.push(new Paragraph({
             children: [
               new TextRun({
-                text: sec.codeBlock,
+                text: sec.code,
                 font: 'Courier New',
                 size: 20,
               })
@@ -364,6 +663,7 @@ export class EasyDocumentsService {
     a.download = `${this.config()?.title || 'Documentation'}.docx`;
     a.click();
     window.URL.revokeObjectURL(url);
+    a.remove();
   }
 
   speak(text: string, lang: 'en' | 'ta' = 'en') {

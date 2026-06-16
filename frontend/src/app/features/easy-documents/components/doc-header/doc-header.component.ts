@@ -1,5 +1,4 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { EasyDocumentsService } from '../../easy-documents.service';
 import { RouterLink } from '@angular/router';
 
@@ -34,6 +33,12 @@ import { RouterLink } from '@angular/router';
       </div>
 
       <div class="header-right">
+        <!-- Sync Status Badge -->
+        <div [class]="'sync-badge ' + docService.syncStatus()" (click)="forceSync()" title="Click to sync manually">
+          <span class="sync-dot"></span>
+          <span class="sync-text">{{ getSyncText() }}</span>
+        </div>
+
         <div class="search-container">
           <input type="text" [placeholder]="docService.t('Search...')" (input)="onSearch($event)">
           <span class="search-icon">🔍</span>
@@ -74,7 +79,7 @@ import { RouterLink } from '@angular/router';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 0.5rem;
+      padding: 0 16px;
       z-index: 1000;
       border-radius: 0;
       border-bottom: 1px solid var(--border-color);
@@ -121,7 +126,7 @@ import { RouterLink } from '@angular/router';
     }
 
     .tab-btn {
-      padding: 6px 0.5rem;
+      padding: 6px 12px;
       padding-bottom: 5px;
       border-radius: 8px;
       border: none;
@@ -143,12 +148,70 @@ import { RouterLink } from '@angular/router';
       gap: 16px;
     }
 
+    /* Sync Status Badge */
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      background: rgba(148, 163, 184, 0.06);
+      border: 1px solid var(--border-color, rgba(148, 163, 184, 0.15));
+      cursor: pointer;
+      user-select: none;
+    }
+    .sync-badge:hover {
+      background: rgba(148, 163, 184, 0.12);
+    }
+    .sync-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+    
+    .sync-badge.synced {
+      color: #10b981;
+    }
+    .sync-badge.synced .sync-dot {
+      background: #10b981;
+    }
+    
+    .sync-badge.syncing {
+      color: #3b82f6;
+    }
+    .sync-badge.syncing .sync-dot {
+      background: #3b82f6;
+      animation: pulse 1.2s infinite alternate;
+    }
+    
+    .sync-badge.offline {
+      color: #64748b;
+    }
+    .sync-badge.offline .sync-dot {
+      background: #64748b;
+    }
+    
+    .sync-badge.failed {
+      color: #ef4444;
+    }
+    .sync-badge.failed .sync-dot {
+      background: #ef4444;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.3; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1.1); }
+    }
+
     .search-container {
       position: relative;
     }
 
     .search-container input {
-      padding: 8px 0.5rem 8px 0.5rem;
+      padding: 8px 12px 8px 12px;
       border-radius: 8px;
       border: 1px solid var(--border-color);
       background: var(--bg-surface);
@@ -199,7 +262,7 @@ import { RouterLink } from '@angular/router';
     }
 
     .dropdown-menu button {
-      padding: 8px 0.5rem;
+      padding: 8px 12px;
       border-radius: 6px;
       border: none;
       background: transparent;
@@ -226,13 +289,19 @@ import { RouterLink } from '@angular/router';
 
     @media (max-width: 640px) {
       .doc-header {
-        padding: 0 0.5rem;
+        padding: 0 8px;
       }
       .btn-sm {
         padding: 4px 8px;
         font-size: 0.7rem;
       }
       .search-container {
+        display: none;
+      }
+      .sync-badge {
+        padding: 4px 8px;
+      }
+      .sync-text {
         display: none;
       }
     }
@@ -247,20 +316,17 @@ export class DocHeaderComponent {
   }
 
   triggerUpload() {
-    // We'll use a hidden input in the main component, but we can also just 
-    // emit an event or use the service to trigger a file picker if we had one.
-    // For now, let's just use a simple approach: provide a way to reset.
     if (confirm('Upload a new Excel file? Current content will be replaced.')) {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.xlsx';
-        input.onchange = (e: any) => {
-            const file = e.target.files[0];
-            if (file) {
-                this.docService.parseExcel(file);
-            }
-        };
-        input.click();
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.xlsx, .xls';
+      input.onchange = (e: any) => {
+        const file = e.target.files[0];
+        if (file) {
+          this.docService.parseExcel(file);
+        }
+      };
+      input.click();
     }
   }
 
@@ -272,5 +338,28 @@ export class DocHeaderComponent {
   exportWord() {
     this.showExportDropdown = false;
     this.docService.exportToWord();
+  }
+
+  forceSync() {
+    const uid = this.docService['authService'].user()?.uid;
+    if (!uid) {
+      alert('Please sign in to sync documentation to the cloud.');
+      return;
+    }
+    this.docService.syncToFirebase().then(() => {
+      alert('Sync completed successfully.');
+    }).catch(() => {
+      alert('Sync failed.');
+    });
+  }
+
+  getSyncText(): string {
+    const status = this.docService.syncStatus();
+    switch (status) {
+      case 'synced': return 'Synced';
+      case 'syncing': return 'Syncing...';
+      case 'failed': return 'Failed';
+      default: return 'Offline';
+    }
   }
 }
