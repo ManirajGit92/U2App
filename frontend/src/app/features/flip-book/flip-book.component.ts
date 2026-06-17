@@ -53,6 +53,37 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   lastFlipTime: number = Date.now();
   isSpeechSpeaking: boolean = false;
 
+  // Presentation & Autoplay state
+  viewEffect: string = localStorage.getItem('u2app_view_effect') || 'flipbook';
+  autoplayMode: 'duration' | 'narration' = (localStorage.getItem('u2app_autoplay_mode') as any) || 'duration';
+  autoplayDurationMode: string = localStorage.getItem('u2app_autoplay_duration_mode') || '5s';
+  customAutoplaySeconds: number = Number(localStorage.getItem('u2app_custom_autoplay_seconds')) || 7;
+
+  private _currentPageIndex: number = 0;
+  get currentPageIndex(): number {
+    return this._currentPageIndex;
+  }
+  set currentPageIndex(val: number) {
+    if (this.pages.length === 0) {
+      this._currentPageIndex = 0;
+      this.currentPaperIndex = 0;
+      return;
+    }
+    const safeVal = Math.max(0, Math.min(this.pages.length - 1, val));
+    this._currentPageIndex = safeVal;
+    
+    // Sync flip book index
+    const paperIdx = Math.floor((safeVal + 1) / 2);
+    if (this.currentPaperIndex !== paperIdx) {
+      this.currentPaperIndex = paperIdx;
+    }
+  }
+
+  // Touch Swipe state
+  private swipeStartX: number = 0;
+  private swipeStartY: number = 0;
+  private isSwiping: boolean = false;
+
   get currentPaperIndex(): number {
     return this._currentPaperIndex;
   }
@@ -73,6 +104,12 @@ export class FlipBookComponent implements OnInit, OnDestroy {
         this.turningPageId = null;
         this.cdr.detectChanges();
       }, 600);
+
+      // Sync currentPageIndex:
+      const targetPageIdx = Math.max(0, val * 2 - 1);
+      if (this._currentPageIndex !== targetPageIdx) {
+        this._currentPageIndex = targetPageIdx;
+      }
     }
   }
 
@@ -103,6 +140,9 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   sidebarCollapsed: boolean = false;
   sidebarMobileOpen: boolean = false;
 
+  // Bottom bar state
+  showBottomBar: boolean = localStorage.getItem('u2app_show_bottom_bar') !== 'false';
+
   // Book Editor Popup state
   showBookModal: boolean = false;
   editingBook: Book | null = null;
@@ -125,6 +165,7 @@ export class FlipBookComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadBooksList();
+    this.updatePlaySpeed();
   }
 
   ngOnDestroy() {
@@ -213,7 +254,8 @@ export class FlipBookComponent implements OnInit, OnDestroy {
         back: this.pages[i + 1]
       });
     }
-    this.currentPaperIndex = 0;
+    this._currentPageIndex = 0;
+    this._currentPaperIndex = 0;
     this.speakCurrentLeftAndRight();
   }
 
@@ -694,28 +736,52 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   // ============== UI / NAV CONTROLS ==============
 
   nextPage() {
-    if (this.currentPaperIndex < this.physicalPages.length) {
-      this.currentPaperIndex++;
-      this.speakCurrentLeftAndRight();
+    if (this.viewEffect === 'flipbook') {
+      if (this.currentPaperIndex < this.physicalPages.length) {
+        this.currentPaperIndex++;
+        this.speakCurrentLeftAndRight();
+      } else {
+        this.stopAutoPlay();
+      }
     } else {
-      this.stopAutoPlay();
+      if (this.currentPageIndex < this.pages.length - 1) {
+        this.currentPageIndex++;
+        this.speakCurrentLeftAndRight();
+      } else {
+        this.stopAutoPlay();
+      }
     }
   }
 
   prevPage() {
-    if (this.currentPaperIndex > 0) {
-      this.currentPaperIndex--;
-      this.speakCurrentLeftAndRight();
+    if (this.viewEffect === 'flipbook') {
+      if (this.currentPaperIndex > 0) {
+        this.currentPaperIndex--;
+        this.speakCurrentLeftAndRight();
+      }
+    } else {
+      if (this.currentPageIndex > 0) {
+        this.currentPageIndex--;
+        this.speakCurrentLeftAndRight();
+      }
     }
   }
 
   firstPage() {
-    this.currentPaperIndex = 0;
+    if (this.viewEffect === 'flipbook') {
+      this.currentPaperIndex = 0;
+    } else {
+      this.currentPageIndex = 0;
+    }
     this.speakCurrentLeftAndRight();
   }
 
   lastPage() {
-    this.currentPaperIndex = this.physicalPages.length;
+    if (this.viewEffect === 'flipbook') {
+      this.currentPaperIndex = this.physicalPages.length;
+    } else {
+      this.currentPageIndex = this.pages.length - 1;
+    }
     this.speakCurrentLeftAndRight();
   }
 
@@ -734,6 +800,11 @@ export class FlipBookComponent implements OnInit, OnDestroy {
     this.lastFlipTime = Date.now();
     this.playInterval = setInterval(() => {
       const now = Date.now();
+      
+      if (this.autoplayMode === 'narration') {
+        return; 
+      }
+      
       if (this.isSpeechSpeaking || (!this.isMuted && window.speechSynthesis.speaking)) {
         this.lastFlipTime = now;
         return;
@@ -760,20 +831,30 @@ export class FlipBookComponent implements OnInit, OnDestroy {
     
     this.stopSpeaking();
     
-    let leftVoice = '';
-    let rightVoice = '';
+    let fullVoice = '';
+    if (this.viewEffect === 'flipbook') {
+      let leftVoice = '';
+      let rightVoice = '';
 
-    if (this.currentPaperIndex > 0) {
-        const prevPaper = this.physicalPages[this.currentPaperIndex - 1];
-        if (prevPaper.back?.voiceOver) leftVoice = prevPaper.back.voiceOver;
-    }
-    
-    if (this.currentPaperIndex < this.physicalPages.length) {
-        const currPaper = this.physicalPages[this.currentPaperIndex];
-        if (currPaper.front?.voiceOver) rightVoice = currPaper.front.voiceOver;
+      if (this.currentPaperIndex > 0) {
+          const prevPaper = this.physicalPages[this.currentPaperIndex - 1];
+          if (prevPaper.back?.voiceOver) leftVoice = prevPaper.back.voiceOver;
+      }
+      
+      if (this.currentPaperIndex < this.physicalPages.length) {
+          const currPaper = this.physicalPages[this.currentPaperIndex];
+          if (currPaper.front?.voiceOver) rightVoice = currPaper.front.voiceOver;
+      }
+      fullVoice = (leftVoice + " ... " + rightVoice).trim();
+    } else {
+      if (this.currentPageIndex >= 0 && this.currentPageIndex < this.pages.length) {
+        const page = this.pages[this.currentPageIndex];
+        if (page.voiceOver) {
+          fullVoice = page.voiceOver.trim();
+        }
+      }
     }
 
-    const fullVoice = (leftVoice + " ... " + rightVoice).trim();
     if (fullVoice && fullVoice !== "...") {
       const msg = new SpeechSynthesisUtterance(fullVoice);
       this.isSpeechSpeaking = true;
@@ -787,6 +868,13 @@ export class FlipBookComponent implements OnInit, OnDestroy {
         this.isSpeechSpeaking = false;
         this.lastFlipTime = Date.now(); // Autoplay delay counts down starting from narration finish
         this.cdr.detectChanges();
+        
+        // Narration-based autoplay hook
+        if (this.isPlaying && this.autoplayMode === 'narration') {
+          setTimeout(() => {
+            this.nextPage();
+          }, 800);
+        }
       };
       
       msg.onerror = () => {
@@ -798,6 +886,14 @@ export class FlipBookComponent implements OnInit, OnDestroy {
       window.speechSynthesis.speak(msg);
     } else {
       this.isSpeechSpeaking = false;
+      
+      // Fallback if autoplay is narration-based and page has no narration
+      if (this.isPlaying && this.autoplayMode === 'narration') {
+        if (this.playInterval) clearInterval(this.playInterval);
+        this.playInterval = setTimeout(() => {
+          this.nextPage();
+        }, this.playSpeedMs);
+      }
     }
   }
 
@@ -846,5 +942,109 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   @HostListener('document:fullscreenchange')
   onFullScreenChange() {
     this.isFullscreen = !!document.fullscreenElement;
+  }
+
+  toggleBottomBar() {
+    this.showBottomBar = !this.showBottomBar;
+    localStorage.setItem('u2app_show_bottom_bar', String(this.showBottomBar));
+  }
+
+  setViewEffect(effect: string) {
+    this.viewEffect = effect;
+    localStorage.setItem('u2app_view_effect', effect);
+    this.cdr.detectChanges();
+  }
+
+  setAutoplayMode(mode: 'duration' | 'narration') {
+    this.autoplayMode = mode;
+    localStorage.setItem('u2app_autoplay_mode', mode);
+    if (this.isPlaying) {
+      this.startInterval();
+    }
+  }
+
+  setAutoplayDurationMode(mode: string) {
+    this.autoplayDurationMode = mode;
+    localStorage.setItem('u2app_autoplay_duration_mode', mode);
+    this.updatePlaySpeed();
+  }
+
+  setCustomAutoplaySeconds(sec: number) {
+    this.customAutoplaySeconds = sec;
+    localStorage.setItem('u2app_custom_autoplay_seconds', String(sec));
+    this.updatePlaySpeed();
+  }
+
+  updatePlaySpeed() {
+    if (this.autoplayDurationMode === 'custom') {
+      this.playSpeedMs = this.customAutoplaySeconds * 1000;
+    } else {
+      this.playSpeedMs = parseInt(this.autoplayDurationMode) * 1000;
+    }
+    if (this.isPlaying) {
+      this.startInterval();
+    }
+  }
+
+  onSwipeStart(event: MouseEvent | TouchEvent) {
+    if (this.viewEffect === 'flipbook') return;
+    this.isSwiping = true;
+    const clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX;
+    const clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY;
+    this.swipeStartX = clientX;
+    this.swipeStartY = clientY;
+  }
+
+  onSwipeEnd(event: MouseEvent | TouchEvent) {
+    if (!this.isSwiping) return;
+    this.isSwiping = false;
+
+    let clientX = 0;
+    let clientY = 0;
+    if (event instanceof MouseEvent) {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    } else if (event.changedTouches && event.changedTouches.length > 0) {
+      clientX = event.changedTouches[0].clientX;
+      clientY = event.changedTouches[0].clientY;
+    } else {
+      return;
+    }
+
+    const dx = clientX - this.swipeStartX;
+    const dy = clientY - this.swipeStartY;
+    const threshold = 50;
+
+    if (this.viewEffect === 'vertical-scroll') {
+      if (dy < -threshold) {
+        this.nextPage();
+      } else if (dy > threshold) {
+        this.prevPage();
+      }
+    } else {
+      if (dx < -threshold) {
+        this.nextPage();
+      } else if (dx > threshold) {
+        this.prevPage();
+      }
+    }
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent) {
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.getAttribute('contenteditable') === 'true')) {
+      return;
+    }
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      this.nextPage();
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      this.prevPage();
+    } else if (event.key === 'Home') {
+      this.firstPage();
+    } else if (event.key === 'End') {
+      this.lastPage();
+    }
   }
 }

@@ -29,6 +29,64 @@
       </div>
     </div>
 
+    <div class="sidebar-settings">
+      <div class="shelf-header">Viewer Settings</div>
+      <div class="setting-item">
+        <span class="setting-label">Show Control Bar</span>
+        <label class="switch" title="Toggle control bar visibility" aria-label="Toggle control bar visibility">
+          <input type="checkbox" [checked]="showBottomBar" (change)="toggleBottomBar()" />
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+      <div class="setting-item flex-col">
+        <span class="setting-label">View Effect</span>
+        <select class="settings-select" [ngModel]="viewEffect" (ngModelChange)="setViewEffect($event)" aria-label="View transition effect">
+          <option value="flipbook">Flip Book (default)</option>
+          <option value="carousel">Carousel</option>
+          <option value="cube">Cube Rotate</option>
+          <option value="cardstack">Card Stack</option>
+          <option value="parallax">Parallax</option>
+          <option value="vertical-scroll">Vertical Scroll</option>
+          <option value="horizontal-scroll">Horizontal Scroll</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sidebar-settings border-top">
+      <div class="shelf-header">Autoplay Settings</div>
+      
+      <div class="setting-item flex-col">
+        <span class="setting-label text-xs">Autoplay Mode</span>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="autoplayMode" value="duration" [ngModel]="autoplayMode" (ngModelChange)="setAutoplayMode($event)" />
+            <span>Duration-Based</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="autoplayMode" value="narration" [ngModel]="autoplayMode" (ngModelChange)="setAutoplayMode($event)" />
+            <span>Voice Narration-Based</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item flex-col" *ngIf="autoplayMode === 'duration'">
+        <span class="setting-label">Slide Duration</span>
+        <select class="settings-select" [ngModel]="autoplayDurationMode" (ngModelChange)="setAutoplayDurationMode($event)" aria-label="Autoplay transition duration">
+          <option value="3s">3s</option>
+          <option value="5s">5s</option>
+          <option value="10s">10s</option>
+          <option value="15s">15s</option>
+          <option value="30s">30s</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      <div class="setting-item flex-col animate-fade-in" *ngIf="autoplayMode === 'duration' && autoplayDurationMode === 'custom'">
+        <span class="setting-label">Custom Duration (seconds)</span>
+        <input type="number" class="settings-input" min="1" max="120" [ngModel]="customAutoplaySeconds" (ngModelChange)="setCustomAutoplaySeconds($event)" />
+      </div>
+    </div>
+
     <div class="book-shelf-list">
       <div class="shelf-header">Books Shelf</div>
       <div class="empty-shelf" *ngIf="books.length === 0">Your shelf is empty. Import or create a book!</div>
@@ -81,13 +139,18 @@
     </div>
 
     <!-- PERSPECTIVE VIEWPORT -->
-    <div class="viewer-canvas">
+    <div class="viewer-canvas" [ngClass]="'effect-' + viewEffect"
+         (mousedown)="onSwipeStart($event)"
+         (mouseup)="onSwipeEnd($event)"
+         (touchstart)="onSwipeStart($event)"
+         (touchend)="onSwipeEnd($event)">
       <div class="loading-overlay" *ngIf="isLoading">
         <div class="spinner"></div>
         <p>Loading book structure...</p>
       </div>
 
-      <div class="book-container">
+      <!-- DOUBLE-PAGE FLIP BOOK CONTAINER -->
+      <div class="book-container" *ngIf="viewEffect === 'flipbook'">
         <div class="book" 
              #bookContainer 
              [style.--zoom]="zoomLevel"
@@ -115,53 +178,9 @@
                 <div class="corner-curl-preview"></div>
               </div>
 
-              <div class="page-content-wrapper" *ngIf="paper.front as page">
-                <h4 class="page-header-title" *ngIf="page.title">{{ page.title }}</h4>
-                
-                <div class="layout-container" [ngClass]="page.layout">
-                  
-                  <!-- full-html -->
-                  <div class="layout-full content-html" *ngIf="page.layout === 'full-html'" [innerHTML]="page.safeHtml"></div>
-
-                  <!-- full-image -->
-                  <div class="layout-full content-image" *ngIf="page.layout === 'full-image'">
-                    <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
-                  </div>
-
-                  <!-- full-iframe -->
-                  <div class="layout-full content-iframe" *ngIf="page.layout === 'full-iframe'">
-                    <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
-                  </div>
-
-                  <!-- split-html-image -->
-                  <div class="layout-split" *ngIf="page.layout === 'split-html-image'">
-                    <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
-                    <div class="split-pane pane-image">
-                      <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
-                    </div>
-                  </div>
-
-                  <!-- split-image-iframe -->
-                  <div class="layout-split" *ngIf="page.layout === 'split-image-iframe'">
-                    <div class="split-pane pane-image">
-                      <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
-                    </div>
-                    <div class="split-pane pane-iframe">
-                      <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
-                    </div>
-                  </div>
-
-                  <!-- split-html-iframe -->
-                  <div class="layout-split" *ngIf="page.layout === 'split-html-iframe'">
-                    <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
-                    <div class="split-pane pane-iframe">
-                      <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="sno">{{ page.sno }}</div>
-              </div>
+              <ng-container *ngIf="paper.front as page">
+                <ng-container *ngTemplateOutlet="pageContentTemplate; context: {page: page}"></ng-container>
+              </ng-container>
               <div class="page-empty" *ngIf="!paper.front">BLANK PAGE</div>
             </div>
             
@@ -172,72 +191,64 @@
                 <div class="corner-curl-preview"></div>
               </div>
 
-              <div class="page-content-wrapper" *ngIf="paper.back as page">
-                <h4 class="page-header-title" *ngIf="page.title">{{ page.title }}</h4>
-                
-                <div class="layout-container" [ngClass]="page.layout">
-                  
-                  <!-- full-html -->
-                  <div class="layout-full content-html" *ngIf="page.layout === 'full-html'" [innerHTML]="page.safeHtml"></div>
-
-                  <!-- full-image -->
-                  <div class="layout-full content-image" *ngIf="page.layout === 'full-image'">
-                    <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
-                  </div>
-
-                  <!-- full-iframe -->
-                  <div class="layout-full content-iframe" *ngIf="page.layout === 'full-iframe'">
-                    <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
-                  </div>
-
-                  <!-- split-html-image -->
-                  <div class="layout-split" *ngIf="page.layout === 'split-html-image'">
-                    <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
-                    <div class="split-pane pane-image">
-                      <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
-                    </div>
-                  </div>
-
-                  <!-- split-image-iframe -->
-                  <div class="layout-split" *ngIf="page.layout === 'split-image-iframe'">
-                    <div class="split-pane pane-image">
-                      <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
-                    </div>
-                    <div class="split-pane pane-iframe">
-                      <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
-                    </div>
-                  </div>
-
-                  <!-- split-html-iframe -->
-                  <div class="layout-split" *ngIf="page.layout === 'split-html-iframe'">
-                    <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
-                    <div class="split-pane pane-iframe">
-                      <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="sno">{{ page.sno }}</div>
-              </div>
+              <ng-container *ngIf="paper.back as page">
+                <ng-container *ngTemplateOutlet="pageContentTemplate; context: {page: page}"></ng-container>
+              </ng-container>
               <div class="page-empty" *ngIf="!paper.back">BLANK PAGE</div>
             </div>
 
           </div>
         </div>
       </div>
+
+      <!-- SINGLE-PAGE PRESENTATION VIEWPORT FOR OTHER EFFECTS -->
+      <div class="presentation-container" *ngIf="viewEffect !== 'flipbook'" [style.--zoom]="zoomLevel">
+        <div class="presentation-stage" [style.--current-page-index]="currentPageIndex">
+          <div *ngFor="let page of pages; let idx = index"
+               class="presentation-page"
+               [class.active]="idx === currentPageIndex"
+               [class.prev]="idx < currentPageIndex"
+               [class.next]="idx > currentPageIndex"
+               [style.--offset]="idx - currentPageIndex">
+            <ng-container *ngTemplateOutlet="pageContentTemplate; context: {page: page}"></ng-container>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- BOTTOM FLOATING TOOL BAR (NARATION AND ZOOM CONTROLS ONLY) -->
-    <div class="viewer-bottom-bar glass-card">
+    <!-- BOTTOM FLOATING TOOL BAR -->
+    <div class="viewer-bottom-bar glass-card" [class.hidden]="!showBottomBar">
       <div class="stats-panel">
-        Pages: {{ physicalPages.length > 0 ? (currentPaperIndex * 2) : 0 }} / {{ pages.length }}
+        <ng-container *ngIf="viewEffect === 'flipbook'; else singleStats">
+          Pages: {{ physicalPages.length > 0 ? (currentPaperIndex * 2) : 0 }} / {{ pages.length }}
+        </ng-container>
+        <ng-template #singleStats>
+          Page: {{ pages.length > 0 ? (currentPageIndex + 1) : 0 }} / {{ pages.length }}
+        </ng-template>
       </div>
 
       <div class="player-controls">
-        <button class="btn btn-primary btn-play" (click)="toggleAutoPlay()">
-          {{ isPlaying ? '⏸ Pause' : '▶ Auto Play' }}
-        </button>
-        <div class="slider-group">
+        <div class="playback-row">
+          <button class="btn icon-btn nav-btn" (click)="firstPage()" [disabled]="(viewEffect === 'flipbook' ? currentPaperIndex === 0 : currentPageIndex === 0) || pages.length === 0" title="Go to first page" aria-label="First page">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+          </button>
+          <button class="btn icon-btn nav-btn" (click)="prevPage()" [disabled]="(viewEffect === 'flipbook' ? currentPaperIndex === 0 : currentPageIndex === 0) || pages.length === 0" title="Previous page" aria-label="Previous page">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+
+          <button class="btn btn-primary btn-play" (click)="toggleAutoPlay()" [disabled]="pages.length === 0" [title]="isPlaying ? 'Pause' : 'Auto Play'" aria-label="Toggle auto play">
+            {{ isPlaying ? '⏸ Pause' : '▶ Auto Play' }}
+          </button>
+
+          <button class="btn icon-btn nav-btn" (click)="nextPage()" [disabled]="(viewEffect === 'flipbook' ? currentPaperIndex >= physicalPages.length : currentPageIndex >= pages.length - 1) || pages.length === 0" title="Next page" aria-label="Next page">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+          <button class="btn icon-btn nav-btn" (click)="lastPage()" [disabled]="(viewEffect === 'flipbook' ? currentPaperIndex >= physicalPages.length : currentPageIndex >= pages.length - 1) || pages.length === 0" title="Go to last page" aria-label="Last page">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+          </button>
+        </div>
+
+        <div class="slider-group" *ngIf="autoplayMode === 'duration'">
           <label>Speed</label>
           <input type="range" class="speed-slider" min="1500" max="8000" step="500" 
                  [(ngModel)]="playSpeedMs" (change)="isPlaying ? startInterval() : null" title="Auto Play Transition Speed">
@@ -254,8 +265,58 @@
         </button>
       </div>
     </div>
-
   </div>
+
+  <!-- REUSABLE PAGE CONTENT TEMPLATE -->
+  <ng-template #pageContentTemplate let-page="page">
+    <div class="page-content-wrapper">
+      <h4 class="page-header-title" *ngIf="page.title">{{ page.title }}</h4>
+      
+      <div class="layout-container" [ngClass]="page.layout">
+        
+        <!-- full-html -->
+        <div class="layout-full content-html" *ngIf="page.layout === 'full-html'" [innerHTML]="page.safeHtml"></div>
+
+        <!-- full-image -->
+        <div class="layout-full content-image" *ngIf="page.layout === 'full-image'">
+          <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+        </div>
+
+        <!-- full-iframe -->
+        <div class="layout-full content-iframe" *ngIf="page.layout === 'full-iframe'">
+          <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+        </div>
+
+        <!-- split-html-image -->
+        <div class="layout-split" *ngIf="page.layout === 'split-html-image'">
+          <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
+          <div class="split-pane pane-image">
+            <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+          </div>
+        </div>
+
+        <!-- split-image-iframe -->
+        <div class="layout-split" *ngIf="page.layout === 'split-image-iframe'">
+          <div class="split-pane pane-image">
+            <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+          </div>
+          <div class="split-pane pane-iframe">
+            <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+          </div>
+        </div>
+
+        <!-- split-html-iframe -->
+        <div class="layout-split" *ngIf="page.layout === 'split-html-iframe'">
+          <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
+          <div class="split-pane pane-iframe">
+            <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="sno">{{ page.sno }}</div>
+    </div>
+  </ng-template>
 
   <!-- BOOK CREATOR AND EDITOR POPUP MODAL -->
   <div class="editor-overlay" *ngIf="showBookModal">
