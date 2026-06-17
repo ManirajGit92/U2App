@@ -1,142 +1,374 @@
-<div class="flipbook-wrapper" [class.fullscreen]="isFullscreen">
+<div class="flipbook-wrapper" [class.fullscreen]="isFullscreen" [class.sidebar-collapsed]="sidebarCollapsed" [class.sidebar-mobile-open]="sidebarMobileOpen" #flipbookWrapper>
   
-  <div class="control-panel top-bar">
-    <div class="tb-left">
-      <h2>Interactive Flip Book</h2>
-      <div class="upload-btn-wrapper">
-        <button class="btn btn-primary">Upload Excel</button>
-        <input type="file" (change)="onFileChange($event)" accept=".xls,.xlsx" />
+  <!-- COLLAPSIBLE SIDEBAR -->
+  <aside class="library-sidebar glass-card">
+    <div class="sidebar-header">
+      <span class="lib-icon">📚</span>
+      <h3>My Library</h3>
+      <button class="close-mobile-sidebar-btn" (click)="sidebarMobileOpen = false">✕</button>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="btn btn-primary create-book-btn" (click)="openCreateBook()">
+        ➕ Create Book
+      </button>
+
+      <div class="import-export-row">
+        <div class="upload-btn-wrapper">
+          <button class="btn btn-secondary btn-sm">📤 Import</button>
+          <input type="file" (change)="onFileChange($event)" accept=".xls,.xlsx" />
+        </div>
+        <button class="btn btn-secondary btn-sm" (click)="exportBookToExcel()" [disabled]="books.length === 0">
+          📥 Export
+        </button>
       </div>
-      <button class="btn" (click)="downloadTemplate()">Download Template</button>
-      <button class="btn btn-outline" (click)="resetBook()">Reset Demo</button>
-    </div>
-    <div class="tb-right">
-      <button class="btn icon-btn" (click)="toggleMute()" [title]="isMuted ? 'Unmute' : 'Mute'">
-        <i class="fa fa-volume-up" *ngIf="!isMuted"></i>
-        <i class="fa fa-volume-mute" *ngIf="isMuted"></i> 
-        {{ isMuted ? 'Muted' : 'Voice On' }}
-      </button>
-      <button class="btn icon-btn" (click)="replayVoice()" title="Replay Narraration">
-        <i class="fa fa-sync"></i> Replay Voice
-      </button>
-      <button class="btn icon-btn" (click)="toggleFullscreen()" title="Toggle Fullscreen">
-        <i class="fa fa-expand" *ngIf="!isFullscreen"></i>
-        <i class="fa fa-compress" *ngIf="isFullscreen"></i>
-      </button>
-    </div>
-  </div>
 
-  <div class="error-banner" *ngIf="errorMessage">
-    {{ errorMessage }}
-  </div>
-
-  <!-- BOOK VIEWER -->
-  <div class="viewer-area">
-    <div class="loading-overlay" *ngIf="isLoading">
-      <div class="spinner"></div>
-      <p>Processing Flipbook...</p>
+      <div class="extra-actions-row">
+        <button class="btn btn-ghost btn-sm" (click)="downloadTemplate()">Download Template</button>
+        <button class="btn btn-ghost btn-sm btn-danger" (click)="resetBook()">Reset Shelf</button>
+      </div>
     </div>
 
-    <!-- PURE CSS 3D BOOK -->
-    <div class="book-container">
-      <div class="book" 
-           #bookContainer 
-           [style.--zoom]="zoomLevel"
-           [class.open]="currentPaperIndex > 0 && currentPaperIndex < physicalPages.length"
-           [class.closed-front]="currentPaperIndex === 0"
-           [class.closed-back]="currentPaperIndex === physicalPages.length">
-        
-        <div class="paper" 
-             *ngFor="let paper of physicalPages; let i = index"
-             [class.flipped]="i < currentPaperIndex"
-             [style.z-index]="i < currentPaperIndex ? i : physicalPages.length - i">
+    <div class="book-shelf-list">
+      <div class="shelf-header">Books Shelf</div>
+      <div class="empty-shelf" *ngIf="books.length === 0">Your shelf is empty. Import or create a book!</div>
+      
+      <div 
+        *ngFor="let book of books" 
+        class="shelf-book-item"
+        [class.active]="book.id === selectedBookId"
+        (click)="selectBook(book.id)"
+      >
+        <span class="book-spine-decor"></span>
+        <div class="book-name-label">{{ book.name }}</div>
+        <div class="book-item-actions">
+          <button class="action-btn edit" (click)="openEditBook(book, $event)" title="Edit book and pages">✏️</button>
+          <button class="action-btn delete" (click)="deleteBook(book, $event)" title="Delete book">🗑️</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN BOOK VIEWPORT -->
+  <div class="main-viewer-area">
+    
+    <!-- HEADER BAR / SIDEBAR TOGGLE -->
+    <div class="viewer-header">
+      <button class="toggle-sidebar-btn" (click)="sidebarCollapsed = !sidebarCollapsed; sidebarMobileOpen = !sidebarMobileOpen" title="Toggle Sidebar">
+        ☰
+      </button>
+      <div class="active-book-title" *ngIf="books.length > 0">
+        📖 {{ getSelectedBookName() }}
+      </div>
+      <div style="flex: 1;"></div>
+      
+      <div class="action-status-indicators">
+        <button class="btn icon-btn" (click)="toggleMute()" [title]="isMuted ? 'Unmute narration' : 'Mute narration'">
+          {{ isMuted ? '🔈 Voice Muted' : '🔊 Voice Narration' }}
+        </button>
+        <button class="btn icon-btn" (click)="replayVoice()" title="Replay voice narration">
+          🔄 Replay Voice
+        </button>
+        <button class="btn icon-btn" (click)="toggleFullscreen()" title="Toggle Fullscreen">
+          {{ isFullscreen ? '🗗 Exit Fullscreen' : '🗖 Fullscreen' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- ERROR BANNER -->
+    <div class="error-banner" *ngIf="errorMessage">
+      ⚠️ {{ errorMessage }}
+    </div>
+
+    <!-- PERSPECTIVE VIEWPORT -->
+    <div class="viewer-canvas">
+      <div class="loading-overlay" *ngIf="isLoading">
+        <div class="spinner"></div>
+        <p>Loading book structure...</p>
+      </div>
+
+      <div class="book-container">
+        <div class="book" 
+             #bookContainer 
+             [style.--zoom]="zoomLevel"
+             [class.open]="currentPaperIndex > 0 && currentPaperIndex < physicalPages.length"
+             [class.closed-front]="currentPaperIndex === 0"
+             [class.closed-back]="currentPaperIndex === physicalPages.length">
           
-          <!-- FRONT SIDES (Right page when viewed flat) -->
-          <div class="front">
-             <div class="page-content" *ngIf="paper.front as page">
-               <div class="sno" *ngIf="page.sno">{{ page.sno }}</div>
-               
-               <ng-container *ngIf="page.isImage">
-                  <img [src]="page.rawContent" class="content-img" alt="Page {{page.sno}}" />
-               </ng-container>
+          <!-- PHYSICAL PAPER LAYERS -->
+          <div class="paper" 
+               *ngFor="let paper of physicalPages; let i = index"
+               [style.z-index]="getPaperZIndex(i)"
+               [style.transform]="getPaperTransform(i)"
+               [class.flipped]="i < currentPaperIndex"
+               [class.dragging]="isDragging && draggedPageId === i"
+               (mousedown)="onMouseDown($event, i)"
+               (touchstart)="onTouchStart($event, i)">
+            
+            <!-- Turn shadow simulation overlay -->
+            <div class="drag-shadow-overlay" [style.opacity]="getPageShadowOpacity(i)"></div>
 
-               <ng-container *ngIf="page.isHtml && page.safeHtml">
-                  <div class="content-html" [innerHTML]="page.safeHtml"></div>
-               </ng-container>
+            <!-- FRONT PAGE (Right side when flat) -->
+            <div class="front">
+              <!-- Click corner area for turning -->
+              <div class="corner-turn-hitbox right" (click)="nextPage()" title="Click to flip page">
+                <div class="corner-curl-preview"></div>
+              </div>
 
-               <ng-container *ngIf="page.isText">
-                  <div class="content-text">{{ page.rawContent }}</div>
-               </ng-container>
+              <div class="page-content-wrapper" *ngIf="paper.front as page">
+                <h4 class="page-header-title" *ngIf="page.title">{{ page.title }}</h4>
+                
+                <div class="layout-container" [ngClass]="page.layout">
+                  
+                  <!-- full-html -->
+                  <div class="layout-full content-html" *ngIf="page.layout === 'full-html'" [innerHTML]="page.safeHtml"></div>
 
-             </div>
-             <!-- Empty page fallback -->
-             <div class="page-empty" *ngIf="!paper.front">BLANK PAGE</div>
-          </div>
-          
-          <!-- BACK SIDES (Left page when viewed flat) -->
-          <div class="back">
-             <div class="page-content" *ngIf="paper.back as page">
-               <div class="sno" *ngIf="page.sno">{{ page.sno }}</div>
-               
-               <ng-container *ngIf="page.isImage">
-                  <img [src]="page.rawContent" class="content-img" alt="Page {{page.sno}}" />
-               </ng-container>
+                  <!-- full-image -->
+                  <div class="layout-full content-image" *ngIf="page.layout === 'full-image'">
+                    <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+                  </div>
 
-               <ng-container *ngIf="page.isHtml && page.safeHtml">
-                  <div class="content-html" [innerHTML]="page.safeHtml"></div>
-               </ng-container>
+                  <!-- full-iframe -->
+                  <div class="layout-full content-iframe" *ngIf="page.layout === 'full-iframe'">
+                    <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+                  </div>
 
-               <ng-container *ngIf="page.isText">
-                  <div class="content-text">{{ page.rawContent }}</div>
-               </ng-container>
+                  <!-- split-html-image -->
+                  <div class="layout-split" *ngIf="page.layout === 'split-html-image'">
+                    <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
+                    <div class="split-pane pane-image">
+                      <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+                    </div>
+                  </div>
 
-             </div>
-             <div class="page-empty" *ngIf="!paper.back">BLANK PAGE</div>
+                  <!-- split-image-iframe -->
+                  <div class="layout-split" *ngIf="page.layout === 'split-image-iframe'">
+                    <div class="split-pane pane-image">
+                      <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+                    </div>
+                    <div class="split-pane pane-iframe">
+                      <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+                    </div>
+                  </div>
+
+                  <!-- split-html-iframe -->
+                  <div class="layout-split" *ngIf="page.layout === 'split-html-iframe'">
+                    <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
+                    <div class="split-pane pane-iframe">
+                      <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sno">{{ page.sno }}</div>
+              </div>
+              <div class="page-empty" *ngIf="!paper.front">BLANK PAGE</div>
+            </div>
+            
+            <!-- BACK PAGE (Left side when flat) -->
+            <div class="back">
+              <!-- Click corner area for turning -->
+              <div class="corner-turn-hitbox left" (click)="prevPage()" title="Click to flip page">
+                <div class="corner-curl-preview"></div>
+              </div>
+
+              <div class="page-content-wrapper" *ngIf="paper.back as page">
+                <h4 class="page-header-title" *ngIf="page.title">{{ page.title }}</h4>
+                
+                <div class="layout-container" [ngClass]="page.layout">
+                  
+                  <!-- full-html -->
+                  <div class="layout-full content-html" *ngIf="page.layout === 'full-html'" [innerHTML]="page.safeHtml"></div>
+
+                  <!-- full-image -->
+                  <div class="layout-full content-image" *ngIf="page.layout === 'full-image'">
+                    <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+                  </div>
+
+                  <!-- full-iframe -->
+                  <div class="layout-full content-iframe" *ngIf="page.layout === 'full-iframe'">
+                    <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+                  </div>
+
+                  <!-- split-html-image -->
+                  <div class="layout-split" *ngIf="page.layout === 'split-html-image'">
+                    <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
+                    <div class="split-pane pane-image">
+                      <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+                    </div>
+                  </div>
+
+                  <!-- split-image-iframe -->
+                  <div class="layout-split" *ngIf="page.layout === 'split-image-iframe'">
+                    <div class="split-pane pane-image">
+                      <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+                    </div>
+                    <div class="split-pane pane-iframe">
+                      <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+                    </div>
+                  </div>
+
+                  <!-- split-html-iframe -->
+                  <div class="layout-split" *ngIf="page.layout === 'split-html-iframe'">
+                    <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
+                    <div class="split-pane pane-iframe">
+                      <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sno">{{ page.sno }}</div>
+              </div>
+              <div class="page-empty" *ngIf="!paper.back">BLANK PAGE</div>
+            </div>
+
           </div>
         </div>
-        
+      </div>
+    </div>
+
+    <!-- BOTTOM FLOATING TOOL BAR (NARATION AND ZOOM CONTROLS ONLY) -->
+    <div class="viewer-bottom-bar glass-card">
+      <div class="stats-panel">
+        Pages: {{ physicalPages.length > 0 ? (currentPaperIndex * 2) : 0 }} / {{ pages.length }}
+      </div>
+
+      <div class="player-controls">
+        <button class="btn btn-primary btn-play" (click)="toggleAutoPlay()">
+          {{ isPlaying ? '⏸ Pause' : '▶ Auto Play' }}
+        </button>
+        <div class="slider-group">
+          <label>Speed</label>
+          <input type="range" class="speed-slider" min="1500" max="8000" step="500" 
+                 [(ngModel)]="playSpeedMs" (change)="isPlaying ? startInterval() : null" title="Auto Play Transition Speed">
+        </div>
+      </div>
+
+      <div class="zoom-controls">
+        <button class="btn icon-btn" (click)="zoomOut()" [disabled]="zoomLevel <= 0.4">
+          🔍 &minus;
+        </button>
+        <span class="zoom-label">{{ zoomLevel | percent }}</span>
+        <button class="btn icon-btn" (click)="zoomIn()" [disabled]="zoomLevel >= 2.5">
+          🔍 &plus;
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOOK CREATOR AND EDITOR POPUP MODAL -->
+  <div class="editor-overlay" *ngIf="showBookModal">
+    <div class="editor-modal card-glass">
+      <div class="editor-header">
+        <div>
+          <h3>📚 Book & Pages Editor</h3>
+          <p class="modal-sub">Modify book name, configure page layouts, split panes, images, and narrations.</p>
+        </div>
+        <button class="close-btn" (click)="showBookModal = false">✕</button>
+      </div>
+
+      <div class="editor-body" *ngIf="editingBook">
+        <!-- BOOK DETAILS SECTION -->
+        <div class="editor-section-card">
+          <div class="field-wrap">
+            <label>Book Title *</label>
+            <input type="text" [(ngModel)]="editingBook.name" placeholder="Enter book title (e.g. User Guide)" />
+          </div>
+        </div>
+
+        <div class="editor-split-panel">
+          
+          <!-- LEFT SIDE: PAGES LIST -->
+          <div class="pages-list-sidebar">
+            <div class="pages-list-header">
+              <span>Book Pages</span>
+              <button class="btn btn-secondary btn-sm" (click)="addPageToEditingBook()">➕ Add</button>
+            </div>
+            <div class="pages-list-body">
+              <div 
+                *ngFor="let p of editingBook.pages; let idx = index" 
+                class="page-list-item"
+                [class.active]="selectedEditingPageId === idx"
+                (click)="selectEditingPage(idx)"
+              >
+                <span class="page-num-tag">Page {{ p.sno }}</span>
+                <span class="page-title-tag">{{ p.title || 'Untitled Page' }}</span>
+                <button class="delete-page-btn" (click)="deletePageFromEditingBook(idx); $event.stopPropagation()" title="Delete page">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT SIDE: ACTIVE PAGE DETAILS -->
+          <div class="page-fields-editor">
+            <div class="page-fields-header">
+              <span>Editing details for Page {{ editingPage.sno }}</span>
+            </div>
+
+            <div class="page-fields-body">
+              <div class="form-row-grid">
+                <div class="field-wrap">
+                  <label>Page Title</label>
+                  <input type="text" [(ngModel)]="editingPage.title" placeholder="e.g. Introduction" />
+                </div>
+                <div class="field-wrap">
+                  <label>Page Layout Mode</label>
+                  <select [(ngModel)]="editingPage.layout">
+                    <option value="full-html">Full-Page HTML</option>
+                    <option value="full-image">Full-Page Image</option>
+                    <option value="full-iframe">Full-Page Sandboxed Iframe</option>
+                    <option value="split-html-image">Split: 50% HTML + 50% Image</option>
+                    <option value="split-image-iframe">Split: 50% Image + 50% Iframe</option>
+                    <option value="split-html-iframe">Split: 50% HTML + 50% Iframe</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- HTML Content area (shown in HTML or Split layouts) -->
+              <div class="field-wrap" *ngIf="editingPage.layout.includes('html')">
+                <label>HTML Content Editor (Supports rich HTML markup)</label>
+                <textarea class="html-editor-textarea" [(ngModel)]="editingPage.htmlContent" rows="10" placeholder="<h1>Heading</h1><p>Writing body content here...</p>"></textarea>
+              </div>
+
+              <!-- Image source area (shown in Image or Split layouts) -->
+              <div class="field-wrap" *ngIf="editingPage.layout.includes('image')">
+                <label>Image Source</label>
+                <div class="image-input-group">
+                  <input type="text" [(ngModel)]="editingPage.imageUrl" placeholder="Enter remote image URL (https://...)" />
+                  <span class="or-separator">or</span>
+                  <div class="image-upload-btn-wrap">
+                    <button class="btn btn-secondary btn-sm">📁 Upload Image</button>
+                    <input type="file" (change)="onImageUploaded($event)" accept="image/*" />
+                  </div>
+                </div>
+                <div class="image-preview-thumbnail" *ngIf="editingPage.imageUrl">
+                  <img [src]="editingPage.imageUrl" alt="Preview Thumbnail" />
+                </div>
+              </div>
+
+              <!-- Iframe URL area (shown in Iframe or Split layouts) -->
+              <div class="field-wrap" *ngIf="editingPage.layout.includes('iframe')">
+                <label>Iframe Sandbox Embed URL</label>
+                <input type="text" [(ngModel)]="editingPage.iframeUrl" placeholder="Enter embed URL (e.g. https://www.youtube.com/embed/...)" />
+              </div>
+
+              <!-- Voiceover narration (available for all pages) -->
+              <div class="field-wrap">
+                <label>Narrator Narration Script (Reads aloud when page turns)</label>
+                <textarea [(ngModel)]="editingPage.voiceOver" rows="3" placeholder="Writing text narration for Speech Synthesis reader..."></textarea>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="editor-footer">
+        <button class="btn btn-secondary" (click)="showBookModal = false">Cancel</button>
+        <button class="btn btn-primary" (click)="saveBookSettings()">💾 Save Book changes</button>
       </div>
     </div>
   </div>
 
-  <!-- BOTTOM CONTROLS -->
-  <div class="control-panel bottom-bar">
-    <div class="page-stats">
-      Pages: {{ physicalPages.length > 0 ? (currentPaperIndex * 2) : 0 }} / {{ pages.length }}
-    </div>
-
-    <div class="navigation-controls">
-      <button class="btn icon-btn" (click)="firstPage()" [disabled]="currentPaperIndex === 0">
-        &laquo; First
-      </button>
-      <button class="btn icon-btn" (click)="prevPage()" [disabled]="currentPaperIndex === 0">
-        &lsaquo; Prev
-      </button>
-
-      <button class="btn btn-primary btn-play" (click)="toggleAutoPlay()">
-        {{ isPlaying ? 'Pause' : 'Auto Play' }}
-      </button>
-
-      <button class="btn icon-btn" (click)="nextPage()" [disabled]="currentPaperIndex === physicalPages.length">
-        Next &rsaquo;
-      </button>
-      <button class="btn icon-btn" (click)="lastPage()" [disabled]="currentPaperIndex === physicalPages.length">
-        Last &raquo;
-      </button>
-    </div>
-
-    <div class="zoom-controls">
-      <label>Speed:</label>
-      <input type="range" class="speed-slider" min="1000" max="10000" step="500" 
-             [(ngModel)]="playSpeedMs" (change)="isPlaying ? startInterval() : null" title="Auto Play Speed (ms)">
-      
-      <button class="btn icon-btn" (click)="zoomOut()" [disabled]="zoomLevel <= 0.4">
-        &minus;
-      </button>
-      <span class="zoom-level">{{ zoomLevel | percent }}</span>
-      <button class="btn icon-btn" (click)="zoomIn()" [disabled]="zoomLevel >= 2.5">
-        &plus;
-      </button>
-    </div>
-  </div>
 </div>
