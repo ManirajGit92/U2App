@@ -87,7 +87,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
 
       <!-- Content Management Modal -->
       <div class="editor-overlay" *ngIf="showEditorModal">
-        <div class="editor-modal glass-card">
+        <div class="editor-modal">
           <div class="editor-header">
             <div>
               <h3>✏️ Easy Content Editor</h3>
@@ -167,7 +167,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
 
                     <div class="field-wrap">
                       <label>Main Body Content (HTML supported)</label>
-                      <textarea [(ngModel)]="formSection.content" (ngModelChange)="markDirty()" rows="4" placeholder="Supports rich text: <b>, <i>, <ul>, etc."></textarea>
+                      <textarea [(ngModel)]="formSection.content" (ngModelChange)="markDirty()" rows="8" placeholder="Supports rich text: <b>, <i>, <ul>, etc."></textarea>
                     </div>
 
                     <div class="form-row-grid">
@@ -187,13 +187,13 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
 
                     <div class="field-wrap">
                       <label>Code Snippet</label>
-                      <textarea class="code-area" [(ngModel)]="formSection.code" (ngModelChange)="markDirty()" rows="4" placeholder="Write code snippet here..."></textarea>
+                      <textarea class="code-area" [(ngModel)]="formSection.code" (ngModelChange)="markDirty()" rows="8" placeholder="Write code snippet here..."></textarea>
                     </div>
                   </div>
 
                   <!-- Form Live Preview tab -->
                   <div class="form-body preview-body" *ngIf="formTab === 'preview'">
-                    <div class="preview-card glass-card">
+                    <div class="preview-card">
                       <div class="preview-header">
                         <h4 class="pre-cat">{{ formSection.category || 'No Category' }}</h4>
                         <h5 class="pre-sub">{{ formSection.subcategory || 'No Subcategory' }}</h5>
@@ -232,12 +232,18 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       background: var(--bg-surface);
       color: var(--text-primary);
       transition: all 0.3s ease;
+      --bg-surface: #f8fafc;
+      --bg-card: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e2e8f0;
     }
 
     .docs-container.dark-mode {
       background: #0f172a;
       color: #f1f5f9;
       --bg-surface: #0f172a;
+      --bg-card: #1e293b;
       --text-primary: #f1f5f9;
       --text-secondary: #94a3b8;
       --border-color: #1e293b;
@@ -394,15 +400,16 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       padding: 1.5rem;
     }
     .editor-modal {
-      width: 1000px;
-      max-width: 95vw;
-      height: 85vh;
+      width: 1400px;
+      max-width: 98vw;
+      height: 92vh;
       display: flex;
       flex-direction: column;
       border-radius: 28px;
       overflow: hidden;
-      background: var(--bg-surface);
+      background: var(--bg-card);
       border: 1px solid var(--border-color);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
     }
     .editor-header {
       padding: 20px 24px;
@@ -468,13 +475,13 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       color: var(--text-secondary);
     }
     .field-wrap select, .field-wrap input, .field-wrap textarea {
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-radius: 10px;
       border: 1px solid var(--border-color);
-      background: var(--bg-surface);
+      background: var(--bg-card);
       color: var(--text-primary);
       outline: none;
-      font-size: 0.9rem;
+      font-size: 1rem;
     }
     .field-wrap select:focus, .field-wrap input:focus, .field-wrap textarea:focus {
       border-color: var(--accent-primary, #6366f1);
@@ -489,7 +496,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       display: flex;
       gap: 20px;
       flex: 1;
-      min-height: 400px;
+      min-height: 0;
     }
     .sections-list-panel {
       width: 320px;
@@ -497,7 +504,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       border-radius: 16px;
       display: flex;
       flex-direction: column;
-      background: rgba(148, 163, 184, 0.02);
+      background: var(--bg-surface);
     }
     .section-list-header {
       padding: 16px;
@@ -516,7 +523,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       display: flex;
       flex-direction: column;
       gap: 6px;
-      max-height: 380px;
+      min-height: 0;
     }
     .section-list-item {
       padding: 10px 14px;
@@ -553,7 +560,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       border-radius: 16px;
       display: flex;
       flex-direction: column;
-      background: rgba(148, 163, 184, 0.02);
+      background: var(--bg-surface);
       padding: 16px;
     }
     .form-empty-state {
@@ -595,7 +602,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       flex-direction: column;
       gap: 12px;
       padding-right: 4px;
-      max-height: 280px;
+      min-height: 0;
     }
     .form-row-grid {
       display: grid;
@@ -604,7 +611,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
     }
     textarea.code-area {
       font-family: monospace;
-      font-size: 0.85rem;
+      font-size: 0.95rem;
       background: #1e293b !important;
       color: #e2e8f0 !important;
     }

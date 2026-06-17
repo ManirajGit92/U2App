@@ -144,12 +144,25 @@ import mermaid from 'mermaid';
   `,
   styles: [`
     .content-wrapper {
-      max-width: 900px;
+      max-width: 100%;
       margin: 0 auto;
-      padding: 32px 24px;
+      padding: 32px 48px;
       display: flex;
       flex-direction: column;
       gap: 64px;
+    }
+
+    @media (max-width: 1024px) {
+      .content-wrapper {
+        padding: 24px 32px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .content-wrapper {
+        padding: 16px 20px;
+        gap: 40px;
+      }
     }
 
     .doc-section {
@@ -231,6 +244,8 @@ import mermaid from 'mermaid';
       gap: 12px;
       align-items: center;
       user-select: none;
+      width: 100%;
+      box-sizing: border-box;
     }
     .carousel-track {
       width: 100%;
@@ -241,9 +256,10 @@ import mermaid from 'mermaid';
       background: #000;
     }
     .carousel-img {
-      max-height: 400px;
+      max-height: 650px;
       width: auto;
       max-width: 100%;
+      object-fit: contain;
       cursor: zoom-in;
       transition: transform 0.2s;
     }
@@ -288,6 +304,17 @@ import mermaid from 'mermaid';
       background: var(--accent-primary, #6366f1);
       width: 18px;
       border-radius: 10px;
+    }
+
+    @media (max-width: 1024px) {
+      .carousel-img {
+        max-height: 500px;
+      }
+    }
+    @media (max-width: 640px) {
+      .carousel-img {
+        max-height: 350px;
+      }
     }
 
     /* Note Card Variants */
@@ -366,13 +393,13 @@ import mermaid from 'mermaid';
     .code-editor-container {
       display: flex;
       font-family: 'Fira Code', monospace;
-      font-size: 0.88rem;
+      font-size: 0.95rem;
       overflow-y: auto;
-      max-height: 380px;
+      max-height: 600px;
       transition: max-height 0.25s ease-out;
     }
     .code-editor-container.collapsed {
-      max-height: 200px;
+      max-height: 320px;
     }
     .line-numbers {
       background: #1e293b;
@@ -415,6 +442,7 @@ import mermaid from 'mermaid';
       background: #000;
       aspect-ratio: 16/9;
       position: relative;
+      min-height: 250px;
     }
     .iframe-wrapper iframe {
       width: 100%;
