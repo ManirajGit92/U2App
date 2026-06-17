@@ -150,7 +150,7 @@ export class EmployeesComponent implements OnInit {
   teams: string[] = [];
   search = '';
   filterTeam = '';
-  sortField: 'id' | 'name' | 'position' | 'team' = 'name';
+  sortField: 'id' | 'name' | 'position' | 'team' = 'id';
   sortOrder: 'asc' | 'desc' = 'asc';
   showModal = false;
   editMode = false;

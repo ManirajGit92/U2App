@@ -105,7 +105,7 @@ import { Reminder, StandupNoteService } from '../standup-note.service';
     .rc-body { flex: 1; }
     .rc-title { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem; }
     .rc-title.done-text { text-decoration: line-through; color: var(--text-secondary); }
-    .rc-desc { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+    .rc-desc { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.5rem; white-space: pre-wrap; }
     .rc-meta { display: flex; gap: 1rem; font-size: 0.76rem; color: var(--text-secondary); }
     .rc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
     .rc-actions { display: flex; gap: 0.2rem; }
