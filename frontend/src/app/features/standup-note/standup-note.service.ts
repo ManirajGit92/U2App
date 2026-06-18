@@ -34,6 +34,7 @@ export interface Project {
   endDate: string;
   notes: string;
   lead: string;
+  taskIds?: string[];
 }
 
 export interface Reminder {
@@ -82,6 +83,30 @@ export interface CalendarEvent {
   categoryId: string;
 }
 
+export type TaskPriority =
+  | 'important-urgent'
+  | 'urgent-not-important'
+  | 'important-not-urgent'
+  | 'not-important-not-urgent';
+
+export type TaskColumn = 'not-taken' | 'in-progress' | 'completed';
+
+export type TaskProgress = 'Not Started' | 'In Progress' | 'Review' | 'Done';
+
+export interface Task {
+  id: string;
+  title: string;
+  tag: string;
+  description: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
+  progress: TaskProgress;
+  priority: TaskPriority;
+  column: TaskColumn;
+  employeeName: string;
+  projectName: string;
+}
+
 export interface StandupState {
   employees: Employee[];
   standupNotes: StandupNote[];
@@ -91,6 +116,7 @@ export interface StandupState {
   feedbacks: FeedbackEntry[];
   calendarCategories?: CalendarCategory[];
   calendarEvents?: CalendarEvent[];
+  tasks?: Task[];
 }
 
 const SEED_STATE: StandupState = {
@@ -215,6 +241,47 @@ const SEED_STATE: StandupState = {
       categoryId: 'CAT-001',
     },
   ],
+  tasks: [
+    {
+      id: 'TSK-001',
+      title: 'Design new login page',
+      tag: 'DESIGN',
+      description: 'Create wireframes and hi-fi mockups for the new login flow',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+      progress: 'In Progress',
+      priority: 'important-urgent',
+      column: 'in-progress',
+      employeeName: 'Alice Johnson',
+      projectName: 'Customer Portal v2',
+    },
+    {
+      id: 'TSK-002',
+      title: 'Fix pagination bug',
+      tag: 'BUG',
+      description: 'Pagination breaks on mobile viewport for the product list',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
+      progress: 'Not Started',
+      priority: 'urgent-not-important',
+      column: 'not-taken',
+      employeeName: 'Bob Smith',
+      projectName: 'Customer Portal v2',
+    },
+    {
+      id: 'TSK-003',
+      title: 'Write unit tests for auth module',
+      tag: 'TEST',
+      description: 'Cover all auth service methods with Jest unit tests',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
+      progress: 'Not Started',
+      priority: 'important-not-urgent',
+      column: 'not-taken',
+      employeeName: 'Carol White',
+      projectName: 'Internal HR Tool',
+    },
+  ],
 };
 
 @Injectable({ providedIn: 'root' })
@@ -246,6 +313,7 @@ export class StandupNoteService {
           feedbacks: parsed.feedbacks || SEED_STATE.feedbacks,
           calendarCategories: parsed.calendarCategories || SEED_STATE.calendarCategories,
           calendarEvents: parsed.calendarEvents || SEED_STATE.calendarEvents,
+          tasks: parsed.tasks || SEED_STATE.tasks,
         };
       }
     } catch (e) {
@@ -343,6 +411,11 @@ export class StandupNoteService {
         'calendarEvents',
         (data.calendarEvents || []) as unknown as Record<string, unknown>[],
       ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'tasks',
+        (data.tasks || []) as unknown as Record<string, unknown>[],
+      ),
     ]);
   }
 
@@ -372,6 +445,7 @@ export class StandupNoteService {
         APP_NAME,
         'calendarEvents',
       );
+      const tasks = await this.syncService.pullFromFirestore<Task>(APP_NAME, 'tasks');
 
       if (
         employees.length > 0 ||
@@ -381,7 +455,8 @@ export class StandupNoteService {
         checklistGroups.length > 0 ||
         feedbacks.length > 0 ||
         calendarCategories.length > 0 ||
-        calendarEvents.length > 0
+        calendarEvents.length > 0 ||
+        tasks.length > 0
       ) {
         const newState = {
           employees: employees.length > 0 ? employees : this.state.employees,
@@ -394,6 +469,7 @@ export class StandupNoteService {
           calendarCategories:
             calendarCategories.length > 0 ? calendarCategories : this.state.calendarCategories,
           calendarEvents: calendarEvents.length > 0 ? calendarEvents : this.state.calendarEvents,
+          tasks: tasks.length > 0 ? tasks : this.state.tasks,
         };
         this.stateSubject.next(newState);
         try {
@@ -479,6 +555,7 @@ export class StandupNoteService {
     // Calendar export
     const ws7 = XLSX.utils.json_to_sheet(this.state.calendarCategories || []);
     const ws8 = XLSX.utils.json_to_sheet(this.state.calendarEvents || []);
+    const ws9 = XLSX.utils.json_to_sheet(this.state.tasks || []);
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws1, 'Employees');
@@ -489,6 +566,7 @@ export class StandupNoteService {
     XLSX.utils.book_append_sheet(wb, ws6, 'Feedbacks');
     XLSX.utils.book_append_sheet(wb, ws7, 'CalendarCategories');
     XLSX.utils.book_append_sheet(wb, ws8, 'CalendarEvents');
+    XLSX.utils.book_append_sheet(wb, ws9, 'Tasks');
     XLSX.writeFile(wb, 'StandupNote_DB.xlsx');
   }
 
@@ -511,6 +589,7 @@ export class StandupNoteService {
       const calendarEvents: CalendarEvent[] = XLSX.utils.sheet_to_json(
         wb.Sheets['CalendarEvents'] || {},
       );
+      const tasks: Task[] = XLSX.utils.sheet_to_json(wb.Sheets['Tasks'] || {});
 
       const checklistGroups: ChecklistGroup[] = (checklistGroupsRaw || []).map((g: any) => {
         let items: ChecklistItem[] = [];
@@ -537,6 +616,7 @@ export class StandupNoteService {
         feedbacks: feedbacks || [],
         calendarCategories: calendarCategories || [],
         calendarEvents: calendarEvents || [],
+        tasks: tasks || [],
       });
     };
     reader.readAsArrayBuffer(file);
@@ -572,6 +652,17 @@ export class StandupNoteService {
     this.update({
       calendarEvents: (this.state.calendarEvents || []).filter((e) => e.id !== id),
     });
+  }
+
+  // ── Tasks ─────────────────────────────────────────────────────────────────
+  addTask(task: Task) {
+    this.update({ tasks: [...(this.state.tasks || []), task] });
+  }
+  updateTask(task: Task) {
+    this.update({ tasks: (this.state.tasks || []).map((t) => (t.id === task.id ? task : t)) });
+  }
+  deleteTask(id: string) {
+    this.update({ tasks: (this.state.tasks || []).filter((t) => t.id !== id) });
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

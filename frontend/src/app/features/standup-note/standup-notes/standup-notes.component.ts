@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Employee, StandupNote, StandupNoteService } from '../standup-note.service';
+import { Employee, StandupNote, StandupNoteService, Task } from '../standup-note.service';
 
 @Component({
   selector: 'app-standup-notes',
@@ -92,7 +92,15 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
             </div>
             <div class="form-row">
               <label>Today's Plan</label>
-              <textarea [(ngModel)]="form.todayPlan" class="input-field" rows="2" placeholder="What will you work on today?"></textarea>
+              <div class="task-select-row">
+                <select class="input-field task-dropdown" [(ngModel)]="selectedTaskId" (ngModelChange)="onTaskSelect($event)">
+                  <option value="">📋 Link a task (optional)...</option>
+                  <option *ngFor="let t of availableTasks" [value]="t.id">
+                    [{{ t.tag || 'TASK' }}] {{ t.title }}
+                  </option>
+                </select>
+              </div>
+              <textarea [(ngModel)]="form.todayPlan" class="input-field" rows="3" placeholder="What will you work on today?"></textarea>
             </div>
             <div class="form-row">
               <label>Blockers</label>
@@ -164,6 +172,8 @@ import { Employee, StandupNote, StandupNoteService } from '../standup-note.servi
     .form-row label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
     .form-row .input-field { width: 100%; box-sizing: border-box; }
     textarea.input-field { resize: vertical; font-family: inherit; }
+    .task-select-row { margin-bottom: 0.4rem; }
+    .task-dropdown { width: 100%; box-sizing: border-box; color: var(--accent-primary); font-weight: 500; }
 
     @media (max-width: 768px) {
       .notes-grid { grid-template-columns: 1fr; }
@@ -196,6 +206,8 @@ export class StandupNotesComponent implements OnInit {
   employees: Employee[] = [];
   allNotes: StandupNote[] = [];
   filtered: StandupNote[] = [];
+  availableTasks: Task[] = [];
+  selectedTaskId = '';
   search = '';
   filterDate = '';
   filterEmp = '';
@@ -209,6 +221,7 @@ export class StandupNotesComponent implements OnInit {
     this.svc.state$.subscribe(s => {
       this.employees = s.employees;
       this.allNotes = s.standupNotes;
+      this.availableTasks = s.tasks || [];
       this.applyFilters();
     });
   }
@@ -233,9 +246,21 @@ export class StandupNotesComponent implements OnInit {
     return { id: '', employeeId: '', date: new Date().toISOString().split('T')[0], previousWork: '', todayPlan: '', blockers: 'None', notes: '' };
   }
 
-  openAdd() { this.form = this.blankForm(); this.editMode = false; this.showModal = true; }
-  openEdit(n: StandupNote) { this.form = { ...n }; this.editMode = true; this.showModal = true; }
-  closeModal() { this.showModal = false; }
+  openAdd() { this.form = this.blankForm(); this.selectedTaskId = ''; this.editMode = false; this.showModal = true; }
+  openEdit(n: StandupNote) { this.form = { ...n }; this.selectedTaskId = ''; this.editMode = true; this.showModal = true; }
+  closeModal() { this.showModal = false; this.selectedTaskId = ''; }
+
+  onTaskSelect(taskId: string) {
+    if (!taskId) return;
+    const task = this.availableTasks.find(t => t.id === taskId);
+    if (!task) return;
+    const parts: string[] = [];
+    if (task.tag) parts.push(`[${task.tag}]`);
+    parts.push(task.title);
+    if (task.description) parts.push(`\u2014 ${task.description}`);
+    if (task.projectName) parts.push(`(${task.projectName})`);
+    this.form.todayPlan = parts.join(' ');
+  }
 
   saveNote() {
     if (!this.form.employeeId) return;

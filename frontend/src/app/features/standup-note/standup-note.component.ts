@@ -10,6 +10,7 @@ import { RemindersComponent } from './reminders/reminders.component';
 import { ChecklistManagerComponent } from './checklist-manager/checklist-manager.component';
 import { FeedbackManagerComponent } from './feedback-manager/feedback-manager.component';
 import { OfficeCalendarComponent } from './office-calendar/office-calendar.component';
+import { TasksComponent } from './tasks/tasks.component';
 import { ThemeService } from '../../core/services/theme.service';
 
 type Tab =
@@ -20,7 +21,8 @@ type Tab =
   | 'reminders'
   | 'checklists'
   | 'feedback'
-  | 'calendar';
+  | 'calendar'
+  | 'tasks';
 
 @Component({
   selector: 'app-standup-note',
@@ -36,6 +38,7 @@ type Tab =
     ChecklistManagerComponent,
     FeedbackManagerComponent,
     OfficeCalendarComponent,
+    TasksComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
@@ -106,6 +109,7 @@ type Tab =
           <app-checklist-manager *ngIf="activeTab === 'checklists'"></app-checklist-manager>
           <app-feedback-manager *ngIf="activeTab === 'feedback'"></app-feedback-manager>
           <app-office-calendar *ngIf="activeTab === 'calendar'"></app-office-calendar>
+          <app-tasks *ngIf="activeTab === 'tasks'"></app-tasks>
         </main>
       </div>
     </div>
@@ -383,6 +387,7 @@ export class StandupNoteComponent {
     { id: 'notes', label: 'Standup Notes', icon: '📝' },
     { id: 'employees', label: 'Employees', icon: '👥' },
     { id: 'projects', label: 'Projects', icon: '🚀' },
+    { id: 'tasks', label: 'Tasks', icon: '📋' },
     { id: 'reminders', label: 'Reminders', icon: '🔔' },
     { id: 'checklists', label: 'Checklists', icon: '✅' },
     { id: 'feedback', label: 'Feedback', icon: '💬' },
