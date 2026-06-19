@@ -35,6 +35,17 @@ import { BillingStateService } from '../../services/billing-state.service';
           <button class="btn btn-primary" (click)="exportData()">Export Current Data</button>
         </div>
 
+        <!-- Demo Data Setup -->
+        <div class="action-card demo-box">
+          <div class="icon">✨</div>
+          <h3>Demo Data Setup</h3>
+          <p>Instantly populate the system with realistic mock data to explore features.</p>
+          <div style="display: flex; gap: 8px; width: 100%">
+            <button class="btn btn-primary" style="flex: 1" (click)="loadDemoData()">Load / Reset</button>
+            <button class="btn btn-secondary" style="flex: 1" (click)="removeDemoData()">Remove</button>
+          </div>
+        </div>
+
         <!-- Clear Memory -->
         <div class="action-card danger">
           <div class="icon text-danger">⚠️</div>
@@ -69,6 +80,10 @@ import { BillingStateService } from '../../services/billing-state.service';
     }
     .action-card.danger {
       border-color: rgba(239, 68, 68, 0.4);
+    }
+    .action-card.demo-box {
+      border-color: #8b5cf6;
+      background: rgba(139, 92, 246, 0.05);
     }
     .icon {
       font-size: 3rem;
@@ -144,6 +159,16 @@ export class DataManagerComponent {
     const data = this.state.getExportData();
     this.excelServ.exportData(data);
     this.showMessage('Exported current state successfully.', false);
+  }
+
+  loadDemoData() {
+    this.state.loadDemoData();
+    this.showMessage('Demo data loaded successfully!', false);
+  }
+
+  removeDemoData() {
+    this.state.deleteDemoData();
+    this.showMessage('Demo data removed from the system.', false);
   }
 
   clearData() {

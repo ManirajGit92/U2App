@@ -5,9 +5,11 @@ export interface Product {
   price: number;
   stock: number;
   imageUrl?: string;
+  barcode?: string;
   lowStockThreshold: number;
   isHidden: boolean;
   category?: string;
+  isDemo?: boolean;
 }
 
 export interface Customer {
@@ -20,6 +22,17 @@ export interface Customer {
   feedback?: string;
   rating?: number;
   isHidden: boolean;
+  isDemo?: boolean;
+}
+
+export interface Employee {
+  id: string;
+  name: string;
+  photoUrl?: string;
+  phone?: string;
+  email?: string;
+  role?: string;
+  isDemo?: boolean;
 }
 
 export interface Purchase {
@@ -29,6 +42,32 @@ export interface Purchase {
   quantity: number;
   costPrice: number;
   supplier?: string;
+  orderId?: string; // optional link to an order
+  isDemo?: boolean;
+}
+
+export interface OrderItem {
+  productId: string;
+  productName: string;
+  productImage?: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  isDemo?: boolean;
+}
+
+export interface Order {
+  id: string;
+  name: string;
+  date: string;
+  employeeId?: string;
+  employeeName?: string;
+  employeePhoto?: string;
+  items: OrderItem[];
+  grandTotal: number;
+  status: 'pending' | 'billed';
+  imageUrl?: string; // thumbnail (first product image or custom)
+  isDemo?: boolean;
 }
 
 export interface InvoiceItem {
@@ -42,6 +81,7 @@ export interface InvoiceItem {
   taxAmount: number;
   totalBeforeTax: number;
   total: number;
+  isDemo?: boolean;
 }
 
 export interface Invoice {
@@ -56,6 +96,8 @@ export interface Invoice {
   grandTotal: number;
   paymentMethod: string;
   notes?: string;
+  orderId?: string; // optional linked order
+  isDemo?: boolean;
 }
 
 export interface BillingDataExport {
@@ -63,4 +105,6 @@ export interface BillingDataExport {
   customers: Customer[];
   purchases: Purchase[];
   invoices: Invoice[];
+  employees?: Employee[];
+  orders?: Order[];
 }
