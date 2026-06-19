@@ -95,8 +95,8 @@ interface NavItem {
     ======================== */
     .billing-layout {
       display: flex;
-      height: 100%;
-      min-height: calc(100vh - 60px);
+      height: 100vh;
+      width: 100vw;
       background: var(--bg-primary);
       position: relative;
       overflow: hidden;
@@ -107,7 +107,7 @@ interface NavItem {
     ======================== */
     .sidebar {
       width: 240px;
-      background: var(--surface-card);
+      background: var(--bg-secondary);
       border-right: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
@@ -233,7 +233,7 @@ interface NavItem {
       left: 0;
       right: 0;
       height: 56px;
-      background: var(--surface-card);
+      background: var(--bg-secondary);
       border-bottom: 1px solid var(--border-color);
       z-index: 200;
       align-items: center;
