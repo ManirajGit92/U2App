@@ -56,6 +56,8 @@ body.theme-light {
   --card-glass: rgba(255,255,255,0.55);
   --card-glass-border: rgba(255,255,255,0.6);
   --navbar-bg: rgba(255,255,255,0.7);
+  --surface-card: #ffffff;
+  --accent-primary-rgb: 99, 102, 241;
 }
 
 /* ───── Dark Theme ───── */
@@ -98,6 +100,8 @@ body.theme-dark {
   --card-glass: rgba(26,26,46,0.55);
   --card-glass-border: rgba(255,255,255,0.08);
   --navbar-bg: rgba(15,15,26,0.7);
+  --surface-card: #1a1a2e;
+  --accent-primary-rgb: 129, 140, 248;
 }
 
 /* ───── Reset & Base ───── */

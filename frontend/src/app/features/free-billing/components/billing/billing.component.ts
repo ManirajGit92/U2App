@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { BillingStateService } from '../../services/billing-state.service';
 import { ReceiptPdfService } from '../../services/receipt-pdf.service';
 import { BarcodeScanService } from '../../services/barcode-scan.service';
@@ -246,7 +247,7 @@ import { Product, Customer, Invoice, InvoiceItem, Order } from '../../models/bil
     .billing-wrapper { display: flex; flex-direction: column; gap: 16px; }
 
     /* Saved Orders Accordion */
-    .saved-orders-panel { background: var(--surface-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; }
+    .saved-orders-panel { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; }
     .accordion-toggle {
       width: 100%; display: flex; justify-content: space-between; align-items: center;
       padding: 14px 20px; background: none; border: none; cursor: pointer;
@@ -403,6 +404,8 @@ import { Product, Customer, Invoice, InvoiceItem, Order } from '../../models/bil
 export class BillingComponent implements OnInit, OnDestroy {
   @ViewChild('scanVideo') scanVideoRef!: ElementRef<HTMLVideoElement>;
 
+  private subs: Subscription[] = [];
+
   viewMode: 'create' | 'history' = 'create';
   customers: Customer[] = [];
   allProducts: Product[] = [];
@@ -442,21 +445,24 @@ export class BillingComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.state.customers$.subscribe(c => {
-      this.customers = c;
-      if (c.length && !this.selectedCustomerId) this.selectedCustomerId = c[0].id;
-    });
-    this.state.products$.subscribe(p => this.allProducts = p);
-    this.state.invoices$.subscribe(i => {
-      this.pastInvoices = [...i].reverse();
-      this.filterInvoices();
-    });
-    this.state.orders$.subscribe(o => {
-      this.savedOrders = [...o].reverse();
-    });
+    this.subs.push(
+      this.state.customers$.subscribe(c => {
+        this.customers = c;
+        if (c.length && !this.selectedCustomerId) this.selectedCustomerId = c[0].id;
+      }),
+      this.state.products$.subscribe(p => this.allProducts = p),
+      this.state.invoices$.subscribe(i => {
+        this.pastInvoices = [...i].reverse();
+        this.filterInvoices();
+      }),
+      this.state.orders$.subscribe(o => {
+        this.savedOrders = [...o].reverse();
+      })
+    );
   }
 
   ngOnDestroy() {
+    this.subs.forEach(s => s.unsubscribe());
     this.barcodeService.stopScan();
   }
 

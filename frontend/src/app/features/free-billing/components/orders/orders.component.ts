@@ -537,24 +537,29 @@ export class OrdersComponent implements OnInit {
   confirmOrder() {
     if (this.cartItems.length === 0 || !this.orderName.trim()) return;
 
-    const firstImage = this.cartItems.find(i => i.productImage)?.productImage;
-    const order: Order = {
-      id: 'ORD-' + Date.now().toString().slice(-7),
-      name: this.orderName.trim(),
-      date: new Date().toISOString(),
-      employeeId: this.selectedEmployee?.id,
-      employeeName: this.selectedEmployee?.name,
-      employeePhoto: this.selectedEmployee?.photoUrl,
-      items: [...this.cartItems],
-      grandTotal: this.grandTotal,
-      status: 'pending',
-      imageUrl: firstImage
-    };
+    try {
+      const firstImage = this.cartItems.find(i => i.productImage)?.productImage;
+      const order: Order = {
+        id: 'ORD-' + Date.now().toString().slice(-7),
+        name: this.orderName.trim(),
+        date: new Date().toISOString(),
+        employeeId: this.selectedEmployee?.id,
+        employeeName: this.selectedEmployee?.name,
+        employeePhoto: this.selectedEmployee?.photoUrl,
+        items: [...this.cartItems],
+        grandTotal: this.grandTotal,
+        status: 'pending',
+        imageUrl: firstImage
+      };
 
-    this.state.addOrder(order);
-    this.showSuccessToast(`Order "${order.name}" saved successfully!`);
-    this.clearCart();
-    this.activeView = 'history';
+      this.state.addOrder(order);
+      this.showSuccessToast(`Order "${order.name}" saved successfully! View it in the Billing section.`);
+      this.clearCart();
+      this.activeView = 'history';
+    } catch (err) {
+      console.error('Failed to save order:', err);
+      this.showErrorToast('❌ Failed to save order. Please try again.');
+    }
   }
 
   clearCart() {
@@ -567,7 +572,13 @@ export class OrdersComponent implements OnInit {
 
   deleteOrder(id: string) {
     if (confirm('Delete this order?')) {
-      this.state.deleteOrder(id);
+      try {
+        this.state.deleteOrder(id);
+        this.showSuccessToast('Order deleted.');
+      } catch (err) {
+        console.error('Failed to delete order:', err);
+        this.showErrorToast('❌ Failed to delete order.');
+      }
     }
   }
 
@@ -575,5 +586,11 @@ export class OrdersComponent implements OnInit {
     this.toastMessage = msg;
     this.showToast = true;
     setTimeout(() => this.showToast = false, 3000);
+  }
+
+  showErrorToast(msg: string) {
+    this.toastMessage = msg;
+    this.showToast = true;
+    setTimeout(() => this.showToast = false, 5000);
   }
 }
