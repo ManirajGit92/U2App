@@ -154,6 +154,22 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'youtube-manager',
+    data: { navLabel: 'YouTube Video Manager', showInNav: true },
+    loadComponent: () =>
+      import('./features/youtube-manager/youtube-manager.component').then(
+        (m) => m.YouTubeManagerComponent,
+      ),
+  },
+  {
+    path: 'assessment-test',
+    data: { navLabel: 'Assessment Test', showInNav: true },
+    loadComponent: () =>
+      import('./features/assessment-test/assessment-test.component').then(
+        (m) => m.AssessmentTestComponent,
+      ),
+  },
+  {
     path: 'free-billing',
     data: { navLabel: 'Free Billing System', showInNav: true },
     loadComponent: () =>
