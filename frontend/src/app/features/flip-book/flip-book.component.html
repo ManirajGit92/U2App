@@ -31,6 +31,22 @@
         </div>
       </div>
 
+      <div class="book-shelf-list">
+        <div class="shelf-header">Books Shelf</div>
+        <div class="empty-shelf" *ngIf="books.length === 0">Your shelf is empty. Import or create a book!</div>
+
+        <div *ngFor="let book of books" class="shelf-book-item" [class.active]="book.id === selectedBookId"
+          (click)="selectBook(book.id)">
+          <span class="book-spine-decor"></span>
+          <div class="book-name-label">{{ book.name }}</div>
+          <div class="book-item-actions">
+            <button class="action-btn edit" (click)="openEditBook(book, $event)" title="Edit book and pages">✏️</button>
+            <button class="action-btn delete" (click)="deleteBook(book, $event)" title="Delete book">🗑️</button>
+
+          </div>
+        </div>
+      </div>
+
       <div class="sidebar-settings">
         <div class="shelf-header">Viewer Settings</div>
         <div class="setting-item">
@@ -142,21 +158,7 @@
       </div>
 
 
-      <div class="book-shelf-list">
-        <div class="shelf-header">Books Shelf</div>
-        <div class="empty-shelf" *ngIf="books.length === 0">Your shelf is empty. Import or create a book!</div>
 
-        <div *ngFor="let book of books" class="shelf-book-item" [class.active]="book.id === selectedBookId"
-          (click)="selectBook(book.id)">
-          <span class="book-spine-decor"></span>
-          <div class="book-name-label">{{ book.name }}</div>
-          <div class="book-item-actions">
-            <button class="action-btn edit" (click)="openEditBook(book, $event)" title="Edit book and pages">✏️</button>
-            <button class="action-btn delete" (click)="deleteBook(book, $event)" title="Delete book">🗑️</button>
-
-          </div>
-        </div>
-      </div>
     </div>
   </aside>
 
