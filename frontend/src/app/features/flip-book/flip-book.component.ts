@@ -29,6 +29,22 @@ interface Book {
   pages: PageContent[];
 }
 
+type VoiceTone = 'natural' | 'warm' | 'clear' | 'deep';
+
+interface VoicePreferences {
+  rate: number;
+  pitch: number;
+  tone: VoiceTone;
+  voiceURI: string;
+}
+
+interface SpeechSegment {
+  text: string;
+  lang: string;
+}
+
+const VOICE_PREFERENCES_KEY = 'u2app_flipbook_voice_preferences_v1';
+
 @Component({
   selector: 'app-flip-book',
   standalone: true,
@@ -52,6 +68,16 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   private turningTimeout: any = null;
   lastFlipTime: number = Date.now();
   isSpeechSpeaking: boolean = false;
+  isVoicePreviewing: boolean = false;
+  availableVoices: SpeechSynthesisVoice[] = [];
+  voiceRate: number = 1;
+  voicePitch: number = 1;
+  voiceTone: VoiceTone = 'natural';
+  selectedVoiceURI: string = '';
+  voiceAvailabilityMessage: string = '';
+  private speechRunId = 0;
+  private narrationAdvanceTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly voicesChangedHandler = () => this.loadAvailableVoices();
 
   // Presentation & Autoplay state
   viewEffect: string = localStorage.getItem('u2app_view_effect') || 'flipbook';
@@ -166,11 +192,19 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadBooksList();
     this.updatePlaySpeed();
+    this.loadVoicePreferences();
+    this.loadAvailableVoices();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.addEventListener('voiceschanged', this.voicesChangedHandler);
+    }
   }
 
   ngOnDestroy() {
     this.stopAutoPlay();
     this.stopSpeaking();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.removeEventListener('voiceschanged', this.voicesChangedHandler);
+    }
   }
 
   // ============== DATA LOAD & PARSE ==============
@@ -856,45 +890,233 @@ export class FlipBookComponent implements OnInit, OnDestroy {
     }
 
     if (fullVoice && fullVoice !== "...") {
-      const msg = new SpeechSynthesisUtterance(fullVoice);
-      this.isSpeechSpeaking = true;
-      
-      msg.onstart = () => {
-        this.isSpeechSpeaking = true;
-        this.cdr.detectChanges();
-      };
-      
-      msg.onend = () => {
-        this.isSpeechSpeaking = false;
-        this.lastFlipTime = Date.now(); // Autoplay delay counts down starting from narration finish
-        this.cdr.detectChanges();
-        
-        // Narration-based autoplay hook
-        if (this.isPlaying && this.autoplayMode === 'narration') {
-          setTimeout(() => {
-            this.nextPage();
-          }, 800);
-        }
-      };
-      
-      msg.onerror = () => {
-        this.isSpeechSpeaking = false;
+      this.speakSegments(this.segmentByLanguage(fullVoice), false, () => {
         this.lastFlipTime = Date.now();
-        this.cdr.detectChanges();
-      };
-      
-      window.speechSynthesis.speak(msg);
+        if (this.isPlaying && this.autoplayMode === 'narration') {
+          this.scheduleNarrationAdvance(500);
+        }
+      });
     } else {
       this.isSpeechSpeaking = false;
       
       // Fallback if autoplay is narration-based and page has no narration
       if (this.isPlaying && this.autoplayMode === 'narration') {
-        if (this.playInterval) clearInterval(this.playInterval);
-        this.playInterval = setTimeout(() => {
-          this.nextPage();
-        }, this.playSpeedMs);
+        this.scheduleNarrationAdvance(this.playSpeedMs);
       }
     }
+  }
+
+  previewVoiceSettings() {
+    this.stopSpeaking();
+    const sample = 'இது தமிழ் குரல் முன்னோட்டம். This is an English voice preview.';
+    this.speakSegments(this.segmentByLanguage(sample), true);
+  }
+
+  onVoicePreferenceChange() {
+    this.voiceRate = this.clamp(Number(this.voiceRate), 0.5, 2);
+    this.voicePitch = this.clamp(Number(this.voicePitch), 0.5, 1.5);
+    this.saveVoicePreferences();
+  }
+
+  private speakSegments(
+    segments: SpeechSegment[],
+    preview: boolean,
+    onComplete?: () => void,
+  ) {
+    if (!('speechSynthesis' in window) || segments.length === 0) {
+      onComplete?.();
+      return;
+    }
+    if (this.availableVoices.length === 0) this.loadAvailableVoices();
+
+    const runId = ++this.speechRunId;
+    window.speechSynthesis.cancel();
+    this.isSpeechSpeaking = true;
+    this.isVoicePreviewing = preview;
+    this.cdr.detectChanges();
+
+    const speakAt = (index: number) => {
+      if (runId !== this.speechRunId) return;
+      if (index >= segments.length) {
+        this.isSpeechSpeaking = false;
+        this.isVoicePreviewing = false;
+        this.cdr.detectChanges();
+        onComplete?.();
+        return;
+      }
+
+      const segment = segments[index];
+      const utterance = new SpeechSynthesisUtterance(segment.text);
+      utterance.lang = segment.lang;
+      utterance.voice = this.selectVoiceForLanguage(segment.lang);
+      const tone = this.getToneAdjustments();
+      utterance.rate = this.clamp(this.voiceRate * tone.rate, 0.5, 2);
+      utterance.pitch = this.clamp(this.voicePitch + tone.pitch, 0.5, 1.5);
+      utterance.volume = 1;
+      utterance.onend = () => speakAt(index + 1);
+      utterance.onerror = (event) => {
+        if (runId !== this.speechRunId || event.error === 'canceled' || event.error === 'interrupted') {
+          return;
+        }
+        speakAt(index + 1);
+      };
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speakAt(0);
+  }
+
+  private segmentByLanguage(text: string): SpeechSegment[] {
+    const segments: SpeechSegment[] = [];
+    let activeLanguage = '';
+    let buffer = '';
+
+    for (const character of text) {
+      const characterLanguage = this.detectCharacterLanguage(character);
+      if (characterLanguage && activeLanguage && characterLanguage !== activeLanguage) {
+        this.pushSpeechSegment(segments, buffer, activeLanguage);
+        buffer = '';
+      }
+      if (characterLanguage) activeLanguage = characterLanguage;
+      buffer += character;
+    }
+    this.pushSpeechSegment(segments, buffer, activeLanguage || 'en-IN');
+    return segments;
+  }
+
+  private detectCharacterLanguage(character: string): string | null {
+    const codePoint = character.codePointAt(0) || 0;
+    const scriptRanges: Array<[number, number, string]> = [
+      [0x0b80, 0x0bff, 'ta-IN'],
+      [0x0900, 0x097f, 'hi-IN'],
+      [0x0980, 0x09ff, 'bn-IN'],
+      [0x0a00, 0x0a7f, 'pa-IN'],
+      [0x0a80, 0x0aff, 'gu-IN'],
+      [0x0b00, 0x0b7f, 'or-IN'],
+      [0x0c00, 0x0c7f, 'te-IN'],
+      [0x0c80, 0x0cff, 'kn-IN'],
+      [0x0d00, 0x0d7f, 'ml-IN'],
+      [0x0d80, 0x0dff, 'si-LK'],
+      [0x0600, 0x06ff, 'ar-SA'],
+      [0x0400, 0x04ff, 'ru-RU'],
+      [0x3040, 0x30ff, 'ja-JP'],
+      [0x4e00, 0x9fff, 'zh-CN'],
+      [0xac00, 0xd7af, 'ko-KR'],
+    ];
+    const range = scriptRanges.find(([start, end]) => codePoint >= start && codePoint <= end);
+    if (range) return range[2];
+    return /\p{L}/u.test(character) ? 'en-IN' : null;
+  }
+
+  private pushSpeechSegment(
+    segments: SpeechSegment[],
+    text: string,
+    lang: string,
+  ) {
+    const cleanText = text.replace(/\s+/g, ' ').trim();
+    if (!cleanText || !/[\p{L}\p{N}]/u.test(cleanText)) return;
+
+    let remaining = cleanText;
+    while (remaining.length > 220) {
+      const candidate = remaining.slice(0, 220);
+      const sentenceBreak = Math.max(
+        candidate.lastIndexOf('.'),
+        candidate.lastIndexOf('!'),
+        candidate.lastIndexOf('?'),
+        candidate.lastIndexOf('।'),
+      );
+      const wordBreak = candidate.lastIndexOf(' ');
+      const splitAt = sentenceBreak >= 80 ? sentenceBreak + 1 : wordBreak >= 80 ? wordBreak : 220;
+      segments.push({ text: remaining.slice(0, splitAt).trim(), lang });
+      remaining = remaining.slice(splitAt).trim();
+    }
+    if (remaining) segments.push({ text: remaining, lang });
+  }
+
+  private selectVoiceForLanguage(lang: string): SpeechSynthesisVoice | null {
+    const language = lang.split('-')[0].toLowerCase();
+    const matchingVoices = this.availableVoices.filter((voice) =>
+      voice.lang.toLowerCase().startsWith(language),
+    );
+    const preferred = this.availableVoices.find(
+      (voice) => voice.voiceURI === this.selectedVoiceURI && voice.lang.toLowerCase().startsWith(language),
+    );
+    if (preferred) return preferred;
+
+    return matchingVoices.sort((a, b) => this.voiceQualityScore(b, lang) - this.voiceQualityScore(a, lang))[0] || null;
+  }
+
+  private voiceQualityScore(voice: SpeechSynthesisVoice, lang: string): number {
+    const descriptor = `${voice.name} ${voice.voiceURI}`.toLowerCase();
+    let score = voice.lang.toLowerCase() === lang.toLowerCase() ? 20 : 0;
+    if (/natural|neural|premium|enhanced|google|microsoft|apple/.test(descriptor)) score += 10;
+    if (!voice.localService) score += 2;
+    return score;
+  }
+
+  private getToneAdjustments(): { rate: number; pitch: number } {
+    const tones: Record<VoiceTone, { rate: number; pitch: number }> = {
+      natural: { rate: 1, pitch: 0 },
+      warm: { rate: 0.94, pitch: 0.08 },
+      clear: { rate: 0.9, pitch: 0.03 },
+      deep: { rate: 0.92, pitch: -0.18 },
+    };
+    return tones[this.voiceTone];
+  }
+
+  private loadAvailableVoices() {
+    if (!('speechSynthesis' in window)) {
+      this.voiceAvailabilityMessage = 'Voice narration is not supported in this browser.';
+      return;
+    }
+    this.availableVoices = [...window.speechSynthesis.getVoices()].sort((a, b) =>
+      `${a.lang} ${a.name}`.localeCompare(`${b.lang} ${b.name}`),
+    );
+    const hasTamilVoice = this.availableVoices.some((voice) => voice.lang.toLowerCase().startsWith('ta'));
+    this.voiceAvailabilityMessage = hasTamilVoice
+      ? 'Tamil voice available. Languages are selected automatically.'
+      : 'No Tamil voice is installed. Add a Tamil system voice for natural Tamil narration.';
+    if (this.selectedVoiceURI && !this.availableVoices.some((voice) => voice.voiceURI === this.selectedVoiceURI)) {
+      this.selectedVoiceURI = '';
+      this.saveVoicePreferences();
+    }
+    this.cdr.detectChanges();
+  }
+
+  private loadVoicePreferences() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(VOICE_PREFERENCES_KEY) || '{}') as Partial<VoicePreferences>;
+      this.voiceRate = this.clamp(Number(saved.rate ?? 1), 0.5, 2);
+      this.voicePitch = this.clamp(Number(saved.pitch ?? 1), 0.5, 1.5);
+      this.voiceTone = ['natural', 'warm', 'clear', 'deep'].includes(saved.tone || '')
+        ? saved.tone as VoiceTone
+        : 'natural';
+      this.selectedVoiceURI = saved.voiceURI || '';
+    } catch {
+      localStorage.removeItem(VOICE_PREFERENCES_KEY);
+    }
+  }
+
+  private saveVoicePreferences() {
+    const preferences: VoicePreferences = {
+      rate: this.voiceRate,
+      pitch: this.voicePitch,
+      tone: this.voiceTone,
+      voiceURI: this.selectedVoiceURI,
+    };
+    localStorage.setItem(VOICE_PREFERENCES_KEY, JSON.stringify(preferences));
+  }
+
+  private scheduleNarrationAdvance(delay: number) {
+    if (this.narrationAdvanceTimer) clearTimeout(this.narrationAdvanceTimer);
+    this.narrationAdvanceTimer = setTimeout(() => {
+      this.narrationAdvanceTimer = null;
+      if (this.isPlaying && this.autoplayMode === 'narration') this.nextPage();
+    }, delay);
+  }
+
+  private clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
   }
 
   replayVoice() {
@@ -912,10 +1134,16 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   }
 
   stopSpeaking() {
+    this.speechRunId++;
+    if (this.narrationAdvanceTimer) {
+      clearTimeout(this.narrationAdvanceTimer);
+      this.narrationAdvanceTimer = null;
+    }
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     this.isSpeechSpeaking = false;
+    this.isVoicePreviewing = false;
   }
 
   // ============== VIEWER SETTINGS ==============
