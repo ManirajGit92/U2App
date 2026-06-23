@@ -189,5 +189,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/flip-book/flip-book.component').then((m) => m.FlipBookComponent),
   },
+  {
+    path: 'angular-performance-playground',
+    data: { navLabel: 'Angular Performance Playground', showInNav: true },
+    loadComponent: () =>
+      import(
+        './features/angular-performance-playground/angular-performance-playground.component'
+      ).then((m) => m.AngularPerformancePlaygroundComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -1,0 +1,276 @@
+<div class="playground-layout">
+  
+  <!-- LEFT PANEL: Configuration Sidenav -->
+  <div class="panel left-panel" [class.collapsed]="!leftPanelExpanded">
+    <div class="panel-toggle-btn left-toggle" (click)="leftPanelExpanded = !leftPanelExpanded" title="Toggle Configuration Panel">
+      <i class="pi" [ngClass]="leftPanelExpanded ? 'pi-chevron-left' : 'pi-chevron-right'"></i>
+    </div>
+    
+    <div class="panel-content" *ngIf="leftPanelExpanded">
+      <div class="panel-header">
+        <i class="pi pi-cog icon-accent"></i>
+        <h2>Playground Config</h2>
+      </div>
+
+      <!-- File Import Section -->
+      <div class="config-section border-glow">
+        <h3>Excel Data Source</h3>
+        <div class="file-uploader">
+          <label class="uploader-label" for="excel-file-input">
+            <i class="pi pi-file-excel upload-icon"></i>
+            <span>{{ fileName ? fileName : 'Upload Excel File (.xlsx, .xls)' }}</span>
+            <span *ngIf="fileSize" class="file-size-badge">{{ (fileSize / 1024).toFixed(1) }} KB</span>
+          </label>
+          <input 
+            type="file" 
+            id="excel-file-input" 
+            accept=".xlsx, .xls" 
+            (change)="onFileSelected($event)" 
+            style="display: none;" 
+          />
+        </div>
+
+        <div class="action-buttons-grid">
+          <button class="btn btn-secondary btn-sm" (click)="exportCurrentData()" [disabled]="activeRows.length === 0">
+            <i class="pi pi-download"></i> Export Data
+          </button>
+          <button class="btn btn-primary btn-sm" (click)="pushDataToFirebase()" [disabled]="activeRows.length === 0">
+            <i class="pi pi-cloud-upload"></i> Push Firebase
+          </button>
+          <button class="btn btn-secondary btn-sm btn-danger-style" (click)="clearFirebaseData()">
+            <i class="pi pi-trash"></i> Clear Firebase
+          </button>
+        </div>
+      </div>
+
+      <!-- Optimization Settings -->
+      <div class="config-section scrollable-section">
+        <div class="section-title-row">
+          <h3>Angular Optimizations</h3>
+          <div class="toggle-helpers">
+            <span class="helper-link" (click)="toggleAll(true)">All ON</span>
+            <span class="divider">|</span>
+            <span class="helper-link" (click)="toggleAll(false)">All OFF</span>
+          </div>
+        </div>
+
+        <div class="optimizations-list">
+          <div 
+            *ngFor="let opt of optimizationList" 
+            class="optimization-item" 
+            [class.active]="currentOptimizations[opt.key]"
+            (click)="toggleOptimization(opt.key)"
+          >
+            <div class="opt-checkbox">
+              <i class="pi" [ngClass]="currentOptimizations[opt.key] ? 'pi-check-circle check-active' : 'pi-circle'"></i>
+            </div>
+            <div class="opt-meta">
+              <span class="opt-label">{{ opt.label }}</span>
+              <span class="opt-desc">{{ opt.desc }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER PANEL: Data Viewer -->
+  <div class="panel center-panel">
+    <div class="panel-content">
+      <div class="viewer-header">
+        <div class="title-area">
+          <h1>Angular Performance Playground</h1>
+          <p class="subtitle">Import large worksheets (10K–100K+ rows) to compare rendering benchmarks</p>
+        </div>
+        
+        <!-- Global Search -->
+        <div class="search-bar-container">
+          <div class="input-icon-group">
+            <i class="pi pi-search search-icon"></i>
+            <input 
+              type="text" 
+              class="search-input-styled" 
+              placeholder="Search across all columns..." 
+              [value]="searchQueryRaw" 
+              (input)="onSearchInput($event)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Column Filters Bar -->
+      <div class="column-filters-container" *ngIf="activeColumns.length > 0">
+        <div class="filters-title">Column Filters:</div>
+        <div class="filters-scroll">
+          <div *ngFor="let col of activeColumns.slice(0, 5)" class="filter-dropdown-wrapper">
+            <span class="filter-label">{{ col }}</span>
+            <select class="filter-select" (change)="setColumnFilter(col, $any($event.target).value)">
+              <option value="">All</option>
+              <option *ngFor="let val of getDistinctValues(col)" [value]="val">{{ val }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sheet Tabs Selector -->
+      <div class="sheet-tabs-container" *ngIf="sheetNames.length > 0">
+        <div 
+          *ngFor="let sheet of sheetNames" 
+          class="sheet-tab" 
+          [class.active]="sheet === currentActiveSheet"
+          (click)="setSheet(sheet)"
+        >
+          <i class="pi pi-table"></i>
+          <span>{{ sheet }}</span>
+          <span class="tab-rows-count" *ngIf="parsedSheets[sheet]">
+            ({{ parsedSheets[sheet].length }})
+          </span>
+        </div>
+      </div>
+
+      <!-- Data Table Viewer Container -->
+      <div class="table-viewer-wrapper">
+        <div class="no-data-placeholder animate-fade-in" *ngIf="activeRows.length === 0">
+          <i class="pi pi-upload placeholder-icon"></i>
+          <h3>No Excel Data Loaded</h3>
+          <p>Click "Upload Excel File" in the left config panel to start rendering benchmarks</p>
+        </div>
+
+        <ng-container *ngIf="activeRows.length > 0">
+          <!-- Condition: OnPush Optimization -->
+          <app-optimized-table
+            *ngIf="currentOptimizations.changeDetectionOnPush"
+            [columns]="currentOptimizations.angularSignals ? activeColumns : columnsNonSignal"
+            [data]="tableRowsSubject.value"
+            [data$]="tableRows$"
+            [optimizations]="currentOptimizations"
+            class="full-height-table"
+          ></app-optimized-table>
+
+          <app-unoptimized-table
+            *ngIf="!currentOptimizations.changeDetectionOnPush"
+            [columns]="currentOptimizations.angularSignals ? activeColumns : columnsNonSignal"
+            [data]="tableRowsSubject.value"
+            [data$]="tableRows$"
+            [optimizations]="currentOptimizations"
+            class="full-height-table"
+          ></app-unoptimized-table>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Performance Monitor -->
+  <div class="panel right-panel" [class.collapsed]="!rightPanelExpanded">
+    <div class="panel-toggle-btn right-toggle" (click)="rightPanelExpanded = !rightPanelExpanded" title="Toggle Dashboard Panel">
+      <i class="pi" [ngClass]="rightPanelExpanded ? 'pi-chevron-right' : 'pi-chevron-left'"></i>
+    </div>
+
+    <div class="panel-content" *ngIf="rightPanelExpanded">
+      <div class="panel-header">
+        <i class="pi pi-chart-bar icon-accent"></i>
+        <h2>Benchmarking Monitor</h2>
+      </div>
+
+      <div class="metrics-grid">
+        <!-- Live FPS gauge -->
+        <div class="metric-card shadow-glow">
+          <div class="metric-top">
+            <span class="metric-title">Live FPS Rate</span>
+            <i class="pi pi-sliders-v"></i>
+          </div>
+          <div class="metric-value" [ngClass]="{'fps-good': fps >= 50, 'fps-warn': fps >= 30 && fps < 50, 'fps-danger': fps < 30}">
+            {{ fps }} <span class="unit">fps</span>
+          </div>
+          <div class="fps-bar-container">
+            <div class="fps-bar-fill" [style.width.%]="(fps / 60) * 100" [ngClass]="{'bg-good': fps >= 50, 'bg-warn': fps >= 30 && fps < 50, 'bg-danger': fps < 30}"></div>
+          </div>
+          <p class="metric-hint">Drop suggests main-thread rendering blockage.</p>
+        </div>
+
+        <!-- Rendered Rows vs Total -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-title">DOM Rows Count</span>
+            <i class="pi pi-list"></i>
+          </div>
+          <div class="metric-value">
+            {{ renderedRowsCount }} <span class="divider-slash">/</span> <span class="total-count">{{ activeRows.length }}</span>
+          </div>
+          <div class="metric-progress-wrapper" *ngIf="activeRows.length > 0">
+            <div class="metric-progress-bar" [style.width.%]="(renderedRowsCount / activeRows.length) * 100"></div>
+          </div>
+          <p class="metric-hint">Optimized view renders ~30 rows regardless of size.</p>
+        </div>
+
+        <!-- Page DOM Nodes Count -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-title">Global DOM Nodes</span>
+            <i class="pi pi-share-alt"></i>
+          </div>
+          <div class="metric-value">{{ domNodeCount }}</div>
+          <p class="metric-hint">Higher counts slow down browser calculations.</p>
+        </div>
+
+        <!-- JS Heap Memory Used -->
+        <div class="metric-card" *ngIf="memoryLimit > 0">
+          <div class="metric-top">
+            <span class="metric-title">JS Heap Usage</span>
+            <i class="pi pi-database"></i>
+          </div>
+          <div class="metric-value">
+            {{ memoryUsed }} MB <span class="divider-slash">/</span> <span class="total-count">{{ memoryTotal }} MB</span>
+          </div>
+          <div class="memory-bar-container">
+            <div class="memory-bar-fill" [style.width.%]="(memoryUsed / memoryTotal) * 100"></div>
+          </div>
+          <p class="metric-hint">Limit: {{ memoryLimit }} MB</p>
+        </div>
+
+        <!-- Search API execution count -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-title">Search Query Runs</span>
+            <i class="pi pi-search-plus"></i>
+          </div>
+          <div class="metric-value text-accent">{{ playgroundService.searchApiCallsCount }}</div>
+          <p class="metric-hint">Shows how debounce/cache reduces calculations.</p>
+        </div>
+
+        <!-- Firestore / API Sync operations -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-title">Firestore Pushes</span>
+            <i class="pi pi-cloud"></i>
+          </div>
+          <div class="metric-value">{{ playgroundService.apiCallsCount }}</div>
+        </div>
+
+        <!-- Leaked Subscriptions Warnings -->
+        <div class="metric-card" [class.leak-active-card]="leakedSubscriptionsCount > 0">
+          <div class="metric-top">
+            <span class="metric-title">Active Observables</span>
+            <i class="pi pi-exclamation-triangle" *ngIf="leakedSubscriptionsCount > 0"></i>
+          </div>
+          <div class="metric-value" [class.text-danger]="leakedSubscriptionsCount > 0">
+            {{ leakedSubscriptionsCount }}
+          </div>
+          <span class="badge-leak-warning" *ngIf="leakedSubscriptionsCount > 0">LEAK ACTIVE</span>
+          <p class="metric-hint">Observables remaining bound in memory after destroy.</p>
+        </div>
+
+        <!-- Change Detection Cycles -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-title">CD Check Runs</span>
+            <i class="pi pi-refresh"></i>
+          </div>
+          <div class="metric-value text-accent">{{ changeDetectionCyclesCount }}</div>
+          <p class="metric-hint">Cycles run automatically on interactions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
