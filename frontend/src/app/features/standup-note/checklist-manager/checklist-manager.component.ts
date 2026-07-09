@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-note.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-checklist-manager',
@@ -29,6 +30,7 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
           [(ngModel)]="newGroupTitle"
           placeholder="Enter a new checklist group title"
           aria-label="New checklist group title"
+          (keyup.enter)="createGroup()"
         />
         <button
           class="btn btn-secondary"
@@ -46,35 +48,47 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
       </div>
 
       <div class="cards" *ngIf="groups.length">
-        <article *ngFor="let g of groups" class="card">
-          <div class="card-top">
-            <div class="card-title-wrap">
-              <input
-                [(ngModel)]="g.title"
-                (blur)="renameGroup(g)"
-                class="group-title"
-                placeholder="Group title"
-                aria-label="Checklist group title"
-              />
-              <span class="group-meta"
-                >{{ getCompletedCount(g) }} of {{ g.items.length }} completed</span
-              >
+        <article *ngFor="let g of groups" class="card" [ngStyle]="getGroupStyles(g)">
+          <div class="card-header">
+            <div class="card-top">
+              <div class="card-title-wrap">
+                <input
+                  [(ngModel)]="g.title"
+                  (blur)="renameGroup(g)"
+                  class="group-title"
+                  placeholder="Group title"
+                  aria-label="Checklist group title"
+                />
+                <span class="group-meta"
+                  >{{ getCompletedCount(g) }} of {{ g.items.length }} completed</span
+                >
+              </div>
+              <div class="card-actions">
+                <!-- Color picker -->
+                <div class="color-picker-wrapper" title="Change group color">
+                  <span class="color-icon">🎨</span>
+                  <input
+                    type="color"
+                    [ngModel]="g.color || '#6366f1'"
+                    (ngModelChange)="updateGroupColor(g, $event)"
+                    class="color-picker-input"
+                  />
+                </div>
+                <button class="icon-btn" title="Toggle items" (click)="toggleGroupCollapse(g.id)">
+                  <span>{{ isCollapsed(g.id) ? '▾' : '▴' }}</span>
+                </button>
+                <button class="icon-btn danger" title="Delete group" (click)="deleteGroup(g.id)">
+                  🗑️
+                </button>
+              </div>
             </div>
-            <div class="card-actions">
-              <button class="icon-btn" title="Toggle items" (click)="toggleGroupCollapse(g.id)">
-                <span>{{ isCollapsed(g.id) ? '▾' : '▴' }}</span>
-              </button>
-              <button class="icon-btn danger" title="Delete group" (click)="deleteGroup(g.id)">
-                🗑️
-              </button>
+
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="getProgressPercent(g)"></div>
             </div>
           </div>
 
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="getProgressPercent(g)"></div>
-          </div>
-
-          <div class="card-body" [class.collapsed]="isCollapsed(g.id)">
+          <div class="card-body-content" [class.collapsed]="isCollapsed(g.id)">
             <ul class="items">
               <li
                 *ngFor="let it of g.items; let i = index"
@@ -96,6 +110,19 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
                     />
                     <span class="checkbox-custom"></span>
                     
+                    <!-- Logo/Icon Display (only if assigned, taking 0 space otherwise) -->
+                    <div class="item-icon-wrapper" *ngIf="it.icon && editingItemId !== it.id">
+                      <img
+                        *ngIf="isDataUrlOrUrl(it.icon)"
+                        [src]="it.icon"
+                        class="item-icon-img"
+                        alt="logo"
+                      />
+                      <span *ngIf="!isDataUrlOrUrl(it.icon)" class="item-icon-emoji">
+                        {{ it.icon }}
+                      </span>
+                    </div>
+                    
                     <!-- Display Mode -->
                     <span
                       *ngIf="editingItemId !== it.id"
@@ -106,13 +133,69 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
                     </span>
                     
                     <!-- Edit Mode -->
-                    <input
-                      *ngIf="editingItemId === it.id"
-                      [(ngModel)]="editItemText"
-                      (keyup.enter)="saveItemEdit(g.id, it)"
-                      class="item-text-edit-input"
-                      #editInput
-                    />
+                    <div class="item-edit-container" *ngIf="editingItemId === it.id">
+                      <div class="edit-input-row">
+                        <!-- Icon Picker Button Trigger -->
+                        <button
+                          type="button"
+                          class="icon-picker-btn"
+                          (click)="toggleIconPicker(it.id)"
+                          title="Choose Icon"
+                        >
+                          <span *ngIf="editItemIcon" class="selected-icon-preview">
+                            <img
+                              *ngIf="isDataUrlOrUrl(editItemIcon)"
+                              [src]="editItemIcon"
+                              class="picker-icon-img"
+                              alt="Selected Icon"
+                            />
+                            <span *ngIf="!isDataUrlOrUrl(editItemIcon)">{{ editItemIcon }}</span>
+                          </span>
+                          <span *ngIf="!editItemIcon" class="add-icon-plus">🎨</span>
+                        </button>
+                        
+                        <input
+                          [(ngModel)]="editItemText"
+                          (keyup.enter)="saveItemEdit(g.id, it)"
+                          class="item-text-edit-input"
+                          #editInput
+                        />
+                      </div>
+
+                      <!-- Icon selector dropdown -->
+                      <div class="icon-picker-dropdown" *ngIf="activeIconPickerId === it.id">
+                        <div class="emoji-grid">
+                          <button
+                            type="button"
+                            *ngFor="let emoji of presetEmojis"
+                            (click)="selectPresetEmoji(emoji)"
+                            class="emoji-btn"
+                          >
+                            {{ emoji }}
+                          </button>
+                        </div>
+                        <div class="picker-divider"></div>
+                        <div class="dropdown-actions">
+                          <label class="upload-btn-label">
+                            📤 Upload
+                            <input
+                              type="file"
+                              accept="image/*"
+                              (change)="onUploadItemIcon($event)"
+                              hidden
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            *ngIf="editItemIcon"
+                            class="clear-btn"
+                            (click)="clearItemIcon()"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </label>
                 </div>
                 
@@ -221,6 +304,7 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         border-radius: 14px;
         border: 1px solid rgba(148, 163, 184, 0.35);
         background: var(--bg-primary);
+        color: var(--text-primary);
         transition:
           border-color 0.2s ease,
           box-shadow 0.2s ease;
@@ -255,25 +339,32 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
       }
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: 18px;
       }
       .card {
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        padding: 20px;
         border-radius: 24px;
-        background: var(--bg-secondary);
-        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: var(--group-bg, var(--bg-secondary));
+        border: 1px solid var(--group-border, rgba(148, 163, 184, 0.18));
         box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
         transition:
           transform 0.24s ease,
           border-color 0.24s ease;
+        overflow: hidden;
+        color: var(--group-text, var(--text-primary));
       }
       .card:hover {
         transform: translateY(-2px);
-        border-color: rgba(99, 102, 241, 0.35);
+      }
+      .card-header {
+        background: var(--group-header-bg, rgba(148, 163, 184, 0.08));
+        padding: 20px 20px 16px;
+        border-bottom: 1px solid var(--group-border, rgba(148, 163, 184, 0.18));
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
       .card-top {
         display: flex;
@@ -284,8 +375,9 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
       .card-title-wrap {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
         min-width: 0;
+        flex: 1;
       }
       .group-title {
         width: 100%;
@@ -293,16 +385,19 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         font-weight: 700;
         border: none;
         background: transparent;
-        color: var(--text-primary);
+        color: var(--group-header-text, var(--text-primary));
         padding: 0;
+        transition: border-bottom 0.15s;
+        border-bottom: 1px dashed transparent;
       }
       .group-title:focus {
         outline: none;
-        color: var(--text-primary);
+        border-bottom-color: var(--group-header-text, var(--text-primary));
       }
       .group-meta {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
+        font-size: 0.85rem;
+        color: var(--group-header-text, var(--text-secondary));
+        opacity: 0.85;
       }
       .card-actions {
         display: flex;
@@ -313,12 +408,12 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 42px;
-        height: 42px;
-        border-radius: 14px;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
         background: rgba(148, 163, 184, 0.12);
         border: none;
-        color: var(--text-primary);
+        color: var(--group-header-text, var(--text-primary));
         cursor: pointer;
         transition:
           transform 0.2s ease,
@@ -326,31 +421,35 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
       }
       .icon-btn:hover {
         transform: scale(1.04);
-        background: rgba(99, 102, 241, 0.16);
+        background: rgba(148, 163, 184, 0.22);
       }
       .icon-btn.danger {
         background: rgba(248, 113, 113, 0.14);
-        color: #b91c1c;
+        color: #ef4444;
+      }
+      .icon-btn.danger:hover {
+        background: rgba(248, 113, 113, 0.25);
       }
       .progress-bar {
         width: 100%;
-        height: 10px;
+        height: 8px;
         border-radius: 999px;
-        background: rgba(99, 102, 241, 0.14);
+        background: var(--group-progress-bg, rgba(99, 102, 241, 0.14));
         overflow: hidden;
       }
       .progress-fill {
         height: 100%;
         border-radius: inherit;
-        background: linear-gradient(90deg, rgba(59, 130, 246, 0.9), rgba(99, 102, 241, 0.75));
+        background: var(--group-progress-fill, linear-gradient(90deg, rgba(59, 130, 246, 0.9), rgba(99, 102, 241, 0.75)));
         transition: width 0.3s ease;
       }
-      .card-body {
-        display: grid;
+      .card-body-content {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
         gap: 16px;
       }
-      .card-body.collapsed .items,
-      .card-body.collapsed .add-item {
+      .card-body-content.collapsed {
         display: none;
       }
       .items {
@@ -367,9 +466,10 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         gap: 12px;
         padding: 12px 14px;
         border-radius: 16px;
-        background: rgba(148, 163, 184, 0.06);
-        border: 1px solid rgba(148, 163, 184, 0.15);
+        background: var(--group-item-bg, rgba(148, 163, 184, 0.06));
+        border: 1px solid var(--group-item-border, rgba(148, 163, 184, 0.15));
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        color: var(--group-text, var(--text-primary));
       }
       .item.dragging {
         opacity: 0.4;
@@ -385,12 +485,12 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
       }
       .drag-handle {
         cursor: grab;
-        color: var(--text-secondary);
+        color: var(--group-text, var(--text-secondary));
+        opacity: 0.5;
         font-size: 1rem;
         user-select: none;
         display: flex;
         align-items: center;
-        opacity: 0.5;
         transition: opacity 0.2s;
       }
       .drag-handle:hover {
@@ -406,13 +506,14 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         flex: 1;
         min-width: 0;
         margin: 0;
+        position: relative;
       }
       .item-label input[type='checkbox'] {
         appearance: none;
         width: 18px;
         height: 18px;
         border-radius: 6px;
-        border: 2px solid rgba(99, 102, 241, 0.6);
+        border: 2px solid var(--group-text, rgba(99, 102, 241, 0.6));
         background: transparent;
         position: relative;
         cursor: pointer;
@@ -422,38 +523,39 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         flex-shrink: 0;
       }
       .item-label input[type='checkbox']:checked {
-        background: rgba(59, 130, 246, 0.96);
-        border-color: rgba(59, 130, 246, 0.96);
+        background: var(--group-progress-fill, rgba(59, 130, 246, 0.96));
+        border-color: var(--group-progress-fill, rgba(59, 130, 246, 0.96));
       }
       .item-label input[type='checkbox']:checked::after {
         content: '✓';
         position: absolute;
-        top: 0;
-        left: 3px;
+        top: -1px;
+        left: 2px;
         color: white;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+        font-weight: bold;
       }
       .checkbox-custom {
         display: none;
       }
       .item-text-display {
         font-size: 0.95rem;
-        color: var(--text-primary);
+        color: var(--group-text, var(--text-primary));
         flex: 1;
         min-width: 0;
         word-break: break-word;
       }
       .item-text-display.done-text {
         text-decoration: line-through;
-        color: var(--text-secondary);
-        opacity: 0.75;
+        color: var(--group-text, var(--text-secondary));
+        opacity: 0.6;
       }
       .item-text-edit-input {
         flex: 1;
         min-width: 0;
         padding: 6px 10px;
         border-radius: 8px;
-        border: 1px solid var(--accent-primary);
+        border: 1px solid var(--group-progress-fill, var(--accent-primary));
         background: var(--bg-input);
         color: var(--text-primary);
         font-size: 0.95rem;
@@ -473,14 +575,14 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         border-radius: 10px;
         background: rgba(148, 163, 184, 0.12);
         border: none;
-        color: var(--text-primary);
+        color: var(--group-text, var(--text-primary));
         cursor: pointer;
         font-size: 0.85rem;
         transition: transform 0.2s, background 0.2s;
       }
       .icon-btn-sm:hover {
         transform: scale(1.05);
-        background: rgba(99, 102, 241, 0.15);
+        background: rgba(148, 163, 184, 0.22);
       }
       .icon-btn-sm.save {
         background: rgba(16, 185, 129, 0.15);
@@ -510,6 +612,7 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         border-radius: 14px;
         border: 1px solid rgba(148, 163, 184, 0.35);
         background: var(--bg-primary);
+        color: var(--text-primary);
         transition: border-color 0.2s ease;
       }
       .add-item input:focus {
@@ -537,6 +640,197 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         background: rgba(15, 23, 42, 0.06);
         color: var(--text-primary);
       }
+      body.theme-dark .btn-secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-primary);
+      }
+
+      /* Color Picker custom wrapper styles */
+      .color-picker-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: rgba(148, 163, 184, 0.15);
+        cursor: pointer;
+        transition: transform 0.2s ease, background 0.2s ease;
+      }
+      .color-picker-wrapper:hover {
+        transform: scale(1.05);
+        background: rgba(148, 163, 184, 0.25);
+      }
+      .color-icon {
+        font-size: 1.1rem;
+        pointer-events: none;
+        color: var(--group-header-text, var(--text-primary));
+      }
+      .color-picker-input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        border: none;
+        padding: 0;
+      }
+
+      /* Item Icon display styling */
+      .item-icon-wrapper {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(148, 163, 184, 0.15);
+        flex-shrink: 0;
+        overflow: hidden;
+      }
+      .item-icon-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .item-icon-emoji {
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Item Icon Selector editing container & dropdown */
+      .item-edit-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+        position: relative;
+      }
+      .edit-input-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+      }
+      .icon-picker-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(148, 163, 184, 0.1);
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+        flex-shrink: 0;
+      }
+      .icon-picker-btn:hover {
+        background: rgba(99, 102, 241, 0.15);
+        border-color: rgba(99, 102, 241, 0.4);
+      }
+      .selected-icon-preview {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        border-radius: 6px;
+      }
+      .picker-icon-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .add-icon-plus {
+        font-size: 0.95rem;
+      }
+      .icon-picker-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 100;
+        margin-top: 6px;
+        background: var(--bg-secondary);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        border-radius: 12px;
+        padding: 10px;
+        width: 220px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+      }
+      .emoji-btn {
+        background: none;
+        border: none;
+        font-size: 1.15rem;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        transition: background 0.2s, transform 0.1s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-primary);
+      }
+      .emoji-btn:hover {
+        background: rgba(99, 102, 241, 0.15);
+        transform: scale(1.1);
+      }
+      .picker-divider {
+        height: 1px;
+        background: rgba(148, 163, 184, 0.2);
+        margin: 2px 0;
+      }
+      .dropdown-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+      }
+      .upload-btn-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(99, 102, 241, 0.12);
+        color: var(--accent-primary);
+        padding: 6px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .upload-btn-label:hover {
+        background: rgba(99, 102, 241, 0.2);
+      }
+      .clear-btn {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border: none;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 6px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .clear-btn:hover {
+        background: rgba(239, 68, 68, 0.18);
+      }
+
       @media (max-width: 768px) {
         .manager-header {
           flex-direction: column;
@@ -570,7 +864,10 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
         .add-item button {
           width: 100%;
         }
-        .card {
+        .card-header {
+          padding: 16px;
+        }
+        .card-body-content {
           padding: 16px;
         }
       }
@@ -579,6 +876,7 @@ import { StandupNoteService, ChecklistGroup, ChecklistItem } from '../standup-no
 })
 export class ChecklistManagerComponent {
   svc = inject(StandupNoteService);
+  themeSvc = inject(ThemeService);
 
   groups: ChecklistGroup[] = [];
   newGroupTitle = '';
@@ -588,8 +886,12 @@ export class ChecklistManagerComponent {
   // Edit & Drag-and-Drop states
   editingItemId = '';
   editItemText = '';
+  editItemIcon = '';
+  activeIconPickerId = '';
   draggedGroupId: string | null = null;
   draggedItemIndex: number | null = null;
+
+  presetEmojis = ['📋', '✅', '🚀', '💻', '🎨', '📅', '⚠️', '💡', '🔧', '🔍', '💬', '🎉', '🌟', '🎯', '🔥'];
 
   constructor() {
     this.svc.state$.subscribe((s) => {
@@ -630,20 +932,33 @@ export class ChecklistManagerComponent {
   startEditItem(item: ChecklistItem) {
     this.editingItemId = item.id;
     this.editItemText = item.text;
+    this.editItemIcon = item.icon || '';
+    this.activeIconPickerId = '';
   }
 
   saveItemEdit(groupId: string, item: ChecklistItem) {
     if (this.editingItemId !== item.id) return;
     const text = this.editItemText.trim();
-    if (text && text !== item.text) {
-      this.svc.updateChecklistItem(groupId, { ...item, text });
+    if (text) {
+      const updatedItem: ChecklistItem = {
+        ...item,
+        text,
+        icon: this.editItemIcon || undefined,
+      };
+      if (!this.editItemIcon) {
+        delete updatedItem.icon;
+      }
+      this.svc.updateChecklistItem(groupId, updatedItem);
     }
     this.editingItemId = '';
+    this.activeIconPickerId = '';
   }
 
   cancelEditItem() {
     this.editingItemId = '';
     this.editItemText = '';
+    this.editItemIcon = '';
+    this.activeIconPickerId = '';
   }
 
   onDragStart(event: DragEvent, groupId: string, index: number) {
@@ -707,5 +1022,127 @@ export class ChecklistManagerComponent {
     return group.items.length
       ? Math.round((this.getCompletedCount(group) / group.items.length) * 100)
       : 0;
+  }
+
+  // Color selection and customization
+  updateGroupColor(group: ChecklistGroup, color: string) {
+    this.svc.updateChecklistGroup({ ...group, color });
+  }
+
+  getGroupStyles(g: ChecklistGroup) {
+    const theme = this.themeSvc.theme();
+    const color = g.color || '#6366f1';
+    const hsl = this.hexToHsl(color);
+
+    if (theme === 'dark') {
+      const bg = `hsl(${hsl.h}, ${Math.min(hsl.s, 25)}%, 14%)`;
+      const headerBg = `hsl(${hsl.h}, ${Math.min(hsl.s, 30)}%, 18%)`;
+      const border = `1px solid hsl(${hsl.h}, ${Math.min(hsl.s, 25)}%, 22%)`;
+      const text = `hsl(${hsl.h}, 10%, 90%)`;
+      const headerText = `hsl(${hsl.h}, 20%, 95%)`;
+      const itemBg = `rgba(0, 0, 0, 0.25)`;
+      const itemBorder = `1px solid hsl(${hsl.h}, ${Math.min(hsl.s, 25)}%, 22%)`;
+      const progressBg = `hsl(${hsl.h}, ${Math.min(hsl.s, 20)}%, 22%)`;
+      const progressFill = `hsl(${hsl.h}, ${Math.max(hsl.s, 60)}%, 55%)`;
+
+      return {
+        '--group-bg': bg,
+        '--group-header-bg': headerBg,
+        '--group-border': border,
+        '--group-text': text,
+        '--group-header-text': headerText,
+        '--group-item-bg': itemBg,
+        '--group-item-border': itemBorder,
+        '--group-progress-bg': progressBg,
+        '--group-progress-fill': progressFill,
+      };
+    } else {
+      const bg = `hsl(${hsl.h}, ${Math.min(hsl.s, 40)}%, 97%)`;
+      const headerBg = `hsl(${hsl.h}, ${Math.min(hsl.s, 45)}%, 88%)`;
+      const border = `1px solid hsl(${hsl.h}, ${Math.min(hsl.s, 30)}%, 82%)`;
+      const text = `hsl(${hsl.h}, 25%, 20%)`;
+      const headerText = `hsl(${hsl.h}, 35%, 15%)`;
+      const itemBg = `rgba(255, 255, 255, 0.65)`;
+      const itemBorder = `1px solid hsl(${hsl.h}, ${Math.min(hsl.s, 25)}%, 84%)`;
+      const progressBg = `hsl(${hsl.h}, ${Math.min(hsl.s, 20)}%, 88%)`;
+      const progressFill = `hsl(${hsl.h}, ${Math.max(hsl.s, 70)}%, 45%)`;
+
+      return {
+        '--group-bg': bg,
+        '--group-header-bg': headerBg,
+        '--group-border': border,
+        '--group-text': text,
+        '--group-header-text': headerText,
+        '--group-item-bg': itemBg,
+        '--group-item-border': itemBorder,
+        '--group-progress-bg': progressBg,
+        '--group-progress-fill': progressFill,
+      };
+    }
+  }
+
+  hexToHsl(hex: string) {
+    hex = hex.replace(/^#/, '');
+    if (hex.length === 3) {
+      hex = hex.split('').map((c) => c + c).join('');
+    }
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0;
+    let s = 0;
+    const l = (max + min) / 2;
+
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      l: Math.round(l * 100),
+    };
+  }
+
+  // Item icon/logo utilities
+  isDataUrlOrUrl(val: string): boolean {
+    if (!val) return false;
+    return val.startsWith('data:') || val.startsWith('http://') || val.startsWith('https://');
+  }
+
+  toggleIconPicker(itemId: string) {
+    this.activeIconPickerId = this.activeIconPickerId === itemId ? '' : itemId;
+  }
+
+  selectPresetEmoji(emoji: string) {
+    this.editItemIcon = emoji;
+    this.activeIconPickerId = '';
+  }
+
+  onUploadItemIcon(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.editItemIcon = e.target.result;
+        this.activeIconPickerId = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  clearItemIcon() {
+    this.editItemIcon = '';
+    this.activeIconPickerId = '';
   }
 }

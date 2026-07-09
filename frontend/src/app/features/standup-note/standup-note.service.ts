@@ -51,12 +51,14 @@ export interface ChecklistItem {
   id: string;
   text: string;
   done: boolean;
+  icon?: string;
 }
 
 export interface ChecklistGroup {
   id: string;
   title: string;
   items: ChecklistItem[];
+  color?: string;
 }
 
 export interface FeedbackEntry {
@@ -652,6 +654,7 @@ export class StandupNoteService {
     const serializedChecklists = (this.state.checklistGroups || []).map((group) => ({
       id: group.id,
       title: group.title,
+      color: group.color || '',
       items: JSON.stringify(group.items || []),
     }));
     const ws5 = XLSX.utils.json_to_sheet(serializedChecklists);
@@ -715,6 +718,7 @@ export class StandupNoteService {
         return {
           id: g.id || '',
           title: g.title || '',
+          color: g.color || undefined,
           items: Array.isArray(items) ? items : [],
         };
       });

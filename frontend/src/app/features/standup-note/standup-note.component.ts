@@ -45,15 +45,22 @@ type Tab =
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
-    <div class="app-shell">
+    <div class="app-shell" [class.sidebar-collapsed]="isSidebarCollapsed">
       <!-- Backdrop Overlay for Mobile Drawer Menu -->
       <div class="sidebar-backdrop" [class.open]="isMobileMenuOpen" (click)="isMobileMenuOpen = false"></div>
 
       <!-- Sidebar -->
-      <aside class="sidebar" [class.open]="isMobileMenuOpen">
+      <aside class="sidebar" [class.open]="isMobileMenuOpen" [class.collapsed]="isSidebarCollapsed">
         <div class="sidebar-logo">
           <span class="logo-icon">📋</span>
-          <span class="logo-text">Standup Note</span>
+          <span class="logo-text" *ngIf="!isSidebarCollapsed">Standup Note</span>
+          <button
+            class="collapse-btn"
+            (click)="toggleSidebar()"
+            [title]="isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+          >
+            {{ isSidebarCollapsed ? '»' : '«' }}
+          </button>
         </div>
         <nav class="sidebar-nav">
           <button
@@ -61,13 +68,17 @@ type Tab =
             class="nav-item"
             [class.active]="activeTab === item.id"
             (click)="activeTab = item.id; isMobileMenuOpen = false"
+            [title]="isSidebarCollapsed ? item.label : ''"
           >
             <span class="nav-icon">{{ item.icon }}</span>
-            <span class="nav-label">{{ item.label }}</span>
+            <span class="nav-label" *ngIf="!isSidebarCollapsed">{{ item.label }}</span>
           </button>
         </nav>
         <div class="sidebar-footer">
-          <a href="/" class="back-link">← Home</a>
+          <a href="/" class="back-link">
+            <span *ngIf="!isSidebarCollapsed">← Home</span>
+            <span *ngIf="isSidebarCollapsed">←</span>
+          </a>
         </div>
       </aside>
 
@@ -141,6 +152,11 @@ type Tab =
         transition: background var(--transition-normal);
       }
 
+      /* Collapsed sidebar styling */
+      .app-shell.sidebar-collapsed {
+        --sidebar-w: 68px;
+      }
+
       /* Sidebar Backdrop */
       .sidebar-backdrop {
         display: none;
@@ -168,7 +184,7 @@ type Tab =
         display: flex;
         flex-direction: column;
         z-index: 100;
-        transition: transform var(--transition-normal);
+        transition: transform var(--transition-normal), width var(--transition-normal), min-width var(--transition-normal);
       }
       .sidebar-logo {
         display: flex;
@@ -176,6 +192,7 @@ type Tab =
         gap: 0.75rem;
         padding: 0.5rem 0.5rem;
         border-bottom: 1px solid var(--border);
+        height: var(--header-h);
       }
       .logo-icon {
         font-size: 1.5rem;
@@ -185,6 +202,35 @@ type Tab =
         font-size: 1rem;
         color: var(--primary);
       }
+      .collapse-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 1.25rem;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        border-radius: 6px;
+        transition: background 0.2s, color 0.2s;
+        width: 28px;
+        height: 28px;
+      }
+      .collapse-btn:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+      }
+
+      .sidebar.collapsed .sidebar-logo {
+        justify-content: center;
+        padding: 0.5rem;
+      }
+      .sidebar.collapsed .collapse-btn {
+        margin: 0;
+      }
+
       .sidebar-nav {
         flex: 1;
         padding: 0.5rem 0.5rem;
@@ -220,14 +266,24 @@ type Tab =
       .nav-icon {
         font-size: 1.1rem;
       }
+
+      .sidebar.collapsed .nav-item {
+        justify-content: center;
+        padding: 0.75rem 0.5rem;
+      }
+
       .sidebar-footer {
         padding: 0.5rem;
         border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: center;
       }
       .back-link {
         font-size: 0.8rem;
         color: var(--text-muted);
         text-decoration: none;
+        width: 100%;
+        text-align: center;
       }
       .back-link:hover {
         color: var(--primary);
@@ -352,12 +408,45 @@ type Tab =
           display: block;
         }
 
+        .collapse-btn {
+          display: none !important;
+        }
+
+        /* Force mobile drawer sidebar to remain 220px wide */
+        .app-shell.sidebar-collapsed {
+          --sidebar-w: 220px !important;
+        }
+
+        .sidebar.collapsed {
+          width: 220px !important;
+          min-width: 220px !important;
+        }
+
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .nav-label,
+        .sidebar.collapsed .back-link span {
+          display: inline !important;
+        }
+
+        .sidebar.collapsed .nav-item {
+          justify-content: flex-start !important;
+          padding: 0.5rem 0.5rem !important;
+        }
+
+        .sidebar.collapsed .sidebar-logo {
+          flex-direction: row !important;
+          justify-content: flex-start !important;
+          padding: 0.5rem 0.5rem !important;
+        }
+
         .sidebar {
           position: fixed;
           top: 0;
           bottom: 0;
           left: 0;
           height: 100vh;
+          width: 220px;
+          min-width: 220px;
           transform: translateX(-100%);
           z-index: 100;
           box-shadow: var(--shadow-lg);
@@ -384,7 +473,7 @@ export class StandupNoteComponent {
   themeSvc = inject(ThemeService);
   activeTab: Tab = 'dashboard';
   isMobileMenuOpen = false;
-
+  isSidebarCollapsed = localStorage.getItem('u2app.sidebarCollapsed') === 'true';
 
   navItems: { id: Tab; label: string; icon: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -401,6 +490,11 @@ export class StandupNoteComponent {
 
   get currentNav() {
     return this.navItems.find((n) => n.id === this.activeTab);
+  }
+
+  toggleSidebar() {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
+    localStorage.setItem('u2app.sidebarCollapsed', String(this.isSidebarCollapsed));
   }
 
   onImport(event: Event) {
