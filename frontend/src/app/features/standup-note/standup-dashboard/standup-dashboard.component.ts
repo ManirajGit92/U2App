@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Employee, Project, Reminder, StandupNote, StandupNoteService, CalendarCategory, CalendarEvent } from '../standup-note.service';
+import { Employee, Project, Reminder, StandupNote, StandupNoteService, CalendarCategory, CalendarEvent, LeaveRecord } from '../standup-note.service';
 
 @Component({
   selector: 'app-standup-dashboard',
@@ -144,6 +144,24 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService, CalendarC
             </div>
           </div>
         </div>
+        <!-- On Leave Today -->
+        <div class="panel" *ngIf="onLeaveToday.length > 0">
+          <div class="panel-header">
+            <h3>🏖️ On Leave Today</h3>
+            <span class="badge badge-red">{{ onLeaveToday.length }}</span>
+          </div>
+          <div class="panel-body">
+            <div class="on-leave-chips">
+              <div class="leave-chip" *ngFor="let r of onLeaveToday">
+                <div class="avatar" [style.background]="getAvatarColor(r.employeeId)">{{ getInitials(r.employeeId) }}</div>
+                <div class="lc-info">
+                  <div class="lc-name">{{ getEmployeeName(r.employeeId) }}</div>
+                  <div class="lc-type">{{ getLeaveLabel(r.leaveType) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -151,7 +169,7 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService, CalendarC
     .dashboard { display: flex; flex-direction: column; gap: 1.5rem; }
  
     /* Stats */
-    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
     .stat-card {
       background: var(--bg-secondary); border-radius: 12px;
       border: 1px solid var(--border-color);
@@ -321,6 +339,14 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService, CalendarC
     .badge-medium { background: #fef3c7; color: #b45309; }
     .badge-low { background: #d1fae5; color: #065f46; }
     .empty { text-align: center; padding: 0.5rem; color: var(--text-muted, #64748b); font-style: italic; font-size: 0.85rem; }
+
+    /* On Leave Chips */
+    .on-leave-chips { display: flex; flex-direction: column; gap: 0.5rem; }
+    .leave-chip { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border-color); }
+    .leave-chip:last-child { border-bottom: none; }
+    .lc-info { flex: 1; }
+    .lc-name { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+    .lc-type { font-size: 0.72rem; color: var(--text-secondary); }
  
     @media (max-width: 768px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -342,6 +368,7 @@ export class StandupDashboardComponent implements OnInit {
   urgentReminders: Reminder[] = [];
   categories: CalendarCategory[] = [];
   allEvents: CalendarEvent[] = [];
+  onLeaveToday: LeaveRecord[] = [];
 
   stats: { icon: string; value: number; label: string }[] = [];
 
@@ -364,12 +391,15 @@ export class StandupDashboardComponent implements OnInit {
       this.urgentReminders = state.reminders.filter(r => !r.done).sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
       this.categories = state.calendarCategories || [];
       this.allEvents = state.calendarEvents || [];
+      const leaveRecords = state.leaveRecords || [];
+      this.onLeaveToday = leaveRecords.filter(r => r.fromDate <= today && r.toDate >= today);
 
       this.stats = [
         { icon: '👥', value: state.employees.length, label: 'Total Employees' },
         { icon: '🚀', value: state.projects.filter(p => p.status === 'Active').length, label: 'Active Projects' },
         { icon: '📝', value: this.todayNotes.length, label: "Today's Notes" },
         { icon: '🔔', value: state.reminders.filter(r => !r.done).length, label: 'Open Reminders' },
+        { icon: '🏖️', value: this.onLeaveToday.length, label: 'On Leave Today' },
       ];
 
       this.generateMiniCalendar();
@@ -464,6 +494,13 @@ export class StandupDashboardComponent implements OnInit {
     return this.AVATAR_COLORS[idx];
   }
   daysUntil(d: string): number { return this.svc.daysUntil(d); }
+
+  readonly LEAVE_LABELS: Record<string, string> = {
+    planned: 'Planned', unplanned: 'Unplanned', sick: 'Sick',
+    vacation: 'Vacation', maternity: 'Maternity', wfh: 'Work From Home',
+    'late-login': 'Late Login', 'early-logoff': 'Early Logoff', partial: 'Partial Hours',
+  };
+  getLeaveLabel(type: string): string { return this.LEAVE_LABELS[type] || type; }
 
   getProgress(p: Project): number {
     const start = new Date(p.startDate).getTime();

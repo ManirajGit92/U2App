@@ -107,6 +107,35 @@ export interface Task {
   projectName: string;
 }
 
+export type LeaveDuration = 'full-day' | 'half-day-first' | 'half-day-second';
+
+export type LeaveType =
+  | 'planned'
+  | 'unplanned'
+  | 'sick'
+  | 'vacation'
+  | 'maternity'
+  | 'wfh'
+  | 'late-login'
+  | 'early-logoff'
+  | 'partial';
+
+export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface LeaveRecord {
+  id: string;
+  employeeId: string;
+  fromDate: string;      // YYYY-MM-DD
+  toDate: string;        // YYYY-MM-DD
+  duration: LeaveDuration;
+  leaveType: LeaveType;
+  loginTime?: string;    // HH:MM – only for 'partial'
+  logoffTime?: string;   // HH:MM – only for 'partial'
+  reason: string;
+  notes?: string;
+  status: LeaveStatus;
+}
+
 export interface StandupState {
   employees: Employee[];
   standupNotes: StandupNote[];
@@ -117,6 +146,7 @@ export interface StandupState {
   calendarCategories?: CalendarCategory[];
   calendarEvents?: CalendarEvent[];
   tasks?: Task[];
+  leaveRecords?: LeaveRecord[];
 }
 
 const SEED_STATE: StandupState = {
@@ -282,6 +312,74 @@ const SEED_STATE: StandupState = {
       projectName: 'Internal HR Tool',
     },
   ],
+  leaveRecords: [
+    {
+      id: 'LV-001',
+      employeeId: 'EMP-001',
+      fromDate: new Date().toISOString().split('T')[0],
+      toDate: new Date().toISOString().split('T')[0],
+      duration: 'full-day',
+      leaveType: 'sick',
+      reason: 'Fever and cold',
+      notes: 'Doctor visit in the afternoon',
+      status: 'Approved',
+    },
+    {
+      id: 'LV-002',
+      employeeId: 'EMP-002',
+      fromDate: new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0],
+      toDate: new Date(Date.now() + 4 * 86400000).toISOString().split('T')[0],
+      duration: 'full-day',
+      leaveType: 'vacation',
+      reason: 'Family vacation trip',
+      notes: '',
+      status: 'Approved',
+    },
+    {
+      id: 'LV-003',
+      employeeId: 'EMP-003',
+      fromDate: new Date(Date.now() + 1 * 86400000).toISOString().split('T')[0],
+      toDate: new Date(Date.now() + 1 * 86400000).toISOString().split('T')[0],
+      duration: 'half-day-first',
+      leaveType: 'planned',
+      reason: 'Bank work',
+      notes: 'Will join by noon',
+      status: 'Pending',
+    },
+    {
+      id: 'LV-004',
+      employeeId: 'EMP-001',
+      fromDate: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0],
+      toDate: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0],
+      duration: 'full-day',
+      leaveType: 'wfh',
+      reason: 'Internet outage at office area',
+      notes: '',
+      status: 'Approved',
+    },
+    {
+      id: 'LV-005',
+      employeeId: 'EMP-002',
+      fromDate: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0],
+      toDate: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0],
+      duration: 'full-day',
+      leaveType: 'unplanned',
+      reason: 'Personal emergency',
+      notes: '',
+      status: 'Approved',
+    },
+    {
+      id: 'LV-006',
+      employeeId: 'EMP-003',
+      fromDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+      toDate: new Date(Date.now() + 9 * 86400000).toISOString().split('T')[0],
+      duration: 'full-day',
+      leaveType: 'planned',
+      reason: 'Wedding ceremony',
+      notes: 'Out of town',
+      status: 'Pending',
+    },
+  ],
 };
 
 @Injectable({ providedIn: 'root' })
@@ -314,6 +412,7 @@ export class StandupNoteService {
           calendarCategories: parsed.calendarCategories || SEED_STATE.calendarCategories,
           calendarEvents: parsed.calendarEvents || SEED_STATE.calendarEvents,
           tasks: parsed.tasks || SEED_STATE.tasks,
+          leaveRecords: parsed.leaveRecords || SEED_STATE.leaveRecords,
         };
       }
     } catch (e) {
@@ -416,6 +515,11 @@ export class StandupNoteService {
         'tasks',
         (data.tasks || []) as unknown as Record<string, unknown>[],
       ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'leaveRecords',
+        (data.leaveRecords || []) as unknown as Record<string, unknown>[],
+      ),
     ]);
   }
 
@@ -446,6 +550,7 @@ export class StandupNoteService {
         'calendarEvents',
       );
       const tasks = await this.syncService.pullFromFirestore<Task>(APP_NAME, 'tasks');
+      const leaveRecords = await this.syncService.pullFromFirestore<LeaveRecord>(APP_NAME, 'leaveRecords');
 
       if (
         employees.length > 0 ||
@@ -456,7 +561,8 @@ export class StandupNoteService {
         feedbacks.length > 0 ||
         calendarCategories.length > 0 ||
         calendarEvents.length > 0 ||
-        tasks.length > 0
+        tasks.length > 0 ||
+        leaveRecords.length > 0
       ) {
         const newState = {
           employees: employees.length > 0 ? employees : this.state.employees,
@@ -470,6 +576,7 @@ export class StandupNoteService {
             calendarCategories.length > 0 ? calendarCategories : this.state.calendarCategories,
           calendarEvents: calendarEvents.length > 0 ? calendarEvents : this.state.calendarEvents,
           tasks: tasks.length > 0 ? tasks : this.state.tasks,
+          leaveRecords: leaveRecords.length > 0 ? leaveRecords : this.state.leaveRecords,
         };
         this.stateSubject.next(newState);
         try {
@@ -557,6 +664,9 @@ export class StandupNoteService {
     const ws8 = XLSX.utils.json_to_sheet(this.state.calendarEvents || []);
     const ws9 = XLSX.utils.json_to_sheet(this.state.tasks || []);
 
+    // Leave Records export
+    const ws10 = XLSX.utils.json_to_sheet(this.state.leaveRecords || []);
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws1, 'Employees');
     XLSX.utils.book_append_sheet(wb, ws2, 'StandupNotes');
@@ -567,6 +677,7 @@ export class StandupNoteService {
     XLSX.utils.book_append_sheet(wb, ws7, 'CalendarCategories');
     XLSX.utils.book_append_sheet(wb, ws8, 'CalendarEvents');
     XLSX.utils.book_append_sheet(wb, ws9, 'Tasks');
+    XLSX.utils.book_append_sheet(wb, ws10, 'LeaveRecords');
     XLSX.writeFile(wb, 'StandupNote_DB.xlsx');
   }
 
@@ -590,6 +701,7 @@ export class StandupNoteService {
         wb.Sheets['CalendarEvents'] || {},
       );
       const tasks: Task[] = XLSX.utils.sheet_to_json(wb.Sheets['Tasks'] || {});
+      const leaveRecords: LeaveRecord[] = XLSX.utils.sheet_to_json(wb.Sheets['LeaveRecords'] || {});
 
       const checklistGroups: ChecklistGroup[] = (checklistGroupsRaw || []).map((g: any) => {
         let items: ChecklistItem[] = [];
@@ -617,6 +729,7 @@ export class StandupNoteService {
         calendarCategories: calendarCategories || [],
         calendarEvents: calendarEvents || [],
         tasks: tasks || [],
+        leaveRecords: leaveRecords || [],
       });
     };
     reader.readAsArrayBuffer(file);
@@ -663,6 +776,28 @@ export class StandupNoteService {
   }
   deleteTask(id: string) {
     this.update({ tasks: (this.state.tasks || []).filter((t) => t.id !== id) });
+  }
+
+  // ── Leave Records ─────────────────────────────────────────────────────────
+  addLeave(leave: LeaveRecord) {
+    this.update({ leaveRecords: [...(this.state.leaveRecords || []), leave] });
+  }
+  updateLeave(leave: LeaveRecord) {
+    this.update({
+      leaveRecords: (this.state.leaveRecords || []).map((l) => (l.id === leave.id ? leave : l)),
+    });
+  }
+  deleteLeave(id: string) {
+    this.update({ leaveRecords: (this.state.leaveRecords || []).filter((l) => l.id !== id) });
+  }
+
+  /** Check if an employee already has a leave overlapping the given date range */
+  hasOverlappingLeave(employeeId: string, fromDate: string, toDate: string, excludeId?: string): boolean {
+    return (this.state.leaveRecords || []).some((l) => {
+      if (l.employeeId !== employeeId) return false;
+      if (excludeId && l.id === excludeId) return false;
+      return l.fromDate <= toDate && l.toDate >= fromDate;
+    });
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
