@@ -1,11 +1,21 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, effect, ChangeDetectorRef, DoCheck } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  inject,
+  signal,
+  effect,
+  ChangeDetectorRef,
+  DoCheck,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import * as XLSX from 'xlsx';
 
-import { AngularPerformancePlaygroundService, PerformancePlaygroundState } from './angular-performance-playground.service';
+import { AngularPerformancePlaygroundService } from './angular-performance-playground.service';
 import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
 import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
 import { OptimizedTableComponent } from './components/optimized-table.component';
@@ -29,14 +39,10 @@ export interface OptimizationFlags {
 @Component({
   selector: 'app-angular-performance-playground',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    OptimizedTableComponent,
-    UnoptimizedTableComponent
-  ],
+  changeDetection: ChangeDetectionStrategy.Default,
+  imports: [CommonModule, FormsModule, OptimizedTableComponent, UnoptimizedTableComponent],
   templateUrl: './angular-performance-playground.component.html',
-  styleUrl: './angular-performance-playground.component.scss'
+  styleUrl: './angular-performance-playground.component.scss',
 })
 export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy, DoCheck {
   public playgroundService = inject(AngularPerformancePlaygroundService);
@@ -44,60 +50,92 @@ export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy,
   public authService = inject(FirebaseAuthService);
   private cdr = inject(ChangeDetectorRef);
 
-  // Layout states
+  // ── Layout ──────────────────────────────────────────────────
   leftPanelExpanded = true;
   rightPanelExpanded = true;
 
-  // Active file info
+  // ── File info ────────────────────────────────────────────────
   fileName = '';
   fileSize = 0;
   sheetNames: string[] = [];
-  
-  // Storage for sheet data
-  // Key: sheetName, Value: rows
   parsedSheets: { [sheetName: string]: any[] } = {};
   lazyArrayBuffer: ArrayBuffer | null = null;
 
-  // Search and column filtering states
+  // ── Search & filter ──────────────────────────────────────────
   searchQueryRaw = '';
   columnFilters: { [colName: string]: string } = {};
 
-  // Standard non-signal reactivity variables (used when signals flag is off)
+  // ── Non-signal path state ────────────────────────────────────
   activeSheetNonSignal = '';
   searchQueryNonSignal = '';
   optimizationsNonSignal: OptimizationFlags = this.getDefaultFlags();
-  filteredRowsNonSignal: any[] = [];
   columnsNonSignal: string[] = [];
 
-  // Signal reactivity states (used when signals flag is on)
+  // ── Signal path state ────────────────────────────────────────
   activeSheetSignal = signal<string>('');
   searchQuerySignal = signal<string>('');
   optimizationsSignal = signal<OptimizationFlags>(this.getDefaultFlags());
-  
-  // List of optimizations configured
+
+  // ── Optimization list for UI ─────────────────────────────────
   optimizationList = [
     { key: 'trackBy', label: 'trackBy', desc: 'Avoids complete row re-rendering on updates' },
-    { key: 'changeDetectionOnPush', label: 'ChangeDetectionStrategy.OnPush', desc: 'Checks view only when inputs update' },
-    { key: 'virtualScrolling', label: 'Virtual Scrolling', desc: 'Renders only visible rows to protect DOM size' },
-    { key: 'asyncPipe', label: 'Async Pipe', desc: 'Auto-manages change detection triggers' },
+    {
+      key: 'changeDetectionOnPush',
+      label: 'ChangeDetectionStrategy.OnPush',
+      desc: 'Checks view only when inputs update',
+    },
+    {
+      key: 'virtualScrolling',
+      label: 'Virtual Scrolling',
+      desc: 'Renders only visible rows to protect DOM size',
+    },
+    {
+      key: 'asyncPipe',
+      label: 'Async Pipe',
+      desc: 'Auto-manages change detection triggers',
+    },
     { key: 'purePipes', label: 'Pure Pipes', desc: 'Caches calculation outputs per inputs' },
-    { key: 'lazyLoading', label: 'Lazy Loading', desc: 'Defers sheet parsing until clicked' },
-    { key: 'debounceUserInput', label: 'Debounce User Input', desc: 'Throttles search/filtering operations' },
-    { key: 'angularSignals', label: 'Angular Signals', desc: 'Fine-grained state reactivity' },
-    { key: 'cacheResponses', label: 'Cache Responses', desc: 'Locally caches database/filter queries' },
-    { key: 'avoidTemplateFunctions', label: 'Avoid Template Functions', desc: 'Binds properties directly instead of functions' },
-    { key: 'unsubscribeObservables', label: 'Unsubscribe Observables', desc: 'Frees active observers to prevent leaks' }
+    {
+      key: 'lazyLoading',
+      label: 'Lazy Loading',
+      desc: 'Defers sheet parsing until clicked',
+    },
+    {
+      key: 'debounceUserInput',
+      label: 'Debounce User Input',
+      desc: 'Throttles search/filtering operations',
+    },
+    {
+      key: 'angularSignals',
+      label: 'Angular Signals',
+      desc: 'Fine-grained state reactivity',
+    },
+    {
+      key: 'cacheResponses',
+      label: 'Cache Responses',
+      desc: 'Locally caches database/filter queries',
+    },
+    {
+      key: 'avoidTemplateFunctions',
+      label: 'Avoid Template Functions',
+      desc: 'Binds properties directly instead of functions',
+    },
+    {
+      key: 'unsubscribeObservables',
+      label: 'Unsubscribe Observables',
+      desc: 'Frees active observers to prevent leaks',
+    },
   ];
 
-  // Debouncing RxJS Subject
+  // ── Debounce ─────────────────────────────────────────────────
   private searchSubject = new Subject<string>();
   private searchSub?: Subscription;
 
-  // Observable for table rendering
+  // ── Table stream ─────────────────────────────────────────────
   public tableRowsSubject = new BehaviorSubject<any[]>([]);
   public tableRows$: Observable<any[]> = this.tableRowsSubject.asObservable();
 
-  // Metrics trackers
+  // ── Metrics ──────────────────────────────────────────────────
   renderedRowsCount = 0;
   domNodeCount = 0;
   fps = 60;
@@ -105,20 +143,20 @@ export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy,
   memoryTotal = 0;
   memoryUsed = 0;
   leakedSubscriptionsCount = 0;
+  changeDetectionCyclesCount = 0;
 
-  // FPS ticker loop
   private fpsFrameId?: number;
   private lastFpsTimestamp = performance.now();
   private fpsFrameCount = 0;
 
-  // Keep track of change detection loops
-  changeDetectionCyclesCount = 0;
-
   constructor() {
-    // Signals-based computed values: automatically resolves filtered rows when signals are updated
+    // ── FIX: react to signal changes only when a sheet is actually loaded ──
     effect(() => {
-      if (this.currentOptimizations.angularSignals) {
-        this.runSignalsFiltering();
+      const sheet = this.activeSheetSignal();
+      const query = this.searchQuerySignal();
+      // Only run filtering if angularSignals is ON and a sheet has been selected
+      if (this.optimizationsSignal().angularSignals && sheet) {
+        this._doFilter();
       }
     });
   }
@@ -135,32 +173,36 @@ export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy,
   }
 
   ngOnDestroy() {
-    if (this.fpsFrameId) {
-      cancelAnimationFrame(this.fpsFrameId);
-    }
-    if (this.searchSub) {
-      this.searchSub.unsubscribe();
-    }
+    if (this.fpsFrameId) cancelAnimationFrame(this.fpsFrameId);
+    if (this.searchSub) this.searchSub.unsubscribe();
   }
 
-  // Get active configurations based on Signals flag
+  // ── Accessors ────────────────────────────────────────────────
+
   get currentOptimizations(): OptimizationFlags {
-    return this.optimizationsSignal().angularSignals 
-      ? this.optimizationsSignal() 
+    return this.optimizationsSignal().angularSignals
+      ? this.optimizationsSignal()
       : this.optimizationsNonSignal;
   }
 
   get currentActiveSheet(): string {
-    return this.currentOptimizations.angularSignals 
-      ? this.activeSheetSignal() 
+    return this.currentOptimizations.angularSignals
+      ? this.activeSheetSignal()
       : this.activeSheetNonSignal;
   }
 
-  get currentSearchQuery(): string {
-    return this.currentOptimizations.angularSignals 
-      ? this.searchQuerySignal() 
-      : this.searchQueryNonSignal;
+  get activeRows(): any[] {
+    const active = this.currentActiveSheet;
+    return active ? (this.parsedSheets[active] ?? []) : [];
   }
+
+  get activeColumns(): string[] {
+    const rows = this.activeRows;
+    if (rows.length === 0) return [];
+    return Object.keys(rows[0]).filter((k) => k !== '_computed_val');
+  }
+
+  // ── Optimization toggles ─────────────────────────────────────
 
   getDefaultFlags(): OptimizationFlags {
     return {
@@ -174,77 +216,66 @@ export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy,
       angularSignals: true,
       cacheResponses: true,
       avoidTemplateFunctions: true,
-      unsubscribeObservables: true
+      unsubscribeObservables: true,
     };
   }
 
   toggleAll(value: boolean) {
-    const newFlags = this.getDefaultFlags();
-    Object.keys(newFlags).forEach(k => {
-      (newFlags as any)[k] = value;
+    const newFlags = { ...this.getDefaultFlags() };
+    (Object.keys(newFlags) as (keyof OptimizationFlags)[]).forEach((k) => {
+      newFlags[k] = value;
     });
-
-    if (newFlags.angularSignals) {
-      this.optimizationsSignal.set(newFlags);
-    }
-    this.optimizationsNonSignal = newFlags;
-
-    if (!newFlags.angularSignals) {
-      this.runNonSignalsFiltering();
-    }
+    this.optimizationsSignal.set(newFlags);
+    this.optimizationsNonSignal = { ...newFlags };
+    this._triggerFilter();
   }
 
   toggleOptimization(key: string) {
-    const isSignalsActive = this.currentOptimizations.angularSignals;
-    
-    if (isSignalsActive) {
-      const current = this.optimizationsSignal();
-      const updated = { ...current, [key]: !(current as any)[key] };
-      this.optimizationsSignal.set(updated);
-      
-      // Sync non-signal flags in case user toggles signals flag off later
-      this.optimizationsNonSignal = updated;
-    } else {
-      (this.optimizationsNonSignal as any)[key] = !(this.optimizationsNonSignal as any)[key];
-      // Sync signal flags
-      this.optimizationsSignal.set({ ...this.optimizationsNonSignal });
-      this.runNonSignalsFiltering();
-    }
+    const current = this.optimizationsSignal();
+    const updated: OptimizationFlags = { ...current, [key]: !current[key] };
+    this.optimizationsSignal.set(updated);
+    this.optimizationsNonSignal = { ...updated };
+    this._triggerFilter();
   }
 
-  // File loading handling
+  // ── File loading ─────────────────────────────────────────────
+
   async onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
+    if (!input.files?.length) return;
 
     const file = input.files[0];
     this.fileName = file.name;
     this.fileSize = file.size;
 
-    // Reset components & states
+    // Reset
     this.parsedSheets = {};
     this.lazyArrayBuffer = null;
+    this.columnFilters = {};
+    this.searchQueryRaw = '';
+    this.searchQuerySignal.set('');
+    this.searchQueryNonSignal = '';
     this.playgroundService.resetMetrics();
     UnoptimizedTableComponent.leakedSubscriptions = 0;
-    this.columnFilters = {};
+    this.tableRowsSubject.next([]); // clear stale data immediately
 
     try {
       const isLazy = this.currentOptimizations.lazyLoading;
-      
+
       if (isLazy) {
-        // Optimized Lazy Loading: Load sheet metadata first
         const metadata = await this.playgroundService.parseExcelLazily(file);
         this.sheetNames = metadata.sheetNames;
         this.lazyArrayBuffer = metadata.arrayBuffer;
-        
-        // Parse only the first sheet to start
+
         const firstSheet = metadata.activeSheet;
         if (firstSheet) {
-          this.parsedSheets[firstSheet] = this.playgroundService.parseSingleSheet(this.lazyArrayBuffer!, firstSheet);
+          this.parsedSheets[firstSheet] = this.playgroundService.parseSingleSheet(
+            this.lazyArrayBuffer!,
+            firstSheet,
+          );
           this.setSheet(firstSheet);
         }
       } else {
-        // Unoptimized Eager Loading: Parse everything immediately
         const eagerData = await this.playgroundService.parseExcelEagerly(file);
         this.sheetNames = eagerData.sheetNames;
         this.parsedSheets = eagerData.sheets;
@@ -258,144 +289,137 @@ export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy,
   }
 
   setSheet(sheetName: string) {
-    // Check if lazy parsing is needed
-    if (this.currentOptimizations.lazyLoading && !this.parsedSheets[sheetName] && this.lazyArrayBuffer) {
-      this.parsedSheets[sheetName] = this.playgroundService.parseSingleSheet(this.lazyArrayBuffer, sheetName);
+    // Lazy-parse the sheet if needed
+    if (
+      this.currentOptimizations.lazyLoading &&
+      !this.parsedSheets[sheetName] &&
+      this.lazyArrayBuffer
+    ) {
+      this.parsedSheets[sheetName] = this.playgroundService.parseSingleSheet(
+        this.lazyArrayBuffer,
+        sheetName,
+      );
     }
 
+    // ── FIX: always push the data immediately regardless of signal path ──
     if (this.currentOptimizations.angularSignals) {
       this.activeSheetSignal.set(sheetName);
+      // effect() will trigger _doFilter() because `sheet` changed
     } else {
       this.activeSheetNonSignal = sheetName;
-      this.runNonSignalsFiltering();
+      this.columnsNonSignal = this._colsFor(sheetName);
+      this._doFilter();
     }
   }
 
-  // Pre-calculate computed formatting to avoid template function bottlenecks
-  preComputeTemplateFields(rows: any[], columns: string[]): any[] {
-    if (!rows.length || !columns.length) return rows;
-    const col0 = columns[0];
-    return rows.map(r => {
-      const val = r[col0];
-      if (val === null || val === undefined) {
-        r._computed_val = '';
-      } else {
-        const num = typeof val === 'number' ? val : parseFloat(String(val)) || 0;
-        let result = 0;
-        for (let i = 0; i < 1500; i++) {
-          result += Math.sin(num + i) * Math.cos(num - i);
-        }
-        r._computed_val = result.toFixed(2);
-      }
-      return r;
-    });
-  }
+  // ── Column filters ────────────────────────────────────────────
 
-  // Retrieve active sheet rows
-  get activeRows(): any[] {
-    const active = this.currentActiveSheet;
-    return this.parsedSheets[active] || [];
-  }
-
-  // Retrieve columns for the active sheet
-  get activeColumns(): string[] {
-    const rows = this.activeRows;
-    if (rows.length === 0) return [];
-    return Object.keys(rows[0]).filter(k => k !== '_computed_val');
-  }
-
-  // Distinct values for select dropdowns
   getDistinctValues(colName: string): string[] {
     const rows = this.activeRows;
     const vals = new Set<string>();
-    for (let i = 0; i < Math.min(rows.length, 1000); i++) {
+    for (let i = 0; i < Math.min(rows.length, 2000); i++) {
       const cell = String(rows[i][colName] ?? '').trim();
       if (cell) vals.add(cell);
     }
-    return Array.from(vals).slice(0, 50); // limit to 50 items for user ease of review
+    return Array.from(vals).slice(0, 50);
   }
 
   setColumnFilter(col: string, val: string) {
-    this.columnFilters[col] = val;
-    if (this.currentOptimizations.angularSignals) {
-      // Signals: trigger recalculation by updating signal state dummy trigger
-      this.activeSheetSignal.set(this.activeSheetSignal());
-    } else {
-      this.runNonSignalsFiltering();
-    }
+    this.columnFilters = { ...this.columnFilters, [col]: val };
+    this._triggerFilter();
   }
 
-  // Global search input event handler
+  // ── Search ────────────────────────────────────────────────────
+
   onSearchInput(event: any) {
-    const val = event.target.value;
+    const val: string = event.target.value;
     this.searchQueryRaw = val;
 
     if (this.currentOptimizations.debounceUserInput) {
       this.searchSubject.next(val);
     } else {
-      this.executeSearch(val);
+      this._setSearchQuery(val);
     }
   }
 
   setupSearchStream() {
-    this.searchSub = this.searchSubject.pipe(
-      debounceTime(300),
-      distinctUntilChanged()
-    ).subscribe(val => {
-      this.executeSearch(val);
-    });
+    this.searchSub = this.searchSubject
+      .pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe((val) => this._setSearchQuery(val));
   }
 
-  executeSearch(val: string) {
+  private _setSearchQuery(val: string) {
     if (this.currentOptimizations.angularSignals) {
       this.searchQuerySignal.set(val);
     } else {
       this.searchQueryNonSignal = val;
-      this.runNonSignalsFiltering();
+      this._doFilter();
     }
   }
 
-  // Filtering calculations
-  runSignalsFiltering() {
-    const rawRows = this.activeRows;
-    const cols = this.activeColumns;
-    const query = this.searchQuerySignal();
+  // ── Internal filtering ────────────────────────────────────────
+
+  /** Trigger filter via the appropriate path */
+  private _triggerFilter() {
+    if (this.currentOptimizations.angularSignals) {
+      // Touch the signal to re-run effect
+      this.activeSheetSignal.set(this.activeSheetSignal());
+    } else {
+      this._doFilter();
+    }
+  }
+
+  /** Core filter function – runs in both signal and non-signal paths */
+  private _doFilter() {
+    const sheet = this.currentOptimizations.angularSignals
+      ? this.activeSheetSignal()
+      : this.activeSheetNonSignal;
+
+    const rawRows = sheet ? (this.parsedSheets[sheet] ?? []) : [];
+    const cols = rawRows.length > 0 ? Object.keys(rawRows[0]).filter((k) => k !== '_computed_val') : [];
+    const query = this.currentOptimizations.angularSignals
+      ? this.searchQuerySignal()
+      : this.searchQueryNonSignal;
     const useCache = this.currentOptimizations.cacheResponses;
 
     let filtered = this.playgroundService.searchRows(rawRows, query, this.columnFilters, useCache);
-    
+
     if (this.currentOptimizations.avoidTemplateFunctions) {
-      filtered = this.preComputeTemplateFields(filtered, cols);
+      filtered = this._preCompute(filtered, cols);
     }
+
+    // Always sync non-signal columns
+    this.columnsNonSignal = cols;
 
     this.tableRowsSubject.next(filtered);
     this.cdr.markForCheck();
   }
 
-  runNonSignalsFiltering() {
-    const rawRows = this.activeRows;
-    const cols = this.activeColumns;
-    const query = this.searchQueryNonSignal;
-    const useCache = this.currentOptimizations.cacheResponses;
-
-    let filtered = this.playgroundService.searchRows(rawRows, query, this.columnFilters, useCache);
-    
-    if (this.optimizationsNonSignal.avoidTemplateFunctions) {
-      filtered = this.preComputeTemplateFields(filtered, cols);
-    }
-
-    this.filteredRowsNonSignal = filtered;
-    this.columnsNonSignal = cols;
-    this.tableRowsSubject.next(filtered);
-    this.cdr.detectChanges();
+  private _colsFor(sheetName: string): string[] {
+    const rows = this.parsedSheets[sheetName] ?? [];
+    return rows.length > 0 ? Object.keys(rows[0]).filter((k) => k !== '_computed_val') : [];
   }
 
-  // Firestore Sync Button Actions
+  private _preCompute(rows: any[], columns: string[]): any[] {
+    if (!rows.length || !columns.length) return rows;
+    const col0 = columns[0];
+    return rows.map((r) => {
+      const val = r[col0];
+      const num = typeof val === 'number' ? val : parseFloat(String(val ?? '')) || 0;
+      let result = 0;
+      for (let i = 0; i < 1500; i++) result += Math.sin(num + i) * Math.cos(num - i);
+      r._computed_val = result.toFixed(2);
+      return r;
+    });
+  }
+
+  // ── Firebase actions ──────────────────────────────────────────
+
   async pushDataToFirebase() {
     if (this.activeRows.length === 0) return;
     try {
       await this.playgroundService.saveToFirebase(this.activeRows);
-      alert('Active sheet data sample (first 1000 items) successfully pushed to Firebase!');
+      alert('Active sheet data (first 1000 rows) pushed to Firebase!');
     } catch (e) {
       alert('Error pushing to Firestore: ' + (e as Error).message);
     }
@@ -410,7 +434,8 @@ export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy,
     }
   }
 
-  // Excel Export Actions
+  // ── Export ────────────────────────────────────────────────────
+
   exportCurrentData() {
     const items = this.tableRowsSubject.value;
     if (items.length === 0) {
@@ -423,7 +448,8 @@ export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy,
     XLSX.writeFile(wb, `${this.currentActiveSheet || 'Playground'}_Export.xlsx`);
   }
 
-  // Live Performance Metrics Gathering
+  // ── Metrics ───────────────────────────────────────────────────
+
   startFpsLoop() {
     const tick = () => {
       this.fpsFrameCount++;
@@ -439,13 +465,9 @@ export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy,
   }
 
   updateLiveMetrics() {
-    // 1. Rendered Rows in DOM
     this.renderedRowsCount = document.querySelectorAll('.playground-table-row').length;
-
-    // 2. DOM node counts
     this.domNodeCount = document.getElementsByTagName('*').length;
 
-    // 3. Memory metrics
     const mem = (performance as any).memory;
     if (mem) {
       this.memoryLimit = Math.round(mem.jsHeapSizeLimit / (1024 * 1024));
@@ -453,7 +475,6 @@ export class AngularPerformancePlaygroundComponent implements OnInit, OnDestroy,
       this.memoryUsed = Math.round(mem.usedJSHeapSize / (1024 * 1024));
     }
 
-    // 4. Leaked Subscriptions count
     this.leakedSubscriptionsCount = UnoptimizedTableComponent.leakedSubscriptions;
   }
 }
