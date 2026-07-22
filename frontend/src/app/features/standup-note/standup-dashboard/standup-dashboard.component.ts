@@ -30,10 +30,10 @@ import { Employee, Project, Reminder, StandupNote, StandupNoteService, CalendarC
             <div *ngIf="todayNotes.length === 0" class="empty">No standup notes submitted today yet.</div>
             <div class="today-card" *ngFor="let note of todayNotes">
               <div class="tc-header">
-                <div class="avatar" [style.background]="getAvatarColor(note.employeeId)">{{ getInitials(note.employeeId) }}</div>
+                <div class="avatar" [style.background]="getAvatarColorForNote(note)">{{ getInitialsForNote(note) }}</div>
                 <div>
-                  <div class="tc-name">{{ getEmployeeName(note.employeeId) }}</div>
-                  <div class="tc-position">{{ getPosition(note.employeeId) }}</div>
+                  <div class="tc-name">{{ getHeading(note) }}</div>
+                  <div class="tc-position">{{ getSubheading(note) }}</div>
                 </div>
               </div>
               <div class="tc-rows">
@@ -492,6 +492,46 @@ export class StandupDashboardComponent implements OnInit {
   getAvatarColor(id: string): string {
     const idx = id.charCodeAt(id.length - 1) % this.AVATAR_COLORS.length;
     return this.AVATAR_COLORS[idx];
+  }
+  getProjName(id: string | undefined) { return id ? (this.projects.find(p => p.id === id)?.name || id) : ''; }
+  
+  getHeading(note: StandupNote): string {
+    const hasEmp = !!note.employeeId;
+    const hasProj = !!note.projectId;
+    if (hasEmp && hasProj) {
+      return `${this.getEmployeeName(note.employeeId)} | ${this.getProjName(note.projectId)}`;
+    } else if (hasEmp) {
+      return this.getEmployeeName(note.employeeId);
+    } else if (hasProj) {
+      return this.getProjName(note.projectId);
+    }
+    return 'No Selection';
+  }
+
+  getSubheading(note: StandupNote): string {
+    if (note.employeeId) {
+      return this.getPosition(note.employeeId);
+    } else if (note.projectId) {
+      const proj = this.projects.find(p => p.id === note.projectId);
+      return proj ? `Project — ${proj.status}` : 'Project';
+    }
+    return '';
+  }
+
+  getAvatarColorForNote(note: StandupNote): string {
+    const id = note.employeeId || note.projectId || 'SN';
+    const idx = id.charCodeAt(id.length - 1) % this.AVATAR_COLORS.length;
+    return this.AVATAR_COLORS[idx];
+  }
+
+  getInitialsForNote(note: StandupNote): string {
+    if (note.employeeId) {
+      return this.getInitials(note.employeeId);
+    } else if (note.projectId) {
+      const projName = this.getProjName(note.projectId);
+      return this.svc.getInitials(projName);
+    }
+    return '?';
   }
   daysUntil(d: string): number { return this.svc.daysUntil(d); }
 
