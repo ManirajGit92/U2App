@@ -138,6 +138,17 @@ export interface LeaveRecord {
   status: LeaveStatus;
 }
 
+export interface QAEntry {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+  responsibleEmployeeId?: string;
+  projectId?: string;
+  tags: string[];
+  lastUpdated: string; // YYYY-MM-DD
+}
+
 export interface StandupState {
   employees: Employee[];
   standupNotes: StandupNote[];
@@ -149,6 +160,7 @@ export interface StandupState {
   calendarEvents?: CalendarEvent[];
   tasks?: Task[];
   leaveRecords?: LeaveRecord[];
+  qaEntries?: QAEntry[];
 }
 
 const SEED_STATE: StandupState = {
@@ -382,6 +394,38 @@ const SEED_STATE: StandupState = {
       status: 'Pending',
     },
   ],
+  qaEntries: [
+    {
+      id: 'QA-001',
+      question: 'How do I request time off?',
+      answer: '<p>Submit a leave request through the <strong>Leave Tracking</strong> tab. Select the dates, type, and reason, then save. Your manager will be notified for approval.</p>',
+      category: 'HR',
+      responsibleEmployeeId: 'EMP-001',
+      projectId: undefined,
+      tags: ['HR', 'Leave', 'Policy'],
+      lastUpdated: new Date().toISOString().split('T')[0],
+    },
+    {
+      id: 'QA-002',
+      question: 'What is the deployment process for the Customer Portal?',
+      answer: '<p>After QA sign-off, create a release branch. Run <code>npm run build</code>, then push the dist folder to staging. After staging approval, merge to main and trigger the CI/CD pipeline.</p>',
+      category: 'Engineering',
+      responsibleEmployeeId: 'EMP-002',
+      projectId: 'PRJ-001',
+      tags: ['Deployment', 'CI/CD', 'Engineering'],
+      lastUpdated: new Date().toISOString().split('T')[0],
+    },
+    {
+      id: 'QA-003',
+      question: 'How are sprint retrospectives conducted?',
+      answer: '<p>Retrospectives follow a <em>Start / Stop / Continue</em> format. The scrum master facilitates, team members add sticky notes, and action items are captured as reminders in the Reminders tab.</p>',
+      category: 'Process',
+      responsibleEmployeeId: 'EMP-003',
+      projectId: undefined,
+      tags: ['Agile', 'Scrum', 'Process'],
+      lastUpdated: new Date().toISOString().split('T')[0],
+    },
+  ],
 };
 
 @Injectable({ providedIn: 'root' })
@@ -415,6 +459,7 @@ export class StandupNoteService {
           calendarEvents: parsed.calendarEvents || SEED_STATE.calendarEvents,
           tasks: parsed.tasks || SEED_STATE.tasks,
           leaveRecords: parsed.leaveRecords || SEED_STATE.leaveRecords,
+          qaEntries: parsed.qaEntries || SEED_STATE.qaEntries,
         };
       }
     } catch (e) {
@@ -522,6 +567,11 @@ export class StandupNoteService {
         'leaveRecords',
         (data.leaveRecords || []) as unknown as Record<string, unknown>[],
       ),
+      this.syncService.pushToFirestore(
+        APP_NAME,
+        'qaEntries',
+        (data.qaEntries || []) as unknown as Record<string, unknown>[],
+      ),
     ]);
   }
 
@@ -553,6 +603,7 @@ export class StandupNoteService {
       );
       const tasks = await this.syncService.pullFromFirestore<Task>(APP_NAME, 'tasks');
       const leaveRecords = await this.syncService.pullFromFirestore<LeaveRecord>(APP_NAME, 'leaveRecords');
+      const qaEntries = await this.syncService.pullFromFirestore<QAEntry>(APP_NAME, 'qaEntries');
 
       if (
         employees.length > 0 ||
@@ -564,7 +615,8 @@ export class StandupNoteService {
         calendarCategories.length > 0 ||
         calendarEvents.length > 0 ||
         tasks.length > 0 ||
-        leaveRecords.length > 0
+        leaveRecords.length > 0 ||
+        qaEntries.length > 0
       ) {
         const newState = {
           employees: employees.length > 0 ? employees : this.state.employees,
@@ -579,6 +631,7 @@ export class StandupNoteService {
           calendarEvents: calendarEvents.length > 0 ? calendarEvents : this.state.calendarEvents,
           tasks: tasks.length > 0 ? tasks : this.state.tasks,
           leaveRecords: leaveRecords.length > 0 ? leaveRecords : this.state.leaveRecords,
+          qaEntries: qaEntries.length > 0 ? qaEntries : this.state.qaEntries,
         };
         this.stateSubject.next(newState);
         try {
@@ -670,6 +723,13 @@ export class StandupNoteService {
     // Leave Records export
     const ws10 = XLSX.utils.json_to_sheet(this.state.leaveRecords || []);
 
+    // Q&A export – serialize tags array as JSON string
+    const serializedQA = (this.state.qaEntries || []).map(q => ({
+      ...q,
+      tags: JSON.stringify(q.tags || []),
+    }));
+    const ws11 = XLSX.utils.json_to_sheet(serializedQA);
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws1, 'Employees');
     XLSX.utils.book_append_sheet(wb, ws2, 'StandupNotes');
@@ -681,6 +741,7 @@ export class StandupNoteService {
     XLSX.utils.book_append_sheet(wb, ws8, 'CalendarEvents');
     XLSX.utils.book_append_sheet(wb, ws9, 'Tasks');
     XLSX.utils.book_append_sheet(wb, ws10, 'LeaveRecords');
+    XLSX.utils.book_append_sheet(wb, ws11, 'QAEntries');
     XLSX.writeFile(wb, 'StandupNote_DB.xlsx');
   }
 
@@ -705,6 +766,7 @@ export class StandupNoteService {
       );
       const tasks: Task[] = XLSX.utils.sheet_to_json(wb.Sheets['Tasks'] || {});
       const leaveRecords: LeaveRecord[] = XLSX.utils.sheet_to_json(wb.Sheets['LeaveRecords'] || {});
+      const qaEntriesRaw: any[] = XLSX.utils.sheet_to_json(wb.Sheets['QAEntries'] || {});
 
       const checklistGroups: ChecklistGroup[] = (checklistGroupsRaw || []).map((g: any) => {
         let items: ChecklistItem[] = [];
@@ -723,6 +785,25 @@ export class StandupNoteService {
         };
       });
 
+      const qaEntries: QAEntry[] = (qaEntriesRaw || []).map((q: any) => {
+        let tags: string[] = [];
+        if (q.tags) {
+          try {
+            tags = typeof q.tags === 'string' ? JSON.parse(q.tags) : q.tags;
+          } catch { tags = []; }
+        }
+        return {
+          id: q.id || '',
+          question: q.question || '',
+          answer: q.answer || '',
+          category: q.category || '',
+          responsibleEmployeeId: q.responsibleEmployeeId || undefined,
+          projectId: q.projectId || undefined,
+          tags: Array.isArray(tags) ? tags : [],
+          lastUpdated: q.lastUpdated || new Date().toISOString().split('T')[0],
+        };
+      });
+
       this.update({
         employees: employees || [],
         standupNotes: standupNotes || [],
@@ -734,6 +815,7 @@ export class StandupNoteService {
         calendarEvents: calendarEvents || [],
         tasks: tasks || [],
         leaveRecords: leaveRecords || [],
+        qaEntries: qaEntries || [],
       });
     };
     reader.readAsArrayBuffer(file);
@@ -793,6 +875,19 @@ export class StandupNoteService {
   }
   deleteLeave(id: string) {
     this.update({ leaveRecords: (this.state.leaveRecords || []).filter((l) => l.id !== id) });
+  }
+
+  // ── Q&A Entries ───────────────────────────────────────────────────────────
+  addQAEntry(entry: QAEntry) {
+    this.update({ qaEntries: [...(this.state.qaEntries || []), entry] });
+  }
+  updateQAEntry(entry: QAEntry) {
+    this.update({
+      qaEntries: (this.state.qaEntries || []).map((q) => (q.id === entry.id ? entry : q)),
+    });
+  }
+  deleteQAEntry(id: string) {
+    this.update({ qaEntries: (this.state.qaEntries || []).filter((q) => q.id !== id) });
   }
 
   /** Check if an employee already has a leave overlapping the given date range */

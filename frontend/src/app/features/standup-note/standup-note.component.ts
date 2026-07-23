@@ -13,6 +13,7 @@ import { OfficeCalendarComponent } from './office-calendar/office-calendar.compo
 import { TasksComponent } from './tasks/tasks.component';
 import { LeaveTrackingComponent } from './leave-tracking/leave-tracking.component';
 import { ThemeService } from '../../core/services/theme.service';
+import { KnowledgeBaseComponent } from './knowledge-base/knowledge-base.component';
 
 type Tab =
   | 'dashboard'
@@ -24,7 +25,8 @@ type Tab =
   | 'feedback'
   | 'calendar'
   | 'tasks'
-  | 'leave';
+  | 'leave'
+  | 'qa';
 
 @Component({
   selector: 'app-standup-note',
@@ -42,6 +44,7 @@ type Tab =
     OfficeCalendarComponent,
     TasksComponent,
     LeaveTrackingComponent,
+    KnowledgeBaseComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
@@ -125,6 +128,7 @@ type Tab =
           <app-office-calendar *ngIf="activeTab === 'calendar'"></app-office-calendar>
           <app-tasks *ngIf="activeTab === 'tasks'"></app-tasks>
           <app-leave-tracking *ngIf="activeTab === 'leave'"></app-leave-tracking>
+          <app-knowledge-base *ngIf="activeTab === 'qa'"></app-knowledge-base>
         </main>
       </div>
     </div>
@@ -486,6 +490,7 @@ export class StandupNoteComponent {
     { id: 'checklists', label: 'Checklists', icon: '✅' },
     { id: 'feedback', label: 'Feedback', icon: '💬' },
     { id: 'calendar', label: 'Office Calendar', icon: '📅' },
+    { id: 'qa', label: 'Q&A / Knowledge Base', icon: '❓' },
   ];
 
   get currentNav() {
