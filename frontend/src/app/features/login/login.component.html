@@ -30,7 +30,7 @@
         </div>
 
         <div *ngIf="!authService.isLoading()">
-          <div class="social-row">
+          <!-- <div class="social-row">
             <button class="btn social google" (click)="handleGoogleSignIn()" [disabled]="authService.isLoading()">
               <span class="icon">G</span>
               Sign in with Google
@@ -39,9 +39,9 @@
               <span class="icon">M</span>
               Sign in with Microsoft
             </button>
-          </div>
+          </div> -->
 
-          <div class="divider login-divider">or continue with email</div>
+          <!-- <div class="divider login-divider">or continue with email</div> -->
 
           <form class="form" (ngSubmit)="signInWithEmail()" #loginForm="ngForm" novalidate>
             <div class="field">
