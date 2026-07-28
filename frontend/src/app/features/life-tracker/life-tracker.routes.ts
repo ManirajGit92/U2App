@@ -3,6 +3,8 @@ import { LifeTrackerComponent } from './life-tracker.component';
 import { LifeTrackerDashboardComponent } from './dashboard.component';
 import { CategoryViewComponent } from './category-view.component';
 import { LifeTrackerCalendarComponent } from './calendar.component';
+import { HealthOverviewComponent } from './health-overview.component';
+import { HealthRecordWizardComponent } from './health-record-wizard.component';
 
 export const LIFE_TRACKER_ROUTES: Routes = [
   {
@@ -11,6 +13,8 @@ export const LIFE_TRACKER_ROUTES: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: LifeTrackerDashboardComponent },
+      { path: 'health', component: HealthOverviewComponent },
+      { path: 'health/add', component: HealthRecordWizardComponent },
       { path: 'calendar', component: LifeTrackerCalendarComponent },
       { path: ':type', component: CategoryViewComponent }
     ]

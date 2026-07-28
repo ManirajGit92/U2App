@@ -8,6 +8,7 @@ interface NavItem {
   label: string;
   route: string;
   icon: string;
+  children?: NavItem[];
 }
 
 @Component({
@@ -43,15 +44,39 @@ interface NavItem {
         </div>
 
         <nav class="nav-list">
-          <a
-            *ngFor="let item of navItems"
-            [routerLink]="item.route"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="item.route === 'dashboard' ? { exact: true } : { exact: false }"
-            (click)="closeMobileDrawer()">
-            <i [class]="item.icon" aria-hidden="true"></i>
-            <span>{{ item.label }}</span>
-          </a>
+          <ng-container *ngFor="let item of navItems">
+            <button
+              *ngIf="item.children?.length; else navLink"
+              type="button"
+              class="nav-group-toggle"
+              [class.expanded]="isGroupExpanded(item.label)"
+              (click)="toggleGroup(item.label)">
+              <i [class]="item.icon" aria-hidden="true"></i>
+              <span>{{ item.label }}</span>
+              <i class="pi pi-chevron-down chevron" aria-hidden="true"></i>
+            </button>
+            <div class="nav-children" *ngIf="item.children?.length && isGroupExpanded(item.label)">
+              <a
+                *ngFor="let child of item.children"
+                [routerLink]="child.route"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="child.route === 'health' ? { exact: true } : { exact: false }"
+                (click)="closeMobileDrawer()">
+                <i [class]="child.icon" aria-hidden="true"></i>
+                <span>{{ child.label }}</span>
+              </a>
+            </div>
+            <ng-template #navLink>
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="item.route === 'dashboard' ? { exact: true } : { exact: false }"
+                (click)="closeMobileDrawer()">
+                <i [class]="item.icon" aria-hidden="true"></i>
+                <span>{{ item.label }}</span>
+              </a>
+            </ng-template>
+          </ng-container>
         </nav>
 
         <div class="sidebar-progress">
@@ -61,9 +86,9 @@ interface NavItem {
             <span></span>
           </div>
           <p>Discipline today</p>
-          <strong>Success tomorrow</strong>
+          <strong>Healthy tomorrow</strong>
           <div class="tiny-progress"><span style="width: 72%"></span></div>
-          <small>72% weekly rhythm</small>
+          <small>85 health score</small>
         </div>
       </aside>
 
@@ -75,13 +100,13 @@ interface NavItem {
             </button>
             <div>
               <p>{{ greeting() }}</p>
-              <h1>Welcome back, {{ userName }}</h1>
+              <h1>{{ pageTitle }}</h1>
             </div>
           </div>
 
           <label class="global-search">
             <i class="pi pi-search" aria-hidden="true"></i>
-            <input type="search" placeholder="Search routines, goals, expenses..." aria-label="Global search">
+            <input type="search" placeholder="Search health, vitals, reports..." aria-label="Global search">
           </label>
 
           <div class="top-actions">
@@ -226,26 +251,33 @@ interface NavItem {
       gap: 6px;
     }
 
-    .nav-list a {
+    .nav-list a,
+    .nav-group-toggle {
       display: flex;
       align-items: center;
       gap: 12px;
       min-height: 44px;
+      width: 100%;
       padding: 0 13px;
       color: var(--text-secondary);
       border-radius: 14px;
       font-weight: 700;
       font-size: 0.91rem;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
       transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
     }
 
-    .nav-list a i {
+    .nav-list a i,
+    .nav-group-toggle i {
       width: 20px;
       text-align: center;
       font-size: 1rem;
     }
 
-    .nav-list a:hover {
+    .nav-list a:hover,
+    .nav-group-toggle:hover {
       color: var(--accent-primary);
       background: var(--accent-surface);
       transform: translateX(3px);
@@ -255,6 +287,34 @@ interface NavItem {
       color: #fff;
       background: linear-gradient(135deg, #2563eb, #0ea5e9);
       box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+    }
+
+    .nav-group-toggle.expanded {
+      color: var(--text-primary);
+      background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+    }
+
+    .nav-group-toggle .chevron {
+      margin-left: auto;
+      transition: transform var(--transition-fast);
+    }
+
+    .nav-group-toggle.expanded .chevron {
+      transform: rotate(180deg);
+    }
+
+    .nav-children {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-left: 12px;
+      animation: navExpand 0.22s ease both;
+    }
+
+    .nav-children a {
+      min-height: 36px;
+      font-size: 0.82rem;
+      border-radius: 12px;
     }
 
     .sidebar-progress {
@@ -506,11 +566,15 @@ interface NavItem {
     .sidebar-collapsed .brand-copy,
     .sidebar-collapsed .sidebar-toggle,
     .sidebar-collapsed .nav-list a span,
+    .sidebar-collapsed .nav-group-toggle span,
+    .sidebar-collapsed .nav-group-toggle .chevron,
+    .sidebar-collapsed .nav-children,
     .sidebar-collapsed .sidebar-progress {
       display: none;
     }
 
-    .sidebar-collapsed .nav-list a {
+    .sidebar-collapsed .nav-list a,
+    .sidebar-collapsed .nav-group-toggle {
       justify-content: center;
       padding: 0;
     }
@@ -598,6 +662,11 @@ interface NavItem {
         font-size: 1.05rem;
       }
     }
+
+    @keyframes navExpand {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   `],
 })
 export class LifeTrackerComponent implements OnInit {
@@ -607,7 +676,9 @@ export class LifeTrackerComponent implements OnInit {
   userName = 'Mani';
   sidebarCollapsed = signal(false);
   mobileDrawerOpen = signal(false);
+  expandedGroups = signal<string[]>(['Health']);
   currentHour = signal(new Date().getHours());
+  pageTitle = 'Health Overview';
 
   greeting = computed(() => {
     const hour = this.currentHour();
@@ -618,16 +689,28 @@ export class LifeTrackerComponent implements OnInit {
 
   navItems: NavItem[] = [
     { label: 'Dashboard', route: 'dashboard', icon: 'pi pi-home' },
-    { label: 'Daily Routine', route: 'Routines', icon: 'pi pi-clock' },
-    { label: 'Health', route: 'MentalHealth', icon: 'pi pi-heart' },
-    { label: 'Fitness', route: 'Fitness', icon: 'pi pi-bolt' },
-    { label: 'Diet', route: 'Diet', icon: 'pi pi-apple' },
-    { label: 'Expenses', route: 'Expenses', icon: 'pi pi-wallet' },
-    { label: 'Investments', route: 'Investments', icon: 'pi pi-chart-line' },
-    { label: 'Mental Health', route: 'MentalHealth', icon: 'pi pi-face-smile' },
-    { label: 'Relationships', route: 'Relationships', icon: 'pi pi-users' },
-    { label: 'Calendar', route: 'calendar', icon: 'pi pi-calendar' },
+    {
+      label: 'Health',
+      route: 'health',
+      icon: 'pi pi-heart',
+      children: [
+        { label: 'Overview', route: 'health', icon: 'pi pi-th-large' },
+        { label: 'Add Health Record', route: 'health/add', icon: 'pi pi-plus-circle' },
+        { label: 'Health Records', route: 'MentalHealth', icon: 'pi pi-folder-open' },
+        { label: 'Trends & Analytics', route: 'Reports', icon: 'pi pi-chart-line' },
+      ],
+    },
+    { label: 'Activity', route: 'Fitness', icon: 'pi pi-bolt' },
+    { label: 'Nutrition', route: 'Diet', icon: 'pi pi-apple' },
+    { label: 'Sleep', route: 'MentalHealth', icon: 'pi pi-moon' },
+    { label: 'Medications', route: 'MentalHealth', icon: 'pi pi-briefcase' },
+    { label: 'Appointments', route: 'calendar', icon: 'pi pi-calendar-clock' },
     { label: 'Reports', route: 'Reports', icon: 'pi pi-chart-bar' },
+    { label: 'Habits', route: 'Routines', icon: 'pi pi-list-check' },
+    { label: 'Water Tracker', route: 'Diet', icon: 'pi pi-filter-fill' },
+    { label: 'Goals', route: 'dashboard', icon: 'pi pi-flag' },
+    { label: 'Reminders', route: 'dashboard', icon: 'pi pi-bell' },
+    { label: 'Insights', route: 'dashboard', icon: 'pi pi-sparkles' },
     { label: 'Settings', route: 'Settings', icon: 'pi pi-cog' },
   ];
 
@@ -640,6 +723,15 @@ export class LifeTrackerComponent implements OnInit {
 
   toggleSidebar() {
     this.sidebarCollapsed.set(!this.sidebarCollapsed());
+  }
+
+  isGroupExpanded(label: string) {
+    return this.expandedGroups().includes(label);
+  }
+
+  toggleGroup(label: string) {
+    const expanded = this.expandedGroups();
+    this.expandedGroups.set(expanded.includes(label) ? expanded.filter((item) => item !== label) : [...expanded, label]);
   }
 
   openMobileDrawer() {
