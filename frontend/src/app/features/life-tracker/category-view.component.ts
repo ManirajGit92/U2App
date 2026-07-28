@@ -24,7 +24,7 @@ import { Observable } from 'rxjs';
     <div class="controls-row glass-card">
       <div class="search-box">
         <span class="icon">🔍</span>
-        <input type="text" [(ngModel)]="searchTerm" placeholder="Search entries...">
+        <input type="text" [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" placeholder="Search entries...">
       </div>
       <div class="filter-info">
         Showing {{ filteredEntries().length }} of {{ allEntries().length }} entries
