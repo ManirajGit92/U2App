@@ -69,7 +69,8 @@ export type CategoryType =
   | 'Fitness'
   | 'MentalHealth'
   | 'Relationships'
-  | 'Investments';
+  | 'Investments'
+  | 'MentalWellness';
 
 const APP_NAME = 'life-tracker';
 
@@ -212,6 +213,7 @@ export class LifeTrackerService {
       case 'Fitness':
         return this.fitnessSubject;
       case 'MentalHealth':
+      case 'MentalWellness':
         return this.mentalHealthSubject;
       case 'Relationships':
         return this.relationshipsSubject;
@@ -235,6 +237,8 @@ export class LifeTrackerService {
         return 'fitness';
       case 'MentalHealth':
         return 'mentalHealth';
+      case 'MentalWellness':
+        return 'mentalWellness';
       case 'Relationships':
         return 'relationships';
       case 'Investments':

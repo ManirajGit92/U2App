@@ -676,7 +676,7 @@ export class LifeTrackerComponent implements OnInit {
   userName = 'Mani';
   sidebarCollapsed = signal(false);
   mobileDrawerOpen = signal(false);
-  expandedGroups = signal<string[]>(['Health']);
+  expandedGroups = signal<string[]>(['Mind & Wellness 🧠']);
   currentHour = signal(new Date().getHours());
   pageTitle = 'Health Overview';
 
@@ -689,6 +689,29 @@ export class LifeTrackerComponent implements OnInit {
 
   navItems: NavItem[] = [
     { label: 'Dashboard', route: 'dashboard', icon: 'pi pi-home' },
+    {
+      label: 'Mind & Wellness 🧠',
+      route: 'mental-wellness',
+      icon: 'pi pi-heart-fill',
+      children: [
+        { label: 'Overview', route: 'mental-wellness', icon: 'pi pi-th-large' },
+        { label: 'Add New Entry', route: 'mental-wellness/add', icon: 'pi pi-plus-circle' },
+        { label: 'Journal', route: 'mental-wellness/journal', icon: 'pi pi-book' },
+        { label: 'Meditation', route: 'mental-wellness/meditation', icon: 'pi pi-moon' },
+        { label: 'Breathing', route: 'mental-wellness/breathing', icon: 'pi pi-compass' },
+        { label: 'Mood Trends', route: 'mental-wellness/trends', icon: 'pi pi-chart-line' },
+        { label: 'Positive Thoughts', route: 'mental-wellness/thoughts', icon: 'pi pi-sun' },
+        { label: 'Gratitude Journal', route: 'mental-wellness/gratitude', icon: 'pi pi-heart' },
+        { label: 'Screen Time & Detox', route: 'mental-wellness/screen-time', icon: 'pi pi-mobile' },
+        { label: 'Books & Learning', route: 'mental-wellness/books', icon: 'pi pi-book' },
+        { label: 'Goals', route: 'mental-wellness/goals', icon: 'pi pi-flag' },
+        { label: 'Habits', route: 'mental-wellness/habits', icon: 'pi pi-list-check' },
+        { label: 'Reports', route: 'mental-wellness/reports', icon: 'pi pi-chart-bar' },
+        { label: 'Insights', route: 'mental-wellness/insights', icon: 'pi pi-sparkles' },
+        { label: 'Calendar', route: 'calendar', icon: 'pi pi-calendar' },
+        { label: 'Settings', route: 'Settings', icon: 'pi pi-cog' },
+      ],
+    },
     {
       label: 'Health',
       route: 'health',
