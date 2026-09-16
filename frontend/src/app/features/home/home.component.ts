@@ -574,6 +574,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     'compare',
     'html-viewer',
     'estimator',
+    'lodge-booking',
   ];
 
   activeSlides: CarouselSlide[] = [];
@@ -769,6 +770,16 @@ export class HomeComponent implements OnInit, OnDestroy {
       route: '/free-billing',
       available: true,
       color: 'linear-gradient(135deg, rgba(52,211,153,0.2), rgba(16,185,129,0.2))',
+    },
+    {
+      id: 'lodge-booking',
+      title: 'Lodge Booking',
+      description:
+        'Run a modern lodge front desk with room booking, guest management, payments, housekeeping, reports, and Excel data import/export.',
+      icon: 'LB',
+      route: '/lodge-booking',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(16,185,129,0.2))',
     },
     {
       id: 'youtube-manager',

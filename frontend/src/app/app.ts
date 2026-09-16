@@ -41,7 +41,9 @@ export class App {
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
-      this.isFullScreen = event.urlAfterRedirects.includes('/free-billing');
+      this.isFullScreen =
+        event.urlAfterRedirects.includes('/free-billing') ||
+        event.urlAfterRedirects.includes('/lodge-booking');
     });
   }
 }

@@ -176,6 +176,14 @@ export const routes: Routes = [
       import('./features/free-billing/free-billing.component').then((m) => m.FreeBillingComponent),
   },
   {
+    path: 'lodge-booking',
+    data: { navLabel: 'Lodge Booking', showInNav: true },
+    loadComponent: () =>
+      import('./features/lodge-booking/lodge-booking.component').then(
+        (m) => m.LodgeBookingComponent,
+      ),
+  },
+  {
     path: 'easy-documents',
     data: { navLabel: 'Easy Documents', showInNav: true },
     loadComponent: () =>
