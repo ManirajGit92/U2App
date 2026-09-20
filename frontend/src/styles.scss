@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 @import 'primeicons/primeicons.css';
 
 /* ───── CSS Custom Properties ───── */
@@ -105,6 +105,227 @@ body.theme-dark {
   --accent-primary-rgb: 129, 140, 248;
 }
 
+/* ───── J.A.R.V.I.S. Theme ───── */
+body.theme-jarvis {
+  /* Backgrounds — deep navy-black HUD */
+  --bg-primary:            #020b18;
+  --bg-secondary:          #051525;
+  --bg-tertiary:           #0a1f35;
+  --bg-card:               rgba(0, 20, 40, 0.82);
+  --bg-card-hover:         rgba(0, 30, 60, 0.96);
+  --bg-input:              rgba(0, 20, 40, 0.92);
+  --bg-overlay:            rgba(2, 11, 24, 0.72);
+
+  /* Text */
+  --text-primary:          #c8eeff;
+  --text-secondary:        #5fb4d8;
+  --text-tertiary:         #2d7a9a;
+  --text-inverse:          #020b18;
+
+  /* Borders — electric cyan */
+  --border-color:           rgba(0, 200, 255, 0.18);
+  --border-color-strong:    rgba(0, 200, 255, 0.40);
+
+  /* Accent — neon cyan / electric blue */
+  --accent-primary:         #00c8ff;
+  --accent-primary-hover:   #40daff;
+  --accent-secondary:       #0080ff;
+  --accent-gradient:        linear-gradient(135deg, #00c8ff 0%, #0060cc 60%, #00aaff 100%);
+  --accent-surface:         rgba(0, 200, 255, 0.10);
+  --accent-primary-rgb:     0, 200, 255;
+
+  /* Status */
+  --success:   #00ff88;
+  --warning:   #ffd000;
+  --danger:    #ff3355;
+  --info:      #00c8ff;
+
+  /* Diff */
+  --diff-match:          rgba(0, 255, 136, 0.12);
+  --diff-match-text:     #00ff88;
+  --diff-mismatch:       rgba(255, 51, 85, 0.12);
+  --diff-mismatch-text:  #ff3355;
+  --diff-added:          rgba(0, 255, 136, 0.10);
+  --diff-removed:        rgba(255, 51, 85, 0.10);
+
+  /* Structural */
+  --hero-gradient:       linear-gradient(160deg, #020b18 0%, #051525 45%, #020b18 100%);
+  --card-glass:          rgba(0, 20, 40, 0.65);
+  --card-glass-border:   rgba(0, 200, 255, 0.28);
+  --navbar-bg:           rgba(2, 11, 24, 0.90);
+  --surface-card:        #051525;
+
+  /* Shadows — cyan glow */
+  --shadow-sm:   0 2px 8px rgba(0, 200, 255, 0.10);
+  --shadow-md:   0 4px 20px rgba(0, 200, 255, 0.15);
+  --shadow-lg:   0 8px 40px rgba(0, 200, 255, 0.20);
+  --shadow-glow: 0 0 30px rgba(0, 200, 255, 0.30);
+
+  /* Radii — slightly sharper, techy */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+/* ── JARVIS: Body background pattern ── */
+body.theme-jarvis {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0, 100, 200, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(0, 200, 255, 0.04) 0%, transparent 50%),
+    var(--bg-primary);
+}
+
+/* ── JARVIS: Scrollbar ── */
+body.theme-jarvis ::-webkit-scrollbar-track {
+  background: rgba(0, 10, 20, 0.8);
+}
+body.theme-jarvis ::-webkit-scrollbar-thumb {
+  background: rgba(0, 200, 255, 0.35);
+  border-radius: 4px;
+}
+body.theme-jarvis ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 200, 255, 0.60);
+}
+
+/* ── JARVIS: Glass Card overrides ── */
+body.theme-jarvis .glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--card-glass-border);
+  box-shadow: var(--shadow-md), inset 0 0 0 1px rgba(0, 200, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+body.theme-jarvis .glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 200, 255, 0.013) 3px,
+    rgba(0, 200, 255, 0.013) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.theme-jarvis .glass-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.theme-jarvis .glass-card:hover {
+  border-color: rgba(0, 200, 255, 0.55);
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(0, 200, 255, 0.18);
+  transform: translateY(-3px);
+}
+
+/* ── JARVIS: Buttons ── */
+body.theme-jarvis .btn-primary {
+  background: linear-gradient(135deg, rgba(0, 200, 255, 0.15) 0%, rgba(0, 100, 200, 0.20) 100%);
+  border: 1px solid var(--accent-primary);
+  color: var(--accent-primary);
+  box-shadow: 0 0 12px rgba(0, 200, 255, 0.25), inset 0 1px 0 rgba(0, 200, 255, 0.15);
+  font-family: 'Orbitron', var(--font-family);
+  letter-spacing: 0.5px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+body.theme-jarvis .btn-primary:hover {
+  background: linear-gradient(135deg, rgba(0, 200, 255, 0.25) 0%, rgba(0, 120, 220, 0.30) 100%);
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.45), 0 4px 16px rgba(0, 200, 255, 0.20);
+  border-color: var(--accent-primary-hover);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+body.theme-jarvis .btn-secondary {
+  background: rgba(0, 20, 40, 0.80);
+  border: 1px solid rgba(0, 200, 255, 0.30);
+  color: var(--text-secondary);
+  font-family: 'Orbitron', var(--font-family);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+body.theme-jarvis .btn-secondary:hover {
+  background: rgba(0, 200, 255, 0.10);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  box-shadow: 0 0 12px rgba(0, 200, 255, 0.20);
+}
+
+body.theme-jarvis .btn-ghost {
+  color: var(--text-secondary);
+}
+body.theme-jarvis .btn-ghost:hover {
+  background: rgba(0, 200, 255, 0.08);
+  color: var(--accent-primary);
+}
+
+/* ── JARVIS: Badge overrides ── */
+body.theme-jarvis .badge-active {
+  background: rgba(0, 255, 136, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(0, 255, 136, 0.30);
+}
+
+/* ── JARVIS: Input fields ── */
+body.theme-jarvis .textarea-styled {
+  background: var(--bg-input);
+  border-color: rgba(0, 200, 255, 0.22);
+  color: var(--text-primary);
+  font-family: 'Orbitron', 'Fira Code', monospace;
+  font-size: 0.82rem;
+}
+body.theme-jarvis .textarea-styled:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.15), 0 0 16px rgba(0, 200, 255, 0.12);
+}
+
+/* ── JARVIS: Headings with Orbitron ── */
+body.theme-jarvis h1,
+body.theme-jarvis h2,
+body.theme-jarvis h3 {
+  font-family: 'Orbitron', var(--font-family);
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+/* ── JARVIS: Keyframe animations ── */
+@keyframes jarvisGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 200, 255, 0.25); }
+  50%       { box-shadow: 0 0 22px rgba(0, 200, 255, 0.55), 0 0 40px rgba(0, 200, 255, 0.15); }
+}
+
+@keyframes jarvisScan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes jarvisFlicker {
+  0%, 96%, 100% { opacity: 1; }
+  97%            { opacity: 0.85; }
+  98%            { opacity: 1; }
+  99%            { opacity: 0.90; }
+}
+
+@keyframes jarvisPulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.97); }
+}
+
+/* ── JARVIS: Apply glow animation to active cards ── */
+body.theme-jarvis .glass-card:hover {
+  animation: jarvisGlow 2.5s ease-in-out infinite;
+}
+
+
 /* ───── Reset & Base ───── */
 *,
 *::before,
@@ -125,10 +346,14 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
-  transition: background var(--transition-normal), color var(--transition-normal);
+  transition:
+    background var(--transition-normal),
+    color var(--transition-normal),
+    border-color var(--transition-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
 
 img,
 svg,

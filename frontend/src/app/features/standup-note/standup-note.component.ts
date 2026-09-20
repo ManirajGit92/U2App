@@ -1,4 +1,4 @@
-import { Component, inject, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, inject, CUSTOM_ELEMENTS_SCHEMA, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { StandupNoteService } from './standup-note.service';
@@ -55,8 +55,19 @@ type Tab =
       <!-- Sidebar -->
       <aside class="sidebar" [class.open]="isMobileMenuOpen" [class.collapsed]="isSidebarCollapsed">
         <div class="sidebar-logo">
-          <span class="logo-icon">📋</span>
-          <span class="logo-text" *ngIf="!isSidebarCollapsed">Standup Note</span>
+          <!-- Arc Reactor SVG for JARVIS theme -->
+          <div class="arc-reactor-mini" *ngIf="themeSvc.isJarvis()" title="J.A.R.V.I.S. Core Active">
+            <svg viewBox="0 0 40 40" width="28" height="28">
+              <circle cx="20" cy="20" r="16" stroke="#00c8ff" stroke-width="1.5" fill="rgba(0, 200, 255, 0.12)" />
+              <circle cx="20" cy="20" r="11" stroke="#00c8ff" stroke-width="1" stroke-dasharray="4,3" class="spin-hud" />
+              <polygon points="20,7 24,15 32,15 26,20 28,28 20,23 12,28 14,20 8,15 16,15" fill="none" stroke="#00c8ff" stroke-width="0.8" opacity="0.6" />
+              <circle cx="20" cy="20" r="5" fill="#00c8ff" class="core-glow" />
+            </svg>
+          </div>
+          <span class="logo-icon" *ngIf="!themeSvc.isJarvis()">📋</span>
+          <span class="logo-text" *ngIf="!isSidebarCollapsed">
+            {{ themeSvc.isJarvis() ? 'J.A.R.V.I.S. HUD' : 'Standup Note' }}
+          </span>
           <button
             class="collapse-btn"
             (click)="toggleSidebar()"
@@ -73,7 +84,7 @@ type Tab =
             (click)="activeTab = item.id; isMobileMenuOpen = false"
             [title]="isSidebarCollapsed ? item.label : ''"
           >
-            <span class="nav-icon">{{ item.icon }}</span>
+            <span class="nav-icon">{{ getNavIcon(item) }}</span>
             <span class="nav-label" *ngIf="!isSidebarCollapsed">{{ item.label }}</span>
           </button>
         </nav>
@@ -87,6 +98,51 @@ type Tab =
 
       <!-- Main content -->
       <div class="main-wrapper">
+        <!-- J.A.R.V.I.S. Top HUD Header Banner -->
+        <div class="jarvis-top-banner" *ngIf="themeSvc.isJarvis()">
+          <div class="banner-left">
+            <div class="helmet-icon-wrapper">
+              <svg class="helmet-svg" viewBox="0 0 100 100" width="46" height="46">
+                <circle cx="50" cy="50" r="44" stroke="#00c8ff" stroke-width="1.5" fill="none" opacity="0.35" />
+                <circle cx="50" cy="50" r="36" stroke="#00c8ff" stroke-width="1.5" stroke-dasharray="6,4" fill="none" class="spin-hud" />
+                <!-- Iron Man Mask Outline -->
+                <path d="M30,32 L50,18 L70,32 L66,68 L50,82 L34,68 Z" fill="rgba(0, 200, 255, 0.12)" stroke="#00c8ff" stroke-width="2" />
+                <polygon points="36,44 44,44 46,50 36,48" fill="#00c8ff" class="eye-glow" />
+                <polygon points="64,44 56,44 54,50 64,48" fill="#00c8ff" class="eye-glow" />
+                <circle cx="50" cy="62" r="5" fill="#00c8ff" class="core-glow" />
+              </svg>
+            </div>
+            <div class="banner-info">
+              <div class="banner-status-badge">
+                <span class="status-dot"></span> SYSTEM ONLINE • STARK HUD v4.8
+              </div>
+              <div class="banner-title">J.A.R.V.I.S. STANDUP INTELLIGENCE</div>
+              <div class="banner-quote">"At your service, boss. Daily standup telemetry and team metrics ready."</div>
+            </div>
+          </div>
+
+          <div class="banner-right">
+            <div class="telemetry-box">
+              <div class="telemetry-item">
+                <span class="label">MODULES</span>
+                <span class="value text-cyan">11/11 ACTIVE</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="label">SYS TEMP</span>
+                <span class="value text-green">36.5°C</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="label">NETWORK</span>
+                <span class="value text-cyan">STARK-LINK</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="label">TIME</span>
+                <span class="value text-gold">{{ currentTime }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Fixed Header -->
         <header class="app-header">
           <div class="header-title-wrapper">
@@ -94,7 +150,7 @@ type Tab =
               ☰
             </button>
             <div class="header-title">
-              <span class="header-icon">{{ currentNav?.icon }}</span>
+              <span class="header-icon">{{ getNavIcon(currentNav) }}</span>
               {{ currentNav?.label }}
             </div>
           </div>
@@ -129,6 +185,58 @@ type Tab =
           <app-tasks *ngIf="activeTab === 'tasks'"></app-tasks>
           <app-leave-tracking *ngIf="activeTab === 'leave'"></app-leave-tracking>
           <app-knowledge-base *ngIf="activeTab === 'qa'"></app-knowledge-base>
+
+          <!-- J.A.R.V.I.S. Bottom Operations & Holographic Globe Footer -->
+          <div class="jarvis-bottom-banner" *ngIf="themeSvc.isJarvis()">
+            <!-- Left: Rotating Holographic Globe SVG -->
+            <div class="globe-container">
+              <svg class="globe-svg" viewBox="0 0 120 120" width="76" height="76">
+                <circle cx="60" cy="60" r="54" stroke="rgba(0, 200, 255, 0.25)" stroke-width="1" fill="none" />
+                <circle cx="60" cy="60" r="46" stroke="rgba(0, 200, 255, 0.5)" stroke-width="1.5" stroke-dasharray="10,6" class="spin-hud-reverse" fill="none" />
+                <ellipse cx="60" cy="60" rx="42" ry="18" stroke="#00c8ff" stroke-width="1" fill="none" opacity="0.7" />
+                <ellipse cx="60" cy="60" rx="42" ry="32" stroke="#00c8ff" stroke-width="1" fill="none" opacity="0.4" />
+                <ellipse cx="60" cy="60" rx="18" ry="42" stroke="#00c8ff" stroke-width="1" fill="none" opacity="0.7" />
+                <line x1="18" y1="60" x2="102" y2="60" stroke="#00c8ff" stroke-width="1" opacity="0.6" />
+                <line x1="60" y1="18" x2="60" y2="102" stroke="#00c8ff" stroke-width="1" opacity="0.6" />
+                <circle cx="45" cy="48" r="3.5" fill="#00ff88" class="node-pulse" />
+                <circle cx="75" cy="55" r="3.5" fill="#00c8ff" class="node-pulse" />
+                <circle cx="60" cy="35" r="3" fill="#ffd000" class="node-pulse" />
+                <circle cx="38" cy="70" r="3" fill="#00c8ff" class="node-pulse" />
+              </svg>
+              <div class="globe-label">GLOBAL OPS CONNECTED</div>
+            </div>
+
+            <!-- Center: Operations Summary -->
+            <div class="ops-center">
+              <div class="ops-title">GLOBAL OPERATIONS & TEAM TELEMETRY</div>
+              <div class="ops-quote">"I am monitoring all active tasks, standup notes, and project milestones across all global sectors, sir."</div>
+              <div class="ops-tags">
+                <span class="tag">ENCRYPTION: AES-256</span>
+                <span class="tag">LATENCY: 12ms</span>
+                <span class="tag">SERVER: STARK-CORE-01</span>
+              </div>
+            </div>
+
+            <!-- Right: Equalizer & Telemetry Spectrum -->
+            <div class="ops-right">
+              <div class="equalizer-title">AUDIO / HUD FREQUENCY</div>
+              <div class="equalizer-bars">
+                <div class="bar bar-1"></div>
+                <div class="bar bar-2"></div>
+                <div class="bar bar-3"></div>
+                <div class="bar bar-4"></div>
+                <div class="bar bar-5"></div>
+                <div class="bar bar-6"></div>
+                <div class="bar bar-7"></div>
+                <div class="bar bar-8"></div>
+              </div>
+              <div class="system-health">
+                <span>CPU <strong class="text-cyan">14%</strong></span>
+                <span>RAM <strong class="text-cyan">2.4GB</strong></span>
+                <span>SYNC <strong class="text-green">ONLINE</strong></span>
+              </div>
+            </div>
+          </div>
         </main>
       </div>
     </div>
@@ -206,6 +314,13 @@ type Tab =
         font-size: 1rem;
         color: var(--primary);
       }
+
+      .arc-reactor-mini {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
       .collapse-btn {
         background: none;
         border: none;
@@ -299,6 +414,268 @@ type Tab =
         display: flex;
         flex-direction: column;
         overflow: hidden;
+      }
+
+      /* ── J.A.R.V.I.S. Top HUD Banner ────────── */
+      .jarvis-top-banner {
+        background: linear-gradient(90deg, rgba(0, 20, 40, 0.95) 0%, rgba(2, 11, 24, 0.98) 50%, rgba(0, 30, 60, 0.95) 100%);
+        border-bottom: 1px solid rgba(0, 200, 255, 0.35);
+        box-shadow: 0 4px 20px rgba(0, 200, 255, 0.15);
+        padding: 0.75rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        position: relative;
+        z-index: 10;
+      }
+
+      .banner-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .helmet-icon-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .banner-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+
+      .banner-status-badge {
+        font-family: 'Orbitron', monospace, sans-serif;
+        font-size: 0.65rem;
+        color: #00c8ff;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        text-transform: uppercase;
+      }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #00ff88;
+        box-shadow: 0 0 8px #00ff88;
+        animation: jarvisPulse 1.5s infinite;
+      }
+
+      .banner-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #c8eeff;
+        letter-spacing: 0.8px;
+        text-shadow: 0 0 10px rgba(0, 200, 255, 0.5);
+      }
+
+      .banner-quote {
+        font-size: 0.78rem;
+        color: #5fb4d8;
+        font-style: italic;
+      }
+
+      .banner-right {
+        display: flex;
+        align-items: center;
+      }
+
+      .telemetry-box {
+        display: flex;
+        gap: 1.25rem;
+        background: rgba(0, 20, 40, 0.6);
+        border: 1px solid rgba(0, 200, 255, 0.25);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+      }
+
+      .telemetry-item {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+
+      .telemetry-item .label {
+        font-family: 'Orbitron', monospace;
+        font-size: 0.58rem;
+        color: #2d7a9a;
+        letter-spacing: 0.5px;
+      }
+
+      .telemetry-item .value {
+        font-family: 'Orbitron', monospace;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      .text-cyan { color: #00c8ff; }
+      .text-green { color: #00ff88; }
+      .text-gold { color: #ffd000; }
+
+      /* ── J.A.R.V.I.S. Bottom Operations Banner ── */
+      .jarvis-bottom-banner {
+        background: linear-gradient(90deg, rgba(0, 15, 30, 0.95) 0%, rgba(2, 11, 24, 0.98) 50%, rgba(0, 20, 40, 0.95) 100%);
+        border: 1px solid rgba(0, 200, 255, 0.3);
+        border-radius: 10px;
+        padding: 0.85rem 1.25rem;
+        margin-top: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.25rem;
+        box-shadow: 0 4px 20px rgba(0, 200, 255, 0.12);
+      }
+
+      .globe-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .globe-label {
+        font-family: 'Orbitron', monospace;
+        font-size: 0.55rem;
+        color: #00c8ff;
+        letter-spacing: 0.8px;
+      }
+
+      .ops-center {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+
+      .ops-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #c8eeff;
+        letter-spacing: 0.5px;
+      }
+
+      .ops-quote {
+        font-size: 0.75rem;
+        color: #5fb4d8;
+        font-style: italic;
+      }
+
+      .ops-tags {
+        display: flex;
+        gap: 0.6rem;
+        margin-top: 0.2rem;
+      }
+
+      .ops-tags .tag {
+        font-family: 'Orbitron', monospace;
+        font-size: 0.6rem;
+        background: rgba(0, 200, 255, 0.08);
+        border: 1px solid rgba(0, 200, 255, 0.2);
+        color: #00c8ff;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+      }
+
+      .ops-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.4rem;
+      }
+
+      .equalizer-title {
+        font-family: 'Orbitron', monospace;
+        font-size: 0.58rem;
+        color: #2d7a9a;
+        letter-spacing: 0.5px;
+      }
+
+      .equalizer-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 22px;
+      }
+
+      .equalizer-bars .bar {
+        width: 4px;
+        background: #00c8ff;
+        border-radius: 2px;
+        box-shadow: 0 0 6px rgba(0, 200, 255, 0.6);
+      }
+
+      .bar-1 { animation: eqBar 1.2s ease-in-out infinite alternate; height: 40%; }
+      .bar-2 { animation: eqBar 0.9s ease-in-out infinite alternate; height: 75%; }
+      .bar-3 { animation: eqBar 1.4s ease-in-out infinite alternate; height: 90%; }
+      .bar-4 { animation: eqBar 0.8s ease-in-out infinite alternate; height: 50%; }
+      .bar-5 { animation: eqBar 1.1s ease-in-out infinite alternate; height: 85%; }
+      .bar-6 { animation: eqBar 1.3s ease-in-out infinite alternate; height: 60%; }
+      .bar-7 { animation: eqBar 0.7s ease-in-out infinite alternate; height: 95%; }
+      .bar-8 { animation: eqBar 1.0s ease-in-out infinite alternate; height: 45%; }
+
+      @keyframes eqBar {
+        0% { height: 20%; opacity: 0.5; }
+        100% { height: 100%; opacity: 1; }
+      }
+
+      .system-health {
+        display: flex;
+        gap: 0.75rem;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.65rem;
+        color: #5fb4d8;
+      }
+
+      /* Animations */
+      .spin-hud {
+        animation: spinClockwise 12s linear infinite;
+        transform-origin: center;
+      }
+
+      .spin-hud-reverse {
+        animation: spinCounterClockwise 16s linear infinite;
+        transform-origin: center;
+      }
+
+      .node-pulse {
+        animation: jarvisPulse 2s infinite alternate;
+      }
+
+      .core-glow {
+        animation: jarvisGlowCore 2s infinite alternate;
+      }
+
+      .eye-glow {
+        animation: eyeFlicker 3s infinite alternate;
+      }
+
+      @keyframes spinClockwise {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      @keyframes spinCounterClockwise {
+        from { transform: rotate(360deg); }
+        to { transform: rotate(0deg); }
+      }
+
+      @keyframes jarvisGlowCore {
+        from { fill: #00c8ff; filter: drop-shadow(0 0 2px #00c8ff); }
+        to { fill: #ffffff; filter: drop-shadow(0 0 8px #00c8ff); }
+      }
+
+      @keyframes eyeFlicker {
+        0%, 100% { fill: #00c8ff; opacity: 1; }
+        50% { fill: #80e5ff; opacity: 0.7; }
       }
 
       /* ── Header ──────────────────────────── */
@@ -404,6 +781,26 @@ type Tab =
 
       /* Mobile styling overrides */
       @media (max-width: 768px) {
+        .jarvis-top-banner {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .telemetry-box {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .jarvis-bottom-banner {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .ops-right {
+          align-items: flex-start;
+          width: 100%;
+        }
+
         .sidebar-backdrop {
           display: block;
         }
@@ -472,26 +869,50 @@ type Tab =
     `,
   ],
 })
-export class StandupNoteComponent {
+export class StandupNoteComponent implements OnInit, OnDestroy {
   svc = inject(StandupNoteService);
   themeSvc = inject(ThemeService);
   activeTab: Tab = 'dashboard';
   isMobileMenuOpen = false;
   isSidebarCollapsed = localStorage.getItem('u2app.sidebarCollapsed') === 'true';
 
-  navItems: { id: Tab; label: string; icon: string }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'notes', label: 'Standup Notes', icon: '📝' },
-    { id: 'employees', label: 'Employees', icon: '👥' },
-    { id: 'projects', label: 'Projects', icon: '🚀' },
-    { id: 'tasks', label: 'Tasks', icon: '📋' },
-    { id: 'leave', label: 'Leave Tracking', icon: '🏖️' },
-    { id: 'reminders', label: 'Reminders', icon: '🔔' },
-    { id: 'checklists', label: 'Checklists', icon: '✅' },
-    { id: 'feedback', label: 'Feedback', icon: '💬' },
-    { id: 'calendar', label: 'Office Calendar', icon: '📅' },
-    { id: 'qa', label: 'Q&A / Knowledge Base', icon: '❓' },
+  currentTime = '';
+  private timerId: any = null;
+
+  navItems: { id: Tab; label: string; icon: string; jarvisIcon: string }[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', jarvisIcon: '⚡' },
+    { id: 'notes', label: 'Standup Notes', icon: '📝', jarvisIcon: '📑' },
+    { id: 'employees', label: 'Employees', icon: '👥', jarvisIcon: '🛡️' },
+    { id: 'projects', label: 'Projects', icon: '🚀', jarvisIcon: '🎯' },
+    { id: 'tasks', label: 'Tasks', icon: '📋', jarvisIcon: '💻' },
+    { id: 'leave', label: 'Leave Tracking', icon: '🏖️', jarvisIcon: '🛰️' },
+    { id: 'reminders', label: 'Reminders', icon: '🔔', jarvisIcon: '🔔' },
+    { id: 'checklists', label: 'Checklists', icon: '✅', jarvisIcon: '⚙️' },
+    { id: 'feedback', label: 'Feedback', icon: '💬', jarvisIcon: '💬' },
+    { id: 'calendar', label: 'Office Calendar', icon: '📅', jarvisIcon: '📅' },
+    { id: 'qa', label: 'Q&A / Knowledge Base', icon: '❓', jarvisIcon: '🤖' },
   ];
+
+  ngOnInit() {
+    this.updateTime();
+    this.timerId = setInterval(() => this.updateTime(), 1000);
+  }
+
+  ngOnDestroy() {
+    if (this.timerId) {
+      clearInterval(this.timerId);
+    }
+  }
+
+  private updateTime() {
+    const now = new Date();
+    this.currentTime = now.toLocaleTimeString();
+  }
+
+  getNavIcon(item?: { icon: string; jarvisIcon: string }) {
+    if (!item) return '';
+    return this.themeSvc.isJarvis() ? item.jarvisIcon : item.icon;
+  }
 
   get currentNav() {
     return this.navItems.find((n) => n.id === this.activeTab);
@@ -507,3 +928,4 @@ export class StandupNoteComponent {
     if (file) this.svc.importExcel(file);
   }
 }
+

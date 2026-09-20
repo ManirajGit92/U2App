@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
 import { FirebaseSyncService, SyncState } from '../../core/services/firebase-sync.service';
+import { ThemeService, AppTheme } from '../../core/services/theme.service';
 import { SyncStatusComponent } from '../../shared/components/sync-status/sync-status.component';
 import { LoadingOverlayComponent } from '../../shared/components/loading-overlay/loading-overlay.component';
 import { LifeTrackerService } from '../life-tracker/life-tracker.service';
@@ -57,6 +58,75 @@ interface SyncModule {
               Sign Out
             </button>
           </div>
+        </div>
+
+        <!-- Appearance / Theme Section -->
+        <div class="appearance-section glass-card">
+          <div class="section-header-row">
+            <h2 class="section-title">🎨 Appearance</h2>
+          </div>
+          <p class="section-subtitle">
+            Choose your preferred visual theme. Changes apply instantly across the entire app.
+          </p>
+
+          <div class="theme-selector-cards">
+            <!-- Default Theme Card -->
+            <button
+              class="theme-card"
+              id="theme-card-default"
+              [class.active]="themeService.appTheme() === 'default'"
+              (click)="setAppTheme('default')"
+              type="button"
+              aria-label="Select Default theme"
+            >
+              <div class="theme-preview default-preview">
+                <div class="tp-navbar"></div>
+                <div class="tp-body">
+                  <div class="tp-card"></div>
+                  <div class="tp-card"></div>
+                  <div class="tp-card tp-wide"></div>
+                </div>
+              </div>
+              <div class="theme-card-footer">
+                <span class="theme-card-name">Default</span>
+                @if (themeService.appTheme() === 'default') {
+                  <span class="theme-check">✓ Active</span>
+                }
+              </div>
+            </button>
+
+            <!-- J.A.R.V.I.S. Theme Card -->
+            <button
+              class="theme-card jarvis-card"
+              id="theme-card-jarvis"
+              [class.active]="themeService.appTheme() === 'jarvis'"
+              (click)="setAppTheme('jarvis')"
+              type="button"
+              aria-label="Select J.A.R.V.I.S. theme"
+            >
+              <div class="theme-preview jarvis-preview">
+                <div class="tp-navbar jarvis-nb"></div>
+                <div class="tp-body jarvis-body">
+                  <div class="tp-card jarvis-c"></div>
+                  <div class="tp-card jarvis-c"></div>
+                  <div class="tp-card tp-wide jarvis-c"></div>
+                </div>
+                <div class="jarvis-scan-line"></div>
+              </div>
+              <div class="theme-card-footer">
+                <span class="theme-card-name">J.A.R.V.I.S.</span>
+                @if (themeService.appTheme() === 'jarvis') {
+                  <span class="theme-check">✓ Active</span>
+                }
+              </div>
+            </button>
+          </div>
+
+          @if (themeService.appTheme() === 'jarvis') {
+            <p class="jarvis-note">
+              🤖 J.A.R.V.I.S. mode active — <em>"Sometimes you gotta run before you can walk."</em>
+            </p>
+          }
         </div>
 
         <!-- Cloud Sync Section -->
@@ -417,11 +487,180 @@ interface SyncModule {
       gap: 12px;
     }
 
+    /* Appearance / Theme Section */
+    .appearance-section {
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      animation: fadeInUp 0.5s ease-out 0.05s both;
+    }
+
+    .theme-selector-cards {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .theme-card {
+      flex: 1;
+      min-width: 160px;
+      max-width: 220px;
+      background: none;
+      border: 2px solid var(--border-color-strong);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      padding: 0;
+      overflow: hidden;
+      transition: all 0.25s ease;
+    }
+
+    .theme-card:hover {
+      border-color: var(--accent-primary);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .theme-card.active {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.25);
+    }
+
+    /* Mini preview */
+    .theme-preview {
+      width: 100%;
+      height: 100px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Default preview */
+    .default-preview {
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+    }
+
+    .tp-navbar {
+      height: 12px;
+      background: rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .tp-body {
+      padding: 6px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+
+    .tp-card {
+      height: 22px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 3px;
+    }
+
+    .tp-wide {
+      grid-column: span 2;
+      height: 16px;
+    }
+
+    /* JARVIS preview */
+    .jarvis-preview {
+      background: linear-gradient(135deg, #020b18 0%, #051525 100%);
+      overflow: hidden;
+    }
+
+    .jarvis-nb {
+      background: rgba(0, 200, 255, 0.08);
+      border-bottom: 1px solid rgba(0, 200, 255, 0.30);
+    }
+
+    .jarvis-body {
+      padding: 6px;
+    }
+
+    .jarvis-c {
+      background: rgba(0, 200, 255, 0.08);
+      border: 1px solid rgba(0, 200, 255, 0.25);
+      border-radius: 2px;
+    }
+
+    .jarvis-scan-line {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(0, 200, 255, 0.05) 50%,
+        transparent 100%
+      );
+      animation: jarvisScan 3s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .theme-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .theme-card-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .theme-check {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      background: var(--accent-surface);
+      padding: 2px 6px;
+      border-radius: 50px;
+    }
+
+    /* JARVIS theme card always shows in JARVIS colours regardless of current theme */
+    .jarvis-card .theme-card-footer {
+      background: #051525;
+      border-top-color: rgba(0, 200, 255, 0.22);
+    }
+
+    .jarvis-card .theme-card-name {
+      color: #5fb4d8;
+      font-family: 'Orbitron', var(--font-family);
+      font-size: 0.72rem;
+      letter-spacing: 0.5px;
+    }
+
+    .jarvis-card .theme-check {
+      color: #00c8ff;
+      background: rgba(0, 200, 255, 0.12);
+    }
+
+    .jarvis-card:hover,
+    .jarvis-card.active {
+      border-color: #00c8ff;
+      box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.20), 0 0 16px rgba(0, 200, 255, 0.15);
+    }
+
+    .jarvis-note {
+      margin-top: 1rem;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      font-style: italic;
+      padding: 8px 14px;
+      background: var(--accent-surface);
+      border-left: 3px solid var(--accent-primary);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
     /* Sync Section */
     .sync-section {
       margin-bottom: 0.5rem;
       animation: fadeInUp 0.5s ease-out 0.1s both;
     }
+
 
     .section-header-row {
       display: flex;
@@ -987,6 +1226,7 @@ interface SyncModule {
 export class ProfileComponent {
   authService = inject(FirebaseAuthService);
   syncService = inject(FirebaseSyncService);
+  themeService = inject(ThemeService);
   private router = inject(Router);
 
   private lifeTrackerService = inject(LifeTrackerService);
@@ -1053,6 +1293,21 @@ export class ProfileComponent {
     this.homeCarouselService.slides$.subscribe(slides => {
       this.slides = slides;
     });
+
+    // Restore theme from Firestore if signed in
+    const uid = this.authService.user()?.uid;
+    if (uid) {
+      this.themeService.loadThemeFromFirestore(uid);
+    }
+  }
+
+  /** Apply app theme immediately and sync to Firestore when signed in. */
+  async setAppTheme(theme: AppTheme): Promise<void> {
+    this.themeService.setAppTheme(theme);
+    const uid = this.authService.user()?.uid;
+    if (uid) {
+      await this.themeService.syncThemeToFirestore(uid);
+    }
   }
 
   openAddSlideForm(): void {

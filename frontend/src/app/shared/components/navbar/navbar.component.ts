@@ -28,6 +28,9 @@ interface NavItem {
         <!-- Logo -->
         <a routerLink="/" class="navbar-logo" (click)="isMobileMenuOpen = false">
           💡<span class="logo-text"> U2 <span class="logo-highlight">Tools</span></span>
+          @if (themeService.isJarvis()) {
+            <span class="jarvis-badge" aria-label="J.A.R.V.I.S. theme active">J.A.R.V.I.S.</span>
+          }
         </a>
 
         <!-- Nav Links -->
@@ -497,6 +500,122 @@ interface NavItem {
       .theme-icon {
         display: flex;
         transition: transform var(--transition-fast);
+      }
+
+      /* ── J.A.R.V.I.S. Navbar Badge ── */
+      .jarvis-badge {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.58rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: #00c8ff;
+        background: rgba(0, 200, 255, 0.10);
+        border: 1px solid rgba(0, 200, 255, 0.35);
+        border-radius: 3px;
+        padding: 2px 6px;
+        animation: jarvisFlicker 6s ease-in-out infinite;
+        white-space: nowrap;
+        line-height: 1;
+        align-self: center;
+        margin-left: 4px;
+      }
+
+      /* ── J.A.R.V.I.S. Navbar link styles ── */
+      :host-context(body.theme-jarvis) .navbar {
+        border-bottom: 1px solid rgba(0, 200, 255, 0.22);
+        box-shadow: 0 2px 20px rgba(0, 200, 255, 0.08);
+      }
+
+      :host-context(body.theme-jarvis) .nav-link {
+        color: #3d9ab8;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.72rem;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        border-radius: 3px;
+      }
+
+      :host-context(body.theme-jarvis) .nav-link:hover {
+        color: #00c8ff;
+        background: rgba(0, 200, 255, 0.08);
+        text-shadow: 0 0 8px rgba(0, 200, 255, 0.5);
+      }
+
+      :host-context(body.theme-jarvis) .nav-link.active {
+        color: #00c8ff;
+        background: rgba(0, 200, 255, 0.10);
+        border: 1px solid rgba(0, 200, 255, 0.30);
+        text-shadow: 0 0 10px rgba(0, 200, 255, 0.6);
+        font-weight: 700;
+      }
+
+      :host-context(body.theme-jarvis) .settings-toggle {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.68rem;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        border-color: rgba(0, 200, 255, 0.25);
+        background: rgba(0, 20, 40, 0.80);
+        color: #3d9ab8;
+      }
+
+      :host-context(body.theme-jarvis) .settings-toggle:hover {
+        background: rgba(0, 200, 255, 0.10);
+        border-color: #00c8ff;
+        color: #00c8ff;
+      }
+
+      :host-context(body.theme-jarvis) .theme-toggle {
+        border-color: rgba(0, 200, 255, 0.25);
+        background: rgba(0, 20, 40, 0.80);
+        color: #3d9ab8;
+      }
+
+      :host-context(body.theme-jarvis) .theme-toggle:hover {
+        border-color: #00c8ff;
+        color: #00c8ff;
+        background: rgba(0, 200, 255, 0.10);
+        box-shadow: 0 0 10px rgba(0, 200, 255, 0.25);
+        transform: rotate(15deg);
+      }
+
+      :host-context(body.theme-jarvis) .user-avatar {
+        border-color: #00c8ff;
+        box-shadow: 0 0 8px rgba(0, 200, 255, 0.35);
+      }
+
+      :host-context(body.theme-jarvis) .user-dropdown {
+        background: #051525;
+        border-color: rgba(0, 200, 255, 0.30);
+        box-shadow: var(--shadow-lg), 0 0 20px rgba(0, 200, 255, 0.12);
+      }
+
+      :host-context(body.theme-jarvis) .dropdown-item {
+        color: #5fb4d8;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.72rem;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+
+      :host-context(body.theme-jarvis) .dropdown-item:hover {
+        background: rgba(0, 200, 255, 0.08);
+        color: #00c8ff;
+      }
+
+      :host-context(body.theme-jarvis) .nav-settings-panel {
+        background: #051525;
+        border-color: rgba(0, 200, 255, 0.30);
+        box-shadow: var(--shadow-lg), 0 0 20px rgba(0, 200, 255, 0.10);
+      }
+
+      :host-context(body.theme-jarvis) .settings-item {
+        background: rgba(0, 20, 40, 0.80);
+        border-color: rgba(0, 200, 255, 0.10);
+      }
+
+      :host-context(body.theme-jarvis) .settings-item:hover {
+        border-color: rgba(0, 200, 255, 0.35);
       }
 
       .user-menu {
