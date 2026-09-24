@@ -1,4 +1,4 @@
-<div class="flipbook-wrapper" [class.fullscreen]="isFullscreen" [class.sidebar-collapsed]="sidebarCollapsed"
+<div class="flipbook-wrapper" [class.fullscreen]="isFullscreen" [class.theme-jarvis]="selectedTheme === 'jarvis'" [class.sidebar-collapsed]="sidebarCollapsed"
   [class.sidebar-mobile-open]="sidebarMobileOpen" #flipbookWrapper>
 
   <!-- COLLAPSIBLE SIDEBAR -->
@@ -49,6 +49,14 @@
 
       <div class="sidebar-settings">
         <div class="shelf-header">Viewer Settings</div>
+        <div class="setting-item flex-col">
+          <span class="setting-label">Presentation Theme</span>
+          <select class="settings-select theme-select-dropdown" [ngModel]="selectedTheme" (ngModelChange)="setTheme($event)"
+            aria-label="Presentation Theme">
+            <option value="default">Default Theme</option>
+            <option value="jarvis">⚡ J.A.R.V.I.S. (Iron Man HUD)</option>
+          </select>
+        </div>
         <div class="setting-item">
           <span class="setting-label">Show Control Bar</span>
           <label class="switch" title="Toggle control bar visibility" aria-label="Toggle control bar visibility">
@@ -177,6 +185,9 @@
       <div style="flex: 1;"></div>
 
       <div class="action-status-indicators">
+        <button class="btn icon-btn theme-quick-btn" [class.jarvis-active]="selectedTheme === 'jarvis'" (click)="toggleTheme()" title="Toggle J.A.R.V.I.S. HUD Theme">
+          {{ selectedTheme === 'jarvis' ? '⚡ J.A.R.V.I.S. Mode' : '🎨 Default Theme' }}
+        </button>
         <button class="btn icon-btn" (click)="toggleMute()" [title]="isMuted ? 'Unmute narration' : 'Mute narration'">
           {{ isMuted ? '🔈 Voice Muted' : '🔊 Voice Narration' }}
         </button>
@@ -197,6 +208,17 @@
     <!-- PERSPECTIVE VIEWPORT -->
     <div class="viewer-canvas" [ngClass]="'effect-' + viewEffect" (mousedown)="onSwipeStart($event)"
       (mouseup)="onSwipeEnd($event)" (touchstart)="onSwipeStart($event)" (touchend)="onSwipeEnd($event)">
+      
+      <!-- J.A.R.V.I.S. CANVAS BACKDROP -->
+      <div class="jarvis-canvas-bg" *ngIf="selectedTheme === 'jarvis'">
+        <div class="jarvis-grid-overlay"></div>
+        <div class="jarvis-radial-glow"></div>
+        <div class="jarvis-top-hud-bar">
+          <span class="hud-sys-tag">JARVIS PRESENTATION SYSTEM // v3.6</span>
+          <span class="hud-status-badge"><span class="pulse-dot"></span> SECURE DISPATCH</span>
+        </div>
+      </div>
+
       <div class="loading-overlay" *ngIf="isLoading">
         <div class="spinner"></div>
         <p>Loading book structure...</p>
@@ -261,7 +283,7 @@
     </div>
 
     <!-- BOTTOM FLOATING TOOL BAR -->
-    <div class="viewer-bottom-bar glass-card" [class.hidden]="!showBottomBar">
+    <div class="viewer-bottom-bar glass-card" [class.hidden]="!showBottomBar" [class.controls-idle]="!controlsVisible && isFullscreen" [class.theme-jarvis-bar]="selectedTheme === 'jarvis'">
       <div class="stats-panel">
         <ng-container *ngIf="viewEffect === 'flipbook'; else singleStats">
           Pages: {{ physicalPages.length > 0 ? (currentPaperIndex * 2) : 0 }} / {{ pages.length }}
@@ -335,9 +357,60 @@
   </div>
 
   <!-- REUSABLE PAGE CONTENT TEMPLATE -->
-  <ng-template #pageContentTemplate let-page="page">
-    <div class="page-content-wrapper">
-      <h4 class="page-header-title" *ngIf="page.title">{{ page.title }}</h4>
+  <ng-template #pageContentTemplate let-page="page" let-isEditorPreview="isEditorPreview">
+    <div class="page-content-wrapper" [class.is-jarvis]="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">
+      
+      <!-- J.A.R.V.I.S. HUD ELEMENTS (VISIBLE WHEN JARVIS THEME IS ACTIVE) -->
+      <ng-container *ngIf="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">
+        <!-- SCANLINE SWEEP ANIMATION EFFECT -->
+        <div class="jarvis-scanline"></div>
+
+        <!-- TECH CORNER BRACKETS -->
+        <div class="hud-corner top-left"></div>
+        <div class="hud-corner top-right"></div>
+        <div class="hud-corner bottom-left"></div>
+        <div class="hud-corner bottom-right"></div>
+
+        <!-- AMBIENT ARC REACTOR HUD GRAPHIC -->
+        <div class="hud-watermark-arc">
+          <svg viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="45" stroke="#00f0ff" stroke-width="1" stroke-dasharray="8 4" opacity="0.25" />
+            <circle cx="50" cy="50" r="32" stroke="#00a8ff" stroke-width="1.5" opacity="0.3" />
+            <circle cx="50" cy="50" r="18" stroke="#00f0ff" stroke-width="2" opacity="0.4" />
+            <circle cx="50" cy="50" r="6" fill="#00f0ff" opacity="0.35" />
+          </svg>
+        </div>
+
+        <!-- J.A.R.V.I.S. SLIDE HEADER -->
+        <div class="jarvis-slide-header">
+          <div class="hud-header-left">
+            <div class="hud-sno-badge">
+              <svg class="badge-ring" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(0,240,255,0.3)" stroke-width="1.5" />
+                <circle cx="18" cy="18" r="15" fill="none" stroke="#00f0ff" stroke-width="1.5" stroke-dasharray="25 75" />
+              </svg>
+              <span class="sno-text">{{ formatIndex(page.sno) }}</span>
+            </div>
+            <div class="hud-title-box">
+              <h3 class="hud-title-main">{{ page.title || ('SECTION ' + formatIndex(page.sno)) }}</h3>
+              <span class="hud-title-sub">{{ getSelectedBookName() || 'U2 TOOLS' }} // SYSTEM DISPATCH</span>
+            </div>
+          </div>
+
+          <div class="hud-header-right">
+            <div class="hud-page-count-badge">
+              <span class="count-curr">{{ formatIndex(page.sno) }}</span>
+              <span class="count-sep">/</span>
+              <span class="count-tot">{{ formatIndex(pages.length || 1) }}</span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- STANDARD TITLE (DEFAULT THEME) -->
+      <h4 class="page-header-title" *ngIf="page.title && (selectedTheme !== 'jarvis' || isEditorPreview) && (!isEditorPreview || editorThemePreview !== 'jarvis')">
+        {{ page.title }}
+      </h4>
 
       <div class="layout-container" [ngClass]="page.layout">
 
@@ -346,45 +419,73 @@
 
         <!-- full-image -->
         <div class="layout-full content-image" *ngIf="page.layout === 'full-image'">
-          <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+          <div class="hud-media-wrapper" [class.jarvis-media]="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">
+            <span class="hud-frame-tag" *ngIf="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">[ VISUAL MEDIA PANEL ]</span>
+            <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+          </div>
         </div>
 
         <!-- full-iframe -->
         <div class="layout-full content-iframe" *ngIf="page.layout === 'full-iframe'">
-          <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            allowfullscreen></iframe>
+          <div class="hud-media-wrapper" [class.jarvis-media]="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">
+            <span class="hud-frame-tag" *ngIf="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">[ SECURE IFRAME STREAM ]</span>
+            <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+          </div>
         </div>
 
         <!-- split-html-image -->
         <div class="layout-split" *ngIf="page.layout === 'split-html-image'">
-          <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
+          <div class="split-pane pane-html content-html" [innerHTML]="page.safeHtml"></div>
           <div class="split-pane pane-image">
-            <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+            <div class="hud-media-wrapper" [class.jarvis-media]="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">
+              <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+            </div>
           </div>
         </div>
 
         <!-- split-image-iframe -->
         <div class="layout-split" *ngIf="page.layout === 'split-image-iframe'">
           <div class="split-pane pane-image">
-            <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+            <div class="hud-media-wrapper" [class.jarvis-media]="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">
+              <img [src]="page.imageUrl" class="page-img" alt="Page Image" />
+            </div>
           </div>
           <div class="split-pane pane-iframe">
-            <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-              allowfullscreen></iframe>
+            <div class="hud-media-wrapper" [class.jarvis-media]="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">
+              <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+            </div>
           </div>
         </div>
 
         <!-- split-html-iframe -->
         <div class="layout-split" *ngIf="page.layout === 'split-html-iframe'">
-          <div class="split-pane pane-html" [innerHTML]="page.safeHtml"></div>
+          <div class="split-pane pane-html content-html" [innerHTML]="page.safeHtml"></div>
           <div class="split-pane pane-iframe">
-            <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-              allowfullscreen></iframe>
+            <div class="hud-media-wrapper" [class.jarvis-media]="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">
+              <iframe [src]="page.safeIframeUrl" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowfullscreen></iframe>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="sno">{{ page.sno }}</div>
+      <!-- J.A.R.V.I.S. HUD FOOTER -->
+      <div class="jarvis-slide-footer" *ngIf="(selectedTheme === 'jarvis' && !isEditorPreview) || (isEditorPreview && editorThemePreview === 'jarvis')">
+        <div class="hud-footer-status">
+          <span class="hud-pulse-dot"></span>
+          <span class="hud-status-lbl">SYSTEM: ONLINE</span>
+        </div>
+        <div class="hud-footer-ticker">
+          <span>SEC.LEVEL 05</span>
+          <span class="t-sep">•</span>
+          <span>DATA SYNC ACTIVE</span>
+        </div>
+      </div>
+
+      <!-- STANDARD SNO (DEFAULT THEME) -->
+      <div class="sno" *ngIf="(selectedTheme !== 'jarvis' || isEditorPreview) && (!isEditorPreview || editorThemePreview !== 'jarvis')">
+        {{ page.sno }}
+      </div>
+
     </div>
   </ng-template>
 
@@ -396,7 +497,14 @@
           <h3>📚 Book & Pages Editor</h3>
           <p class="modal-sub">Modify book name, configure page layouts, split panes, images, and narrations.</p>
         </div>
-        <button class="close-btn" (click)="showBookModal = false">✕</button>
+        <div class="editor-header-actions">
+          <div class="editor-theme-preview-bar">
+            <span class="preview-label">Theme Preview:</span>
+            <button class="btn btn-sm btn-preview-tab" [class.active]="editorThemePreview === 'default'" (click)="editorThemePreview = 'default'">Default</button>
+            <button class="btn btn-sm btn-preview-tab jarvis-tab" [class.active]="editorThemePreview === 'jarvis'" (click)="editorThemePreview = 'jarvis'">⚡ J.A.R.V.I.S.</button>
+          </div>
+          <button class="close-btn" (click)="showBookModal = false">✕</button>
+        </div>
       </div>
 
       <div class="editor-body" *ngIf="editingBook">
@@ -427,7 +535,7 @@
             </div>
           </div>
 
-          <!-- RIGHT SIDE: ACTIVE PAGE DETAILS -->
+          <!-- RIGHT SIDE: ACTIVE PAGE DETAILS + LIVE PREVIEW -->
           <div class="page-fields-editor">
             <div class="page-fields-header">
               <span>Editing details for Page {{ editingPage.sno }}</span>
@@ -455,7 +563,7 @@
               <!-- HTML Content area (shown in HTML or Split layouts) -->
               <div class="field-wrap" *ngIf="editingPage.layout.includes('html')">
                 <label>HTML Content Editor (Supports rich HTML markup)</label>
-                <textarea class="html-editor-textarea" [(ngModel)]="editingPage.htmlContent" rows="10"
+                <textarea class="html-editor-textarea" [(ngModel)]="editingPage.htmlContent" rows="8"
                   placeholder="<h1>Heading</h1><p>Writing body content here...</p>"></textarea>
               </div>
 
@@ -488,6 +596,16 @@
                 <label>Narrator Narration Script (Reads aloud when page turns)</label>
                 <textarea [(ngModel)]="editingPage.voiceOver" rows="3"
                   placeholder="Writing text narration for Speech Synthesis reader..."></textarea>
+              </div>
+
+              <!-- LIVE SLIDE THEME PREVIEW PANEL IN EDITOR -->
+              <div class="editor-live-preview-box">
+                <div class="live-preview-title">
+                  <span>LIVE PAGE PREVIEW ({{ editorThemePreview | uppercase }} THEME)</span>
+                </div>
+                <div class="live-preview-stage">
+                  <ng-container *ngTemplateOutlet="pageContentTemplate; context: {page: parseContentFields(editingPage), isEditorPreview: true}"></ng-container>
+                </div>
               </div>
 
             </div>

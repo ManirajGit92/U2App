@@ -80,6 +80,11 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   private readonly voicesChangedHandler = () => this.loadAvailableVoices();
 
   // Presentation & Autoplay state
+  selectedTheme: 'default' | 'jarvis' = (localStorage.getItem('u2app_flipbook_theme') as 'default' | 'jarvis') || 'default';
+  editorThemePreview: 'default' | 'jarvis' = 'jarvis';
+  controlsVisible: boolean = true;
+  private idleTimeout: any = null;
+
   viewEffect: string = localStorage.getItem('u2app_view_effect') || 'flipbook';
   autoplayMode: 'duration' | 'narration' = (localStorage.getItem('u2app_autoplay_mode') as any) || 'duration';
   autoplayDurationMode: string = localStorage.getItem('u2app_autoplay_duration_mode') || '5s';
@@ -207,6 +212,40 @@ export class FlipBookComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ============== THEME & FULLSCREEN CONTROLS ==============
+
+  setTheme(theme: 'default' | 'jarvis') {
+    this.selectedTheme = theme;
+    localStorage.setItem('u2app_flipbook_theme', theme);
+    this.cdr.detectChanges();
+  }
+
+  toggleTheme() {
+    this.setTheme(this.selectedTheme === 'default' ? 'jarvis' : 'default');
+  }
+
+  formatIndex(num: number): string {
+    if (!num || isNaN(num)) return '01';
+    return num < 10 ? `0${num}` : `${num}`;
+  }
+
+  @HostListener('window:mousemove')
+  @HostListener('window:touchstart')
+  resetIdleTimer() {
+    if (!this.isFullscreen) {
+      this.controlsVisible = true;
+      return;
+    }
+    this.controlsVisible = true;
+    if (this.idleTimeout) clearTimeout(this.idleTimeout);
+    this.idleTimeout = setTimeout(() => {
+      if (this.isFullscreen) {
+        this.controlsVisible = false;
+        this.cdr.detectChanges();
+      }
+    }, 3000);
+  }
+
   // ============== DATA LOAD & PARSE ==============
 
   loadDefaultDemo() {
@@ -216,38 +255,96 @@ export class FlipBookComponent implements OnInit, OnDestroy {
       pages: [
         {
           sno: 1,
-          title: 'Cover Page',
+          title: 'INNOVATION TODAY',
           layout: 'full-html',
-          htmlContent: `<div style="text-align:center; padding: 2rem 1rem;">
-            <h1 style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1.5rem;">Digital Library Experience</h1>
-            <p style="font-size: 1.1rem; color: var(--text-secondary);">Select a book from the shelf on the left, turn pages with drag, or edit pages dynamically.</p>
-            <div style="margin-top: 2.5rem; font-size: 4rem;">📖</div>
+          htmlContent: `<div class="demo-jarvis-hero">
+            <div class="hero-tag-badge">U2 TOOLS // PRESENTATION DISPATCH</div>
+            <h1 class="hero-main-heading">INNOVATION TODAY<br/><span class="cyan-text">A BRIGHTER TOMORROW</span></h1>
+            <p class="hero-subtext">Next-generation interactive presentation system powered by J.A.R.V.I.S. HUD visual architecture and speech synthesis narration.</p>
+            <div class="hero-metrics-grid">
+              <div class="metric-card">
+                <span class="metric-val">9+</span>
+                <span class="metric-lbl">Years Exp</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-val">50+</span>
+                <span class="metric-lbl">Projects</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-val">100%</span>
+                <span class="metric-lbl">Commitment</span>
+              </div>
+            </div>
           </div>`,
-          voiceOver: 'Welcome to Flip Book Viewer. Use controls to go to the next page or toggle auto-play.'
+          voiceOver: 'Welcome to Flip Book Viewer. Experience interactive slideshow presentations in Default or J.A.R.V.I.S. HUD mode.'
         },
         {
           sno: 2,
-          title: 'Full Image Feature',
-          layout: 'full-image',
-          imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=1000',
-          voiceOver: 'Here is a scenic photography page rendered across the page.'
+          title: 'AGENDA & ROADMAP',
+          layout: 'full-html',
+          htmlContent: `<div class="demo-agenda-wrap">
+            <p style="margin-bottom: 1rem; color: #88ccff; font-weight: 600;">Let's explore today's journey across platform capabilities:</p>
+            <ul class="agenda-list">
+              <li><span>01</span> Introduction & Overview</li>
+              <li><span>02</span> Key Objectives & Strategy</li>
+              <li><span>03</span> Solution Overview & Architecture</li>
+              <li><span>04</span> Platform Features & Multi-Tools</li>
+              <li><span>05</span> Benefits & Cost Efficiency</li>
+              <li><span>06</span> Roadmap & Future Releases</li>
+            </ul>
+          </div>`,
+          voiceOver: 'Here is our agenda outlining introduction, strategy, platform architecture, and roadmap.'
         },
         {
           sno: 3,
-          title: 'Split Page: Text & Image',
+          title: 'INTRODUCTION & OVERVIEW',
           layout: 'split-html-image',
-          htmlContent: `<h3>Responsive Split Views</h3>
-            <p>This page demonstrates a 50% HTML block aligned side-by-side with a 50% image container.</p>
-            <p>On mobile viewports, these automatically wrap vertically to guarantee maximum comfort and readability.</p>`,
-          imageUrl: 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&q=80&w=500',
-          voiceOver: 'This page shows custom text layout paired with a book image side-by-side.'
+          htmlContent: `<div class="demo-intro-text">
+            <h3>Turning Ideas Into Real Solutions</h3>
+            <p>We build practical tools and web applications to make daily work simpler, faster, and significantly more efficient.</p>
+            <ul class="feature-bullets">
+              <li>Simple & Intuitive Design</li>
+              <li>Better Team Collaboration</li>
+              <li>Higher Productivity Output</li>
+            </ul>
+          </div>`,
+          imageUrl: 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&q=80&w=600',
+          voiceOver: 'We build practical tools to streamline workflows and enhance team collaboration.'
         },
         {
           sno: 4,
-          title: 'Sandboxed Iframe Embed',
+          title: 'SOLUTION OVERVIEW',
+          layout: 'full-html',
+          htmlContent: `<div class="demo-solution-grid">
+            <div class="sol-card">
+              <div class="sol-icon">💻</div>
+              <h4>Web Application</h4>
+              <p>Modern, responsive, user-friendly frontend architecture.</p>
+            </div>
+            <div class="sol-card">
+              <div class="sol-icon">☁️</div>
+              <h4>Cloud Ready</h4>
+              <p>Secure and scalable data infrastructure integration.</p>
+            </div>
+            <div class="sol-card">
+              <div class="sol-icon">📊</div>
+              <h4>Data Management</h4>
+              <p>Flexible import and export using standard Excel formats.</p>
+            </div>
+            <div class="sol-card">
+              <div class="sol-icon">⚙️</div>
+              <h4>Customizable</h4>
+              <p>Configurable settings tailored to match team requirements.</p>
+            </div>
+          </div>`,
+          voiceOver: 'Our solution offers cloud ready architecture, seamless data management, and customizable themes.'
+        },
+        {
+          sno: 5,
+          title: 'SANDBOXED MEDIA EMBED',
           layout: 'full-iframe',
           iframeUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-          voiceOver: 'Here is a sandboxed media embed section.'
+          voiceOver: 'Here is a sandboxed video embed section integrated inside the HUD slide layout.'
         }
       ]
     };
