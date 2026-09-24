@@ -5,6 +5,7 @@ import { WorkTrackerService, DeveloperTask, HourlyUpdateStatus, HourlyWorkUpdate
 import { BehaviorSubject, Subscription, combineLatest, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { NotificationReminder, NotificationReminderService } from '../../../core/services/notification-reminder.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 interface HourlyReminderPopup {
   hour: string;
@@ -18,7 +19,7 @@ interface HourlyReminderPopup {
   imports: [CommonModule, FormsModule],
   template: `
     <div class="dashboard-container">
-      <div class="dashboard-controls">
+      <div class="dashboard-controls" *ngIf="!themeService.isJarvis()">
         <button class="btn-table secondary" type="button" (click)="expandAllSections()">Expand All</button>
         <button class="btn-table secondary" type="button" (click)="collapseAllSections()">Collapse All</button>
       </div>
@@ -26,34 +27,49 @@ interface HourlyReminderPopup {
       <!-- Filters Section -->
       <div class="glass-card filters-section">
         <div class="table-header compact-header">
-          <h3>Task Data Filters</h3>
+          <div class="hud-header-title">
+            <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#00c8ff" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="#00c8ff"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="#00c8ff" stroke-width="2"/></svg>
+            <h3>Task Data Filters</h3>
+          </div>
           <button class="btn-table secondary" type="button" (click)="toggleSection('filters')">{{ sections.filters ? 'Collapse' : 'Expand' }}</button>
         </div>
         @if (sections.filters) {
         <div class="filters-grid">
           <div class="filter-group">
-            <label>Resource Name</label>
+            <label>
+              <i *ngIf="themeService.isJarvis()" class="pi pi-user filter-icon"></i>
+              Resource Name
+            </label>
             <select (change)="onFilterChange('resource', $event)">
               <option value="">All Resources</option>
               <option *ngFor="let res of uniqueResources$ | async" [value]="res">{{ res }}</option>
             </select>
           </div>
           <div class="filter-group">
-            <label>Project Name</label>
+            <label>
+              <i *ngIf="themeService.isJarvis()" class="pi pi-folder filter-icon"></i>
+              Project Name
+            </label>
             <select (change)="onFilterChange('project', $event)">
               <option value="">All Projects</option>
               <option *ngFor="let proj of uniqueProjects$ | async" [value]="proj">{{ proj }}</option>
             </select>
           </div>
           <div class="filter-group">
-            <label>Task Status</label>
+            <label>
+              <i *ngIf="themeService.isJarvis()" class="pi pi-cog filter-icon"></i>
+              Task Status
+            </label>
             <select (change)="onFilterChange('status', $event)">
               <option value="">All Statuses</option>
               <option *ngFor="let stat of uniqueStatuses$ | async" [value]="stat">{{ stat }}</option>
             </select>
           </div>
           <div class="filter-group">
-            <label>Task Priority</label>
+            <label>
+              <i *ngIf="themeService.isJarvis()" class="pi pi-flag filter-icon"></i>
+              Task Priority
+            </label>
             <select (change)="onFilterChange('priority', $event)">
               <option value="">All Priorities</option>
               <option *ngFor="let prio of uniquePriorities$ | async" [value]="prio">{{ prio }}</option>
@@ -61,31 +77,48 @@ interface HourlyReminderPopup {
           </div>
         </div>
 
-        <h3 class="margin-top-section">Release Data Filters</h3>
+        <div class="table-header compact-header margin-top-section">
+          <div class="hud-header-title">
+            <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="#00c8ff" stroke-width="2"/><polyline points="3.27 6.96 12 12.01 20.73 6.96" fill="none" stroke="#00c8ff" stroke-width="2"/><line x1="12" y1="22.08" x2="12" y2="12" stroke="#00c8ff" stroke-width="2"/></svg>
+            <h3>Release Data Filters</h3>
+          </div>
+        </div>
         <div class="filters-grid">
           <div class="filter-group">
-            <label>Category</label>
+            <label>
+              <i *ngIf="themeService.isJarvis()" class="pi pi-th-large filter-icon"></i>
+              Category
+            </label>
             <select (change)="onRelFilterChange('category', $event)">
               <option value="">All Categories</option>
               <option *ngFor="let cat of uniqueRelCategories$ | async" [value]="cat">{{ cat }}</option>
             </select>
           </div>
           <div class="filter-group">
-            <label>Release Status</label>
+            <label>
+              <i *ngIf="themeService.isJarvis()" class="pi pi-database filter-icon"></i>
+              Release Status
+            </label>
             <select (change)="onRelFilterChange('status', $event)">
               <option value="">All Statuses</option>
               <option *ngFor="let stat of uniqueRelStatuses$ | async" [value]="stat">{{ stat }}</option>
             </select>
           </div>
           <div class="filter-group">
-            <label>Priority</label>
+            <label>
+              <i *ngIf="themeService.isJarvis()" class="pi pi-flag filter-icon"></i>
+              Priority
+            </label>
             <select (change)="onRelFilterChange('priority', $event)">
               <option value="">All Priorities</option>
               <option *ngFor="let prio of uniqueRelPriorities$ | async" [value]="prio">{{ prio }}</option>
             </select>
           </div>
           <div class="filter-group">
-            <label>Assigned To</label>
+            <label>
+              <i *ngIf="themeService.isJarvis()" class="pi pi-user filter-icon"></i>
+              Assigned To
+            </label>
             <select (change)="onRelFilterChange('assigned', $event)">
               <option value="">All Assignees</option>
               <option *ngFor="let assign of uniqueRelAssigned$ | async" [value]="assign">{{ assign }}</option>
@@ -98,19 +131,25 @@ interface HourlyReminderPopup {
       <!-- Widgets Section -->
       <div class="section-shell">
         <div class="table-header">
-          <h2>Dashboard Summary</h2>
+          <div class="hud-header-title">
+            <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10" stroke="#00c8ff" stroke-width="2"/><line x1="12" y1="20" x2="12" y2="4" stroke="#00c8ff" stroke-width="2"/><line x1="6" y1="20" x2="6" y2="14" stroke="#00c8ff" stroke-width="2"/></svg>
+            <h2>Dashboard Summary</h2>
+          </div>
           <button class="btn-table secondary" type="button" (click)="toggleSection('widgets')">{{ sections.widgets ? 'Collapse' : 'Expand' }}</button>
         </div>
       @if (sections.widgets) {
       <div class="dashboard-grid">
         <!-- Developer Status Widget -->
         <div class="glass-card dev-widget">
-          <h2>Developer Status (Filtered)</h2>
+          <div class="hud-card-header">
+            <svg *ngIf="themeService.isJarvis()" class="hud-card-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="none" stroke="#00c8ff" stroke-width="2"/><circle cx="9" cy="7" r="4" fill="none" stroke="#00c8ff" stroke-width="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87" fill="none" stroke="#00c8ff" stroke-width="2"/><path d="M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="#00c8ff" stroke-width="2"/></svg>
+            <h2>Developer Status (Filtered)</h2>
+          </div>
           <div class="dev-list">
             <div class="dev-item" *ngFor="let dev of developers$ | async">
               <div class="dev-info">
                 <div class="avatar">{{ dev.name.charAt(0) }}</div>
-                <div>
+                <div class="dev-meta">
                   <h4>{{ dev.name }}</h4>
                   <span class="status-badge" [ngClass]="dev.status.replace(' ', '') | lowercase">{{ dev.status }}</span>
                 </div>
@@ -118,7 +157,7 @@ interface HourlyReminderPopup {
               <div class="progress-section">
                 <div class="progress-text">
                   <span>{{ dev.tasksCompleted }} / {{ dev.totalTasks }} Tasks</span>
-                  <span>{{ getPercentage(dev.tasksCompleted, dev.totalTasks) | number:'1.0-0' }}%</span>
+                  <span class="pct-num">{{ getPercentage(dev.tasksCompleted, dev.totalTasks) | number:'1.0-0' }}%</span>
                 </div>
                 <div class="progress-bar-bg">
                   <div class="progress-bar-fill" [style.width.%]="getPercentage(dev.tasksCompleted, dev.totalTasks)"></div>
@@ -133,28 +172,44 @@ interface HourlyReminderPopup {
 
         <!-- Release Tracking Widget -->
         <div class="glass-card release-widget">
-          <h2>Product Release Tracks</h2>
+          <div class="hud-card-header">
+            <svg *ngIf="themeService.isJarvis()" class="hud-card-icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="#00c8ff" stroke-width="2"/></svg>
+            <h2>Product Release Tracks</h2>
+          </div>
           <div class="release-timeline">
-            <div class="release-item" *ngFor="let release of filteredReleases$ | async">
+            <div class="release-item" *ngFor="let release of filteredReleases$ | async" [class.jarvis-release-item]="themeService.isJarvis()">
+              <!-- Icon for JARVIS mode -->
+              <div *ngIf="themeService.isJarvis()" class="release-icon-box">
+                <ng-container [ngSwitch]="getReleaseIconType(release)">
+                  <svg *ngSwitchCase="'shield'" class="rel-type-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="#00c8ff" stroke-width="2"/></svg>
+                  <svg *ngSwitchCase="'card'" class="rel-type-icon" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" fill="none" stroke="#00c8ff" stroke-width="2"/><line x1="1" y1="10" x2="23" y2="10" stroke="#00c8ff" stroke-width="2"/></svg>
+                  <svg *ngSwitchCase="'display'" class="rel-type-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" fill="none" stroke="#00c8ff" stroke-width="2"/><line x1="8" y1="21" x2="16" y2="21" stroke="#00c8ff" stroke-width="2"/><line x1="12" y1="17" x2="12" y2="21" stroke="#00c8ff" stroke-width="2"/></svg>
+                  <svg *ngSwitchDefault class="rel-type-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10" stroke="#00c8ff" stroke-width="2"/><line x1="12" y1="20" x2="12" y2="4" stroke="#00c8ff" stroke-width="2"/><line x1="6" y1="20" x2="6" y2="14" stroke="#00c8ff" stroke-width="2"/></svg>
+                </ng-container>
+              </div>
+
               <div class="release-header">
                 <h4>{{ release.title }}</h4>
                 <span class="stage-badge" [attr.data-stage]="release.status | lowercase">{{ release.status }}</span>
               </div>
-              <div class="mini-chart">
-                <svg viewBox="0 0 36 36" class="circular-chart" [ngClass]="getStrokeColorClass(release.progress)">
-                  <path class="circle-bg"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path class="circle"
-                    [attr.stroke-dasharray]="release.progress + ', 100'"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
+
+              <!-- Horizontal progress bar for JARVIS mode -->
+              <div *ngIf="themeService.isJarvis()" class="release-progress-bar-wrap">
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" [ngClass]="getReleaseColorClass(release.progress, release.status)" [style.width.%]="release.progress"></div>
+                </div>
+              </div>
+
+              <!-- Circular Chart for Default mode / Ring Badge for JARVIS mode -->
+              <div class="mini-chart" [class.jarvis-pct-pill]="themeService.isJarvis()">
+                <svg *ngIf="!themeService.isJarvis()" viewBox="0 0 36 36" class="circular-chart" [ngClass]="getStrokeColorClass(release.progress)">
+                  <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <path class="circle" [attr.stroke-dasharray]="release.progress + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                   <text x="18" y="20.35" class="percentage">{{ release.progress }}%</text>
                 </svg>
+                <div *ngIf="themeService.isJarvis()" class="jarvis-badge-ring" [ngClass]="getReleaseColorClass(release.progress, release.status)">
+                  {{ release.progress }}%
+                </div>
               </div>
             </div>
             <div *ngIf="(filteredReleases$ | async)?.length === 0" class="empty-state">
@@ -169,13 +224,19 @@ interface HourlyReminderPopup {
       <!-- Hourly Updates Charts -->
       <div class="glass-card hourly-analytics">
         <div class="table-header">
-          <h2>Hourly Work Updates</h2>
+          <div class="hud-header-title">
+            <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#00c8ff" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="#00c8ff" stroke-width="2"/></svg>
+            <h2>Hourly Work Updates</h2>
+          </div>
           <button class="btn-table secondary" type="button" (click)="toggleSection('charts')">{{ sections.charts ? 'Collapse' : 'Expand' }}</button>
         </div>
         @if (sections.charts) {
         <div class="chart-grid">
           <div class="chart-card">
-            <h3>Hours Worked Per Day</h3>
+            <div class="hud-sub-header">
+              <i *ngIf="themeService.isJarvis()" class="pi pi-chart-bar sub-icon"></i>
+              <h3>Hours Worked Per Day</h3>
+            </div>
             <div class="bar-chart" *ngIf="hoursPerDay$ | async as bars">
               <div class="bar-item" *ngFor="let bar of bars">
                 <div class="bar-track">
@@ -189,7 +250,10 @@ interface HourlyReminderPopup {
           </div>
 
           <div class="chart-card">
-            <h3>Status Distribution</h3>
+            <div class="hud-sub-header">
+              <i *ngIf="themeService.isJarvis()" class="pi pi-chart-pie sub-icon"></i>
+              <h3>Status Distribution</h3>
+            </div>
             <div class="pie-layout" *ngIf="statusDistribution$ | async as slices">
               <div class="pie-chart" [style.background]="getPieBackground(slices)" aria-label="Hourly update status distribution"></div>
               <div class="legend">
@@ -204,7 +268,10 @@ interface HourlyReminderPopup {
           </div>
 
           <div class="chart-card">
-            <h3>Productivity Trend</h3>
+            <div class="hud-sub-header">
+              <i *ngIf="themeService.isJarvis()" class="pi pi-chart-line sub-icon"></i>
+              <h3>Productivity Trend</h3>
+            </div>
             <svg class="line-chart" viewBox="0 0 320 180" role="img" aria-label="Productivity trend over time" *ngIf="productivityTrend$ | async as trend">
               <line x1="24" y1="146" x2="300" y2="146" class="axis"></line>
               <line x1="24" y1="24" x2="24" y2="146" class="axis"></line>
@@ -221,7 +288,10 @@ interface HourlyReminderPopup {
       <!-- Data Table Section (Hourly Updates) -->
       <div class="glass-card table-section">
         <div class="table-header">
-          <h2>Hourly Updates Data</h2>
+          <div class="hud-header-title">
+            <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#00c8ff" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="#00c8ff" stroke-width="2"/></svg>
+            <h2>Hourly Updates Data</h2>
+          </div>
           <div class="table-actions">
             <button class="btn-table secondary" type="button" (click)="enableHourlyReminders()">
               {{ reminderPermissionLabel }}
@@ -303,7 +373,10 @@ interface HourlyReminderPopup {
       <!-- Data Table Section (Developer Tasks) -->
       <div class="glass-card table-section">
         <div class="table-header">
-          <h2>Developer Tasks Data</h2>
+          <div class="hud-header-title">
+            <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6" fill="none" stroke="#00c8ff" stroke-width="2"/><polyline points="8 6 2 12 8 18" fill="none" stroke="#00c8ff" stroke-width="2"/></svg>
+            <h2>Developer Tasks Data</h2>
+          </div>
           <div class="table-actions">
             <button class="btn-table" type="button" (click)="openTaskModal()">Add Task</button>
             <button class="btn-table secondary" type="button" (click)="toggleHiddenTaskRows()">
@@ -406,7 +479,10 @@ interface HourlyReminderPopup {
       <!-- Data Table Section (Release Tracks) -->
       <div class="glass-card table-section">
         <div class="table-header">
-          <h2>Release Tracks Data</h2>
+          <div class="hud-header-title">
+            <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="#00c8ff" stroke-width="2"/></svg>
+            <h2>Release Tracks Data</h2>
+          </div>
           <div class="table-actions">
             <button class="btn-table" type="button" (click)="openReleaseModal()">Add Release</button>
             <button class="btn-table secondary" type="button" (click)="toggleHiddenReleaseRows()">
@@ -1372,6 +1448,7 @@ interface HourlyReminderPopup {
 })
 export class DashboardComponent implements OnDestroy {
   workTrackerService = inject(WorkTrackerService);
+  themeService = inject(ThemeService);
   private notificationReminderService = inject(NotificationReminderService);
   private changeDetectorRef = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
@@ -1473,6 +1550,27 @@ export class DashboardComponent implements OnDestroy {
         this.changeDetectorRef.detectChanges();
       });
     }));
+
+    this.reminderSubscription.add(this.workTrackerService.expandAll$.subscribe(() => this.expandAllSections()));
+    this.reminderSubscription.add(this.workTrackerService.collapseAll$.subscribe(() => this.collapseAllSections()));
+  }
+
+  getReleaseIconType(release: ReleaseTrack): string {
+    const cat = (release.category || '').toLowerCase();
+    const mod = (release.module || '').toLowerCase();
+    const title = (release.title || '').toLowerCase();
+    if (cat.includes('auth') || mod.includes('auth') || title.includes('auth')) return 'shield';
+    if (cat.includes('billing') || mod.includes('billing') || title.includes('payment')) return 'card';
+    if (cat.includes('ui') || mod.includes('front') || title.includes('landing')) return 'display';
+    return 'chart';
+  }
+
+  getReleaseColorClass(progress: number, status: string): string {
+    const st = (status || '').toLowerCase();
+    if (st === 'released' || progress === 100) return 'release-green';
+    if (st === 'staging' || progress >= 80) return 'release-cyan';
+    if (st === 'in review' || progress >= 50) return 'release-amber';
+    return 'release-purple';
   }
 
   ngOnDestroy(): void {

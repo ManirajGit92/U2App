@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
 import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
@@ -72,6 +72,20 @@ export interface WorkTrackerData {
 export class WorkTrackerService {
   private authService = inject(FirebaseAuthService);
   private syncService = inject(FirebaseSyncService);
+
+  private expandAllSubject = new Subject<void>();
+  private collapseAllSubject = new Subject<void>();
+
+  expandAll$ = this.expandAllSubject.asObservable();
+  collapseAll$ = this.collapseAllSubject.asObservable();
+
+  expandAllSections(): void {
+    this.expandAllSubject.next();
+  }
+
+  collapseAllSections(): void {
+    this.collapseAllSubject.next();
+  }
   private initialState: WorkTrackerData = {
     developerTasks: [
       {
