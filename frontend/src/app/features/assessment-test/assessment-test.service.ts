@@ -1228,15 +1228,17 @@ export class AssessmentTestService implements OnDestroy {
         ],
       ];
 
+      let questionSerial = 0;
       for (const set of this.questionSets()) {
         const category = this.categories().find((item) => item.id === set.categoryId);
         for (const question of set.questions) {
+          questionSerial++;
           questionRows.push([
             category?.name || 'Unknown',
             set.name,
             set.description || '',
             set.timerSeconds || '',
-            question.id,
+            `Q${questionSerial}`,
             question.title,
             question.description || '',
             question.type,

@@ -718,27 +718,47 @@ import { ThemeService } from '../../core/services/theme.service';
                 <button
                   class="btn btn-secondary btn-interactive"
                   [disabled]="service.activeQuestionIndex() === 0"
-                  (click)="service.previousQuestion(); service.playSound('navigate')"
+                  (click)="service.previousQuestion(); syncPillPage(); service.playSound('navigate')"
                 >
                   ← Previous
                 </button>
 
                 <div class="question-pills">
+                  <!-- Back page arrow (if not on first group) -->
                   <button
-                    *ngFor="let q of service.activeSet()?.questions; let idx = index"
-                    class="q-pill btn-interactive"
-                    [class.active]="idx === service.activeQuestionIndex()"
-                    [class.answered]="service.hasResponseForQuestion(q)"
-                    (click)="service.jumpToQuestion(idx); service.playSound('navigate')"
+                    *ngIf="pillPage() > 0"
+                    class="q-pill q-pill-nav btn-interactive"
+                    title="Previous 10 questions"
+                    (click)="prevPillPage()"
                   >
-                    {{ idx + 1 }}
+                    «
+                  </button>
+
+                  <button
+                    *ngFor="let q of visiblePills(); let idx = index"
+                    class="q-pill btn-interactive"
+                    [class.active]="pillPage() * 10 + idx === service.activeQuestionIndex()"
+                    [class.answered]="service.hasResponseForQuestion(q)"
+                    (click)="service.jumpToQuestion(pillPage() * 10 + idx); service.playSound('navigate')"
+                  >
+                    {{ pillPage() * 10 + idx + 1 }}
+                  </button>
+
+                  <!-- Forward page arrow (if more groups remain) -->
+                  <button
+                    *ngIf="(pillPage() + 1) * 10 < activeSetQuestionCount"
+                    class="q-pill q-pill-nav btn-interactive"
+                    title="Next 10 questions"
+                    (click)="nextPillPage()"
+                  >
+                    »
                   </button>
                 </div>
 
                 <button
                   *ngIf="service.activeQuestionIndex() < activeSetQuestionCount - 1"
                   class="btn btn-primary btn-interactive"
-                  (click)="service.nextQuestion(); service.playSound('navigate')"
+                  (click)="service.nextQuestion(); syncPillPage(); service.playSound('navigate')"
                 >
                   Next →
                 </button>
@@ -1353,6 +1373,8 @@ import { ThemeService } from '../../core/services/theme.service';
         display: grid;
         grid-template-columns: 320px minmax(0, 1fr);
         gap: 1.25rem;
+        align-items: stretch;
+        min-height: 0;
       }
       .questions-list-col {
         border-right: 1px solid var(--border-color, #e2e8f0);
@@ -1360,6 +1382,8 @@ import { ThemeService } from '../../core/services/theme.service';
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
+        min-height: 0;
+        overflow: hidden;
       }
       .list-col-header {
         display: flex;
@@ -1374,7 +1398,8 @@ import { ThemeService } from '../../core/services/theme.service';
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-        max-height: 480px;
+        flex: 1 1 0;
+        min-height: 0;
         overflow-y: auto;
       }
       .question-list-card {
@@ -1667,6 +1692,17 @@ import { ThemeService } from '../../core/services/theme.service';
       .q-pill.active.answered {
         background: #10b981;
         color: #ffffff;
+      }
+      .q-pill-nav {
+        font-size: 1rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        border-style: dashed;
+        opacity: 0.85;
+      }
+      .q-pill-nav:hover {
+        opacity: 1;
+        border-style: solid;
       }
 
       /* Results Styling */
@@ -2052,6 +2088,7 @@ export class AssessmentTestComponent {
   questionsEditorOpen = signal(true);
   overviewOpen = signal(true);
   dragOverCategoryId = signal<string | null>(null);
+  pillPage = signal(0);
   searchQuery = '';
   expandedCategories = new Set<string>();
 
@@ -2353,9 +2390,12 @@ export class AssessmentTestComponent {
 
   saveQuestion(): void {
     if (!this.currentQuestion || !this.service.selectedSetId()) return;
+    const parsedAnswers = this.parseCorrectAnswers(this.correctAnswerText);
     const question = {
       ...this.currentQuestion,
-      correctAnswers: this.parseCorrectAnswers(this.correctAnswerText),
+      // Keep correctAnswer (single) in sync for radio/textbox/textarea grading
+      correctAnswer: parsedAnswers[0] ?? '',
+      correctAnswers: parsedAnswers,
     };
     this.service.saveQuestion(this.service.selectedSetId()!, question);
     this.currentQuestion = question;
@@ -2379,8 +2419,9 @@ export class AssessmentTestComponent {
 
   answerTextForQuestion(question: AssessmentQuestion): string {
     if (!question) return '';
-    if (question.type === 'checkbox') {
-      return (question.correctAnswers || []).join(', ');
+    // Prefer correctAnswers array first (source of truth after saving)
+    if (question.correctAnswers && question.correctAnswers.length > 0) {
+      return question.correctAnswers.join(', ');
     }
     return question.correctAnswer || '';
   }
@@ -2444,7 +2485,37 @@ export class AssessmentTestComponent {
     this.service.updateResponse(question.id, next);
   }
 
+  /** Questions visible in the current pill page (10 per page) */
+  visiblePills(): AssessmentQuestion[] {
+    const questions = this.service.activeSet()?.questions ?? [];
+    const start = this.pillPage() * 10;
+    return questions.slice(start, start + 10);
+  }
+
+  prevPillPage(): void {
+    if (this.pillPage() > 0) {
+      this.pillPage.update((p) => p - 1);
+    }
+  }
+
+  nextPillPage(): void {
+    const total = this.activeSetQuestionCount;
+    if ((this.pillPage() + 1) * 10 < total) {
+      this.pillPage.update((p) => p + 1);
+    }
+  }
+
+  /** Keep pillPage in sync when service navigates (Prev / Next buttons) */
+  public syncPillPage(): void {
+    const idx = this.service.activeQuestionIndex();
+    const page = Math.floor(idx / 10);
+    if (this.pillPage() !== page) {
+      this.pillPage.set(page);
+    }
+  }
+
   startAssessment(): void {
+    this.pillPage.set(0);
     this.service.startOrResumeAssessment();
     this.viewMode.set('test');
     this.service.playSound('start');
