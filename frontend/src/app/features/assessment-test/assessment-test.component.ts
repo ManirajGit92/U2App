@@ -852,6 +852,9 @@ import { ThemeService } from '../../core/services/theme.service';
                   </span>
                 </div>
                 <div class="feedback-text">{{ detail.feedback }}</div>
+                <div class="feedback-correct-answer" *ngIf="!detail.correct && detail.correctAnswerText">
+                  Correct answer: {{ detail.correctAnswerText }}
+                </div>
               </div>
             </div>
 
@@ -1802,6 +1805,12 @@ import { ThemeService } from '../../core/services/theme.service';
       .earned-badge.earned-full {
         background: rgba(22, 163, 74, 0.12);
         color: #16a34a;
+      }
+      .feedback-correct-answer {
+        font-size: 0.9rem;
+        color: #16a34a;
+        font-weight: 500;
+        margin-top: 0.25rem;
       }
 
       .certificate-box {

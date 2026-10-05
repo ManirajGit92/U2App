@@ -57,6 +57,7 @@ export interface AssessmentResultDetail {
   earned: number;
   possible: number;
   feedback: string;
+  correctAnswerText?: string;
 }
 
 export interface AssessmentResult {
@@ -798,6 +799,13 @@ export class AssessmentTestService implements OnDestroy {
       if (!correct && !this.hasResponseForQuestion(q)) skippedCount += 1;
       if (!correct && this.hasResponseForQuestion(q) && q.required) incorrectCount += 1;
 
+      let correctAnswerText = '';
+      if (q.type === 'checkbox' && q.correctAnswers) {
+        correctAnswerText = q.correctAnswers.join(', ');
+      } else if (q.correctAnswer) {
+        correctAnswerText = String(q.correctAnswer);
+      }
+
       return {
         questionId: q.id,
         questionTitle: q.title,
@@ -805,6 +813,7 @@ export class AssessmentTestService implements OnDestroy {
         earned,
         possible,
         feedback,
+        correctAnswerText,
       };
     };
 
