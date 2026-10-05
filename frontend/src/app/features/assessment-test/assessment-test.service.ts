@@ -5,6 +5,7 @@ import autoTable from 'jspdf-autotable';
 import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
 import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
 import { FirestoreService } from '../../core/services/firestore.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 export type QuestionInputType = 'radio' | 'checkbox' | 'textbox' | 'textarea' | 'mixed';
 
@@ -34,6 +35,7 @@ export interface QuestionSet {
   description?: string;
   categoryId: string;
   timerSeconds?: number;
+  passingScore?: number;
   questions: AssessmentQuestion[];
   createdAt: string;
   updatedAt: string;
@@ -62,9 +64,16 @@ export interface AssessmentResult {
   maxScore: number;
   percentage: number;
   badge: string;
+  passed: boolean;
+  passingScore: number;
   correctCount: number;
   incorrectCount: number;
   skippedCount: number;
+  totalQuestions: number;
+  totalMarks: number;
+  timeTakenSeconds: number;
+  totalDurationSeconds: number;
+  submissionStatus: 'manual' | 'auto-time-over';
   details: AssessmentResultDetail[];
   completedAt: string;
 }
@@ -98,6 +107,12 @@ interface PersistedAssessmentState {
   lastResult: AssessmentResult | null;
   history: AssessmentHistoryItem[];
   autoSyncEnabled: boolean;
+  testStarted?: boolean;
+  testSubmitted?: boolean;
+  testStartTimeIso?: string | null;
+  remainingSeconds?: number;
+  autoSubmitted?: boolean;
+  interactionSoundsEnabled?: boolean;
   lastSyncedAt?: string;
 }
 
@@ -108,6 +123,7 @@ export class AssessmentTestService implements OnDestroy {
   private authService = inject(FirebaseAuthService);
   private syncService = inject(FirebaseSyncService);
   private firestoreService = inject(FirestoreService);
+  private themeService = inject(ThemeService);
 
   categories = signal<Category[]>([]);
   questionSets = signal<QuestionSet[]>([]);
@@ -125,6 +141,77 @@ export class AssessmentTestService implements OnDestroy {
   exportMessage = signal<string | null>(null);
   certificatePreview = signal<CertificateData | null>(null);
   errorMessage = signal<string | null>(null);
+  testStarted = signal<boolean>(false);
+  testSubmitted = signal<boolean>(false);
+  testStartTimeIso = signal<string | null>(null);
+  remainingSeconds = signal<number>(0);
+  autoSubmitted = signal<boolean>(false);
+  interactionSoundsEnabled = signal<boolean>(false);
+
+  private timerHandle: ReturnType<typeof setInterval> | null = null;
+  private audioCtx: AudioContext | null = null;
+
+  playSound(type: 'click' | 'start' | 'submit' | 'navigate' | 'action' = 'click'): void {
+    if (!this.interactionSoundsEnabled()) return;
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      if (!this.audioCtx) {
+        this.audioCtx = new AudioContextClass();
+      }
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume();
+      }
+      const ctx = this.audioCtx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      const now = ctx.currentTime;
+      if (type === 'click') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(850, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        osc.start(now);
+        osc.stop(now + 0.04);
+      } else if (type === 'start') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.12);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      } else if (type === 'submit') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
+        osc.frequency.setValueAtTime(783.99, now + 0.16);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } else if (type === 'navigate') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        osc.start(now);
+        osc.stop(now + 0.03);
+      } else if (type === 'action') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(950, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        osc.start(now);
+        osc.stop(now + 0.04);
+      }
+    } catch {
+      // Ignore audio errors
+    }
+  }
 
   activeCategory = computed(() => {
     return this.categories().find((category) => category.id === this.selectedCategoryId()) || null;
@@ -174,7 +261,7 @@ export class AssessmentTestService implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // no subscriptions to clean up
+    this.stopTimer();
   }
 
   private nowIso(): string {
@@ -296,6 +383,11 @@ export class AssessmentTestService implements OnDestroy {
     this.responses.set({});
     this.lastResult.set(null);
     this.history.set([]);
+    this.testStarted.set(false);
+    this.testSubmitted.set(false);
+    this.testStartTimeIso.set(null);
+    this.remainingSeconds.set(defaultSet.timerSeconds || 0);
+    this.autoSubmitted.set(false);
   }
 
   private loadLocalState(): void {
@@ -315,6 +407,15 @@ export class AssessmentTestService implements OnDestroy {
       this.lastResult.set(parsed.lastResult || null);
       this.history.set(parsed.history || []);
       this.autoSyncEnabled.set(parsed.autoSyncEnabled || false);
+      this.testStarted.set(parsed.testStarted || false);
+      this.testSubmitted.set(parsed.testSubmitted || false);
+      this.testStartTimeIso.set(parsed.testStartTimeIso ?? null);
+      this.remainingSeconds.set(parsed.remainingSeconds ?? this.activeSet()?.timerSeconds ?? 0);
+      this.autoSubmitted.set(parsed.autoSubmitted || false);
+      this.interactionSoundsEnabled.set(parsed.interactionSoundsEnabled || false);
+      if (this.testStarted() && !this.testSubmitted()) {
+        this.startTimer();
+      }
     } catch (error) {
       console.error('AssessmentTestService: failed to load local state', error);
       this.defaultState();
@@ -333,6 +434,12 @@ export class AssessmentTestService implements OnDestroy {
         lastResult: this.lastResult(),
         history: this.history(),
         autoSyncEnabled: this.autoSyncEnabled(),
+        testStarted: this.testStarted(),
+        testSubmitted: this.testSubmitted(),
+        testStartTimeIso: this.testStartTimeIso(),
+        remainingSeconds: this.remainingSeconds(),
+        autoSubmitted: this.autoSubmitted(),
+        interactionSoundsEnabled: this.interactionSoundsEnabled(),
         lastSyncedAt: this.syncMessage() ?? undefined,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -357,6 +464,7 @@ export class AssessmentTestService implements OnDestroy {
   setSelectedSet(setId: string): void {
     this.selectedSetId.set(setId);
     this.activeQuestionIndex.set(0);
+    this.resetAttemptState();
   }
 
   setActiveQuestionIndex(index: number): void {
@@ -425,6 +533,7 @@ export class AssessmentTestService implements OnDestroy {
               name: name.trim(),
               description: description.trim(),
               timerSeconds,
+              passingScore: set.passingScore,
               updatedAt: this.nowIso(),
             }
           : set,
@@ -439,6 +548,23 @@ export class AssessmentTestService implements OnDestroy {
     );
     this.selectedSetId.set(remaining.length ? remaining[0].id : null);
     this.activeQuestionIndex.set(0);
+  }
+
+  moveQuestionSetToCategory(setId: string, categoryId: string): void {
+    const categoryExists = this.categories().some((category) => category.id === categoryId);
+    if (!categoryExists) return;
+    this.questionSets.update((sets) =>
+      sets.map((set) =>
+        set.id === setId
+          ? {
+              ...set,
+              categoryId,
+              updatedAt: this.nowIso(),
+            }
+          : set,
+      ),
+    );
+    this.selectedCategoryId.set(categoryId);
   }
 
   addQuestion(template?: Partial<AssessmentQuestion>): void {
@@ -526,6 +652,7 @@ export class AssessmentTestService implements OnDestroy {
   }
 
   updateResponse(questionId: string, value: AssessmentResponseValue): void {
+    if (this.testSubmitted()) return;
     this.responses.update((current) => ({ ...current, [questionId]: value }));
   }
 
@@ -560,9 +687,59 @@ export class AssessmentTestService implements OnDestroy {
     this.activeQuestionIndex.set(index);
   }
 
-  submitAssessment(): void {
+  resetAttemptState(): void {
+    this.stopTimer();
+    this.testStarted.set(false);
+    this.testSubmitted.set(false);
+    this.testStartTimeIso.set(null);
+    this.autoSubmitted.set(false);
+    this.remainingSeconds.set(this.activeSet()?.timerSeconds || 0);
+  }
+
+  startOrResumeAssessment(): void {
+    const set = this.activeSet();
+    if (!set || set.questions.length === 0) return;
+    if (this.testSubmitted()) {
+      this.responses.set({});
+      this.lastResult.set(null);
+      this.activeQuestionIndex.set(0);
+      this.testSubmitted.set(false);
+      this.autoSubmitted.set(false);
+    }
+    if (!this.testStarted()) {
+      this.testStarted.set(true);
+      this.testStartTimeIso.set(this.nowIso());
+      this.remainingSeconds.set(set.timerSeconds || 0);
+    }
+    this.startTimer();
+  }
+
+  private startTimer(): void {
+    this.stopTimer();
+    if (!this.testStarted() || this.testSubmitted()) return;
+    const duration = this.activeSet()?.timerSeconds || 0;
+    if (duration <= 0) return;
+    this.timerHandle = setInterval(() => {
+      const next = Math.max(0, this.remainingSeconds() - 1);
+      this.remainingSeconds.set(next);
+      if (next <= 0) {
+        this.submitAssessment(true);
+      }
+    }, 1000);
+  }
+
+  private stopTimer(): void {
+    if (this.timerHandle) {
+      clearInterval(this.timerHandle);
+      this.timerHandle = null;
+    }
+  }
+
+  submitAssessment(autoTimeOver = false): void {
     const set = this.activeSet();
     if (!set) return;
+    if (this.testSubmitted()) return;
+    this.stopTimer();
 
     const details: AssessmentResultDetail[] = [];
     let score = 0;
@@ -641,20 +818,37 @@ export class AssessmentTestService implements OnDestroy {
 
     const percentage = maxScore ? Math.round((score / maxScore) * 100) : 0;
     const badge = this.getBadge(percentage);
+    const passingScore = set.passingScore ?? 60;
+    const duration = set.timerSeconds || 0;
+    const timeTakenSeconds = duration
+      ? Math.max(0, duration - this.remainingSeconds())
+      : this.testStartTimeIso()
+        ? Math.max(0, Math.round((Date.now() - new Date(this.testStartTimeIso()!).getTime()) / 1000))
+        : 0;
 
     const result: AssessmentResult = {
       score,
       maxScore,
       percentage,
       badge,
+      passed: percentage >= passingScore,
+      passingScore,
       correctCount,
       incorrectCount,
       skippedCount,
+      totalQuestions: set.questions.length,
+      totalMarks: maxScore,
+      timeTakenSeconds,
+      totalDurationSeconds: duration,
+      submissionStatus: autoTimeOver ? 'auto-time-over' : 'manual',
       details,
       completedAt: this.nowIso(),
     };
 
     this.lastResult.set(result);
+    this.testSubmitted.set(true);
+    this.testStarted.set(false);
+    this.autoSubmitted.set(autoTimeOver);
     this.history.update((items) => [
       {
         id: this.buildId('hist'),
@@ -662,7 +856,7 @@ export class AssessmentTestService implements OnDestroy {
         setName: set.name,
         categoryName: this.getCategoryName(set.categoryId),
         result,
-        durationSeconds: 0,
+        durationSeconds: timeTakenSeconds,
       },
       ...items,
     ]);
@@ -776,39 +970,225 @@ export class AssessmentTestService implements OnDestroy {
     const certificateData = this.generateCertificate(userName);
     if (!certificateData) return;
 
-    const doc = new jsPDF({ orientation: 'landscape' });
-    doc.setFillColor('#1f2937');
-    doc.rect(0, 0, 297, 210, 'F');
-    doc.setTextColor('#f8fafc');
-    doc.setFontSize(32);
-    doc.text('Certificate of Completion', 148, 35, { align: 'center' });
-    doc.setFontSize(16);
-    doc.text(`This certifies that`, 148, 52, { align: 'center' });
-    doc.setFontSize(28);
-    doc.text(certificateData.userName, 148, 72, { align: 'center' });
-    doc.setFontSize(16);
-    doc.text(`has completed the assessment`, 148, 85, { align: 'center' });
-    doc.setFontSize(22);
-    doc.text(certificateData.assessmentName, 148, 100, { align: 'center' });
-    doc.setFontSize(16);
-    doc.text(`Category: ${certificateData.category}`, 148, 115, { align: 'center' });
-    doc.text(`Score: ${certificateData.score} (${certificateData.percentage}%)`, 148, 124, {
-      align: 'center',
-    });
-    doc.text(`Badge earned: ${certificateData.badge}`, 148, 133, { align: 'center' });
-    doc.text(`Date: ${new Date(certificateData.completedAt).toLocaleDateString()}`, 148, 142, {
-      align: 'center',
-    });
+    const isJarvis = this.themeService.isJarvis();
+
+    // ── Theme Palettes ────────────────────────────────────────────────────────
+    const theme = isJarvis
+      ? {
+          bgPage:       '#020c18',
+          bgCard:       '#041525',
+          accent1:      '#00c8ff',
+          accent2:      '#0055aa',
+          accent3:      '#003366',
+          gold:         '#00e5ff',
+          goldLight:    '#80f0ff',
+          textPrimary:  '#c8eeff',
+          textSecondary:'#5fb4d8',
+          textMuted:    '#2d7a9a',
+          borderOuter:  '#00c8ff',
+          borderInner:  '#003a5c',
+          tableHead:    '#00182e',
+          tableRow1:    '#041525',
+          tableRow2:    '#021020',
+          sealBg:       '#003366',
+          sealRing:     '#00c8ff',
+          ribbonTop:    '#0044aa',
+          ribbonBot:    '#002255',
+          title:        'J.A.R.V.I.S. INTELLIGENCE SYSTEMS',
+        }
+      : {
+          bgPage:       '#0f172a',
+          bgCard:       '#1e293b',
+          accent1:      '#818cf8',
+          accent2:      '#4f46e5',
+          accent3:      '#312e81',
+          gold:         '#f59e0b',
+          goldLight:    '#fde68a',
+          textPrimary:  '#f1f5f9',
+          textSecondary:'#94a3b8',
+          textMuted:    '#475569',
+          borderOuter:  '#6366f1',
+          borderInner:  '#312e81',
+          tableHead:    '#1e1b4b',
+          tableRow1:    '#1e293b',
+          tableRow2:    '#0f172a',
+          sealBg:       '#1e1b4b',
+          sealRing:     '#f59e0b',
+          ribbonTop:    '#4338ca',
+          ribbonBot:    '#312e81',
+          title:        'U2 TOOLS ACADEMY',
+        };
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const W = 297, H = 210;
+    const cx = W / 2;
+
+    // ── Background ────────────────────────────────────────────────────────────
+    doc.setFillColor(theme.bgPage);
+    doc.rect(0, 0, W, H, 'F');
+
+    // ── Outer decorative border (double line) ─────────────────────────────────
+    doc.setDrawColor(theme.borderOuter);
+    doc.setLineWidth(1.5);
+    doc.rect(6, 6, W - 12, H - 12);
+    doc.setLineWidth(0.4);
+    doc.rect(9, 9, W - 18, H - 18);
+
+    // ── Corner accent squares ─────────────────────────────────────────────────
+    const corners = [[6, 6], [W - 14, 6], [6, H - 14], [W - 14, H - 14]];
+    doc.setFillColor(theme.accent1);
+    for (const [x, y] of corners) {
+      doc.rect(x, y, 8, 8, 'F');
+    }
+
+    // ── Header band ───────────────────────────────────────────────────────────
+    doc.setFillColor(theme.accent3);
+    doc.rect(9, 9, W - 18, 26, 'F');
+    // subtle accent stripe
+    doc.setFillColor(theme.accent2);
+    doc.rect(9, 9, W - 18, 3, 'F');
+
+    // ── Issuer label ──────────────────────────────────────────────────────────
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(theme.accent1);
+    doc.text(theme.title, cx, 17, { align: 'center', charSpace: 1.5 });
+
+    // ── Main title ────────────────────────────────────────────────────────────
+    doc.setFontSize(26);
+    doc.setTextColor(theme.gold);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CERTIFICATE OF ACHIEVEMENT', cx, 28, { align: 'center', charSpace: 0.8 });
+
+    // ── Gold divider line ─────────────────────────────────────────────────────
+    doc.setDrawColor(theme.gold);
+    doc.setLineWidth(0.8);
+    doc.line(30, 39, W - 30, 39);
+    doc.setLineWidth(0.25);
+    doc.line(35, 41, W - 35, 41);
+
+    // ── Seal circle (right side) ──────────────────────────────────────────────
+    const sealX = W - 38, sealY = 75, sealR = 22;
+    doc.setFillColor(theme.sealBg);
+    doc.circle(sealX, sealY, sealR, 'F');
+    doc.setDrawColor(theme.sealRing);
+    doc.setLineWidth(1.2);
+    doc.circle(sealX, sealY, sealR);
+    doc.setLineWidth(0.4);
+    doc.circle(sealX, sealY, sealR - 3);
+    // star in seal
+    doc.setFontSize(18);
+    doc.setTextColor(theme.gold);
+    doc.text('★', sealX, sealY - 4, { align: 'center' });
+    doc.setFontSize(6.5);
+    doc.setTextColor(theme.accent1);
+    doc.setFont('helvetica', 'bold');
+    doc.text('VERIFIED', sealX, sealY + 4, { align: 'center', charSpace: 1 });
+    doc.text('ACHIEVEMENT', sealX, sealY + 9, { align: 'center', charSpace: 0.5 });
+
+    // ── "This certifies that" ─────────────────────────────────────────────────
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(theme.textSecondary);
+    doc.text('This is to certify that', cx - 18, 53, { align: 'center' });
+
+    // ── Recipient name ────────────────────────────────────────────────────────
+    doc.setFont('helvetica', 'bolditalic');
+    doc.setFontSize(24);
+    doc.setTextColor(theme.goldLight);
+    doc.text(certificateData.userName, cx - 18, 68, { align: 'center' });
+    // underline
+    doc.setDrawColor(theme.gold);
+    doc.setLineWidth(0.5);
+    const nameWidth = doc.getTextWidth(certificateData.userName);
+    doc.line(cx - 18 - nameWidth / 2, 71, cx - 18 + nameWidth / 2, 71);
+
+    // ── Body text ─────────────────────────────────────────────────────────────
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    doc.setTextColor(theme.textSecondary);
+    doc.text('has successfully completed the assessment', cx - 18, 80, { align: 'center' });
+
+    // ── Assessment name ───────────────────────────────────────────────────────
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.setTextColor(theme.accent1);
+    doc.text(certificateData.assessmentName, cx - 18, 91, { align: 'center' });
+
+    // ── Category ─────────────────────────────────────────────────────────────
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(theme.textSecondary);
+    doc.text(`Category: ${certificateData.category}`, cx - 18, 99, { align: 'center' });
+
+    // ── Score badge band ──────────────────────────────────────────────────────
+    doc.setFillColor(theme.accent3);
+    doc.roundedRect(cx - 60, 104, 120, 18, 4, 4, 'F');
+    doc.setDrawColor(theme.accent1);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(cx - 60, 104, 120, 18, 4, 4);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(theme.gold);
+    doc.text(
+      `Score: ${certificateData.score} pts  |  ${certificateData.percentage}%  |  Badge: ${certificateData.badge}`,
+      cx - 18, 115, { align: 'center' }
+    );
+
+    // ── Divider ───────────────────────────────────────────────────────────────
+    doc.setDrawColor(theme.borderInner);
+    doc.setLineWidth(0.3);
+    doc.line(20, 128, W - 20, 128);
+
+    // ── Details table ─────────────────────────────────────────────────────────
     autoTable(doc, {
-      startY: 155,
-      theme: 'grid',
+      startY: 132,
+      margin: { left: 20, right: 20 },
+      theme: 'plain',
+      head: [['DETAIL', 'VALUE']],
       body: [
         ['Assessment', certificateData.assessmentName],
         ['Category', certificateData.category],
-        ['Badge', certificateData.badge],
-        ['Date', new Date(certificateData.completedAt).toLocaleString()],
+        ['Score', `${certificateData.score} points (${certificateData.percentage}%)`],
+        ['Badge Earned', certificateData.badge],
+        ['Completed On', new Date(certificateData.completedAt).toLocaleString()],
       ],
+      headStyles: {
+        fillColor: theme.tableHead,
+        textColor: theme.accent1,
+        fontStyle: 'bold',
+        fontSize: 8,
+        cellPadding: 2.5,
+      },
+      bodyStyles: {
+        fontSize: 8.5,
+        textColor: theme.textPrimary,
+        cellPadding: 2.5,
+      },
+      alternateRowStyles: {
+        fillColor: theme.tableRow2,
+      },
+      styles: {
+        fillColor: theme.tableRow1,
+        lineColor: theme.borderInner,
+        lineWidth: 0.2,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', textColor: theme.textSecondary, cellWidth: 45 },
+      },
     });
+
+    // ── Footer bar ────────────────────────────────────────────────────────────
+    doc.setFillColor(theme.accent3);
+    doc.rect(9, H - 18, W - 18, 9, 'F');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(theme.textMuted);
+    doc.text(
+      `Generated by U2 Tools  •  ${new Date().toLocaleDateString()}  •  This certificate is digitally issued and is valid.`,
+      cx, H - 12, { align: 'center' }
+    );
+
     doc.save(
       `${certificateData.assessmentName.replace(/\s+/g, '_')}-${certificateData.userName.replace(/\s+/g, '_')}.pdf`,
     );
@@ -1079,6 +1459,12 @@ export class AssessmentTestService implements OnDestroy {
         lastResult: this.lastResult(),
         history: this.history(),
         autoSyncEnabled: this.autoSyncEnabled(),
+        testStarted: this.testStarted(),
+        testSubmitted: this.testSubmitted(),
+        testStartTimeIso: this.testStartTimeIso(),
+        remainingSeconds: this.remainingSeconds(),
+        autoSubmitted: this.autoSubmitted(),
+        interactionSoundsEnabled: this.interactionSoundsEnabled(),
       });
       await this.syncService.pushToFirestore(
         'assessment-test',
@@ -1130,7 +1516,16 @@ export class AssessmentTestService implements OnDestroy {
         this.lastResult.set(cloudSet.lastResult || null);
         this.history.set(cloudSet.history || []);
         this.autoSyncEnabled.set(cloudSet.autoSyncEnabled ?? false);
+        this.testStarted.set(cloudSet.testStarted || false);
+        this.testSubmitted.set(cloudSet.testSubmitted || false);
+        this.testStartTimeIso.set(cloudSet.testStartTimeIso ?? null);
+        this.remainingSeconds.set(cloudSet.remainingSeconds ?? this.activeSet()?.timerSeconds ?? 0);
+        this.autoSubmitted.set(cloudSet.autoSubmitted || false);
+        this.interactionSoundsEnabled.set(cloudSet.interactionSoundsEnabled || false);
         this.responses.set(userResponse);
+        if (this.testStarted() && !this.testSubmitted()) {
+          this.startTimer();
+        }
         this.syncMessage.set('Cloud assessment data loaded.');
       }
     } catch (error) {

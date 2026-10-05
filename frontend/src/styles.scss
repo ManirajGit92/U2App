@@ -58,6 +58,7 @@ body.theme-light {
   --card-glass-border: rgba(255,255,255,0.6);
   --navbar-bg: rgba(255,255,255,0.7);
   --surface-card: #ffffff;
+  --bg-surface: #ffffff;
   --accent-primary-rgb: 99, 102, 241;
 }
 
@@ -70,6 +71,7 @@ body.theme-dark {
   --bg-card-hover: rgba(34,34,64,0.95);
   --bg-input: #222240;
   --bg-overlay: rgba(15,15,26,0.6);
+  --bg-surface: #1a1a2e;
 
   --text-primary: #e8e8f0;
   --text-secondary: #9494b8;
@@ -115,6 +117,7 @@ body.theme-jarvis {
   --bg-card-hover:         rgba(0, 30, 60, 0.96);
   --bg-input:              rgba(0, 20, 40, 0.92);
   --bg-overlay:            rgba(2, 11, 24, 0.72);
+  --bg-surface:            rgba(0, 30, 60, 0.75);
 
   /* Text */
   --text-primary:          #c8eeff;
