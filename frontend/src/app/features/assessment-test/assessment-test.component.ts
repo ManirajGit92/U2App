@@ -878,7 +878,13 @@ import { ThemeService } from '../../core/services/theme.service';
             <!-- Question Feedback Breakdown -->
             <div class="panel glass-card" *ngIf="service.lastResult() as result">
               <h4>Detailed Question Feedback</h4>
-              <div *ngFor="let detail of result.details; let i = index" class="feedback-row">
+              <div
+                *ngFor="let detail of result.details; let i = index"
+                class="feedback-row"
+                [class.feedback-row-correct]="detail.status === 'correct'"
+                [class.feedback-row-incorrect]="detail.status === 'incorrect'"
+                [class.feedback-row-unanswered]="detail.status === 'unanswered'"
+              >
                 <div class="feedback-top">
                   <div class="feedback-title-group">
                     <span class="feedback-q-number">Q{{ i + 1 }}.</span>
@@ -888,10 +894,71 @@ import { ThemeService } from '../../core/services/theme.service';
                     {{ detail.earned }} / {{ detail.possible }} pts
                   </span>
                 </div>
-                <div class="feedback-text">{{ detail.feedback }}</div>
-                <div class="feedback-correct-answer" *ngIf="!detail.correct && detail.correctAnswerText">
-                  Correct answer: {{ detail.correctAnswerText }}
+
+                <!-- Answer Display Container with Clear Green/Red Indicators -->
+                <div class="feedback-answers-container">
+                  <!-- Case 1: Correct Answer Selected -->
+                  <div class="feedback-answer-item answer-correct" *ngIf="detail.status === 'correct'">
+                    <span class="answer-badge-icon">✓</span>
+                    <div class="answer-content">
+                      <span class="answer-label-tag">Correct Answer:</span>
+                      <span class="answer-value-text">{{ detail.userAnswerText || detail.correctAnswerText }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Case 2: Incorrect Answer Selected -->
+                  <ng-container *ngIf="detail.status === 'incorrect'">
+                    <div class="feedback-answer-item answer-incorrect">
+                      <span class="answer-badge-icon">✗</span>
+                      <div class="answer-content">
+                        <span class="answer-label-tag">Incorrect Selected:</span>
+                        <span class="answer-value-text">{{ detail.userAnswerText || '(No text)' }}</span>
+                      </div>
+                    </div>
+                    <div class="feedback-answer-item answer-correct" *ngIf="detail.correctAnswerText">
+                      <span class="answer-badge-icon">✓</span>
+                      <div class="answer-content">
+                        <span class="answer-label-tag">Correct Answer:</span>
+                        <span class="answer-value-text">{{ detail.correctAnswerText }}</span>
+                      </div>
+                    </div>
+                  </ng-container>
+
+                  <!-- Case 3: Unanswered / Skipped -->
+                  <ng-container *ngIf="detail.status === 'unanswered'">
+                    <div class="feedback-answer-item answer-unanswered">
+                      <span class="answer-badge-icon">⚠️</span>
+                      <div class="answer-content">
+                        <span class="answer-label-tag">Status:</span>
+                        <span class="answer-value-text">Not Answered / Skipped</span>
+                      </div>
+                    </div>
+                    <div class="feedback-answer-item answer-correct" *ngIf="detail.correctAnswerText">
+                      <span class="answer-badge-icon">✓</span>
+                      <div class="answer-content">
+                        <span class="answer-label-tag">Correct Answer:</span>
+                        <span class="answer-value-text">{{ detail.correctAnswerText }}</span>
+                      </div>
+                    </div>
+                  </ng-container>
                 </div>
+
+                <!-- Informative feedback note if any special details -->
+                <div
+                  class="feedback-note-text"
+                  *ngIf="
+                    detail.feedback &&
+                    detail.feedback !== 'Correct.' &&
+                    detail.feedback !== 'Correct selection.' &&
+                    detail.feedback !== 'Incorrect choice.' &&
+                    detail.feedback !== 'Required question not answered.' &&
+                    detail.feedback !== 'No answer provided.' &&
+                    detail.feedback !== 'No response provided.'
+                  "
+                >
+                  {{ detail.feedback }}
+                </div>
+
                 <div class="feedback-reason" *ngIf="detail.correctAnswerReason">
                   <div class="reason-label">💡 Reason for Correct Answer:</div>
                   <div class="reason-content" [innerHTML]="detail.correctAnswerReason"></div>
@@ -1861,11 +1928,71 @@ import { ThemeService } from '../../core/services/theme.service';
         background: rgba(22, 163, 74, 0.12);
         color: #16a34a;
       }
-      .feedback-correct-answer {
-        font-size: 0.9rem;
-        color: #16a34a;
-        font-weight: 500;
-        margin-top: 0.25rem;
+      .feedback-row.feedback-row-correct {
+        border-left: 4px solid #16a34a;
+      }
+      .feedback-row.feedback-row-incorrect {
+        border-left: 4px solid #dc2626;
+      }
+      .feedback-row.feedback-row-unanswered {
+        border-left: 4px solid #eab308;
+      }
+      .feedback-answers-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        margin-top: 0.35rem;
+      }
+      .feedback-answer-item {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.55rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.92rem;
+        line-height: 1.4;
+      }
+      .feedback-answer-item.answer-correct {
+        background: rgba(22, 163, 74, 0.1);
+        border: 1px solid rgba(22, 163, 74, 0.35);
+        color: #15803d;
+      }
+      .feedback-answer-item.answer-incorrect {
+        background: rgba(220, 38, 38, 0.1);
+        border: 1px solid rgba(220, 38, 38, 0.35);
+        color: #dc2626;
+      }
+      .feedback-answer-item.answer-unanswered {
+        background: rgba(234, 179, 8, 0.12);
+        border: 1px solid rgba(234, 179, 8, 0.35);
+        color: #b45309;
+      }
+      .answer-badge-icon {
+        font-weight: 900;
+        font-size: 1rem;
+        flex-shrink: 0;
+      }
+      .answer-content {
+        display: flex;
+        align-items: baseline;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+      }
+      .answer-label-tag {
+        font-weight: 700;
+        font-size: 0.88rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      .answer-value-text {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      .feedback-note-text {
+        font-size: 0.86rem;
+        color: var(--text-secondary, #64748b);
+        margin-top: 0.2rem;
+        font-style: italic;
       }
 
       .certificate-box {
@@ -2175,6 +2302,35 @@ import { ThemeService } from '../../core/services/theme.service';
       .jarvis-mode .btn-clear-all:hover {
         background: rgba(255, 107, 107, 0.15) !important;
         border-color: rgba(255, 107, 107, 0.5) !important;
+      }
+      .jarvis-mode .feedback-answer-item.answer-correct {
+        background: rgba(0, 255, 136, 0.12) !important;
+        border: 1px solid rgba(0, 255, 136, 0.45) !important;
+        color: #00ff88 !important;
+        text-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
+      }
+      .jarvis-mode .feedback-answer-item.answer-incorrect {
+        background: rgba(255, 68, 68, 0.15) !important;
+        border: 1px solid rgba(255, 68, 68, 0.45) !important;
+        color: #ff5555 !important;
+        text-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
+      }
+      .jarvis-mode .feedback-answer-item.answer-unanswered {
+        background: rgba(255, 190, 0, 0.15) !important;
+        border: 1px solid rgba(255, 190, 0, 0.45) !important;
+        color: #ffcc00 !important;
+      }
+      .jarvis-mode .feedback-row.feedback-row-correct {
+        border-left: 4px solid #00ff88 !important;
+      }
+      .jarvis-mode .feedback-row.feedback-row-incorrect {
+        border-left: 4px solid #ff4444 !important;
+      }
+      .jarvis-mode .feedback-row.feedback-row-unanswered {
+        border-left: 4px solid #ffbb00 !important;
+      }
+      .jarvis-mode .feedback-note-text {
+        color: #5fb4d8 !important;
       }
 
       /* Animations */

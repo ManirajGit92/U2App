@@ -60,8 +60,10 @@ export interface AssessmentResultDetail {
   earned: number;
   possible: number;
   feedback: string;
+  userAnswerText?: string;
   correctAnswerText?: string;
   correctAnswerReason?: string;
+  status: 'correct' | 'incorrect' | 'unanswered';
 }
 
 export interface AssessmentResult {
@@ -779,6 +781,53 @@ export class AssessmentTestService implements OnDestroy {
     }
   }
 
+  private findMatchingOption(
+    options: QuestionOption[] | undefined,
+    val: string | number | undefined | null,
+  ): QuestionOption | undefined {
+    if (!options || !options.length || val === undefined || val === null) return undefined;
+    const target = String(val).trim().toLowerCase();
+    if (!target) return undefined;
+    return options.find(
+      (opt) =>
+        opt.value.trim().toLowerCase() === target ||
+        opt.label.trim().toLowerCase() === target ||
+        opt.id.trim().toLowerCase() === target,
+    );
+  }
+
+  private getHumanReadableOptionLabel(
+    options: QuestionOption[] | undefined,
+    val: string | number | undefined | null,
+  ): string {
+    if (val === undefined || val === null) return '';
+    const match = this.findMatchingOption(options, val);
+    return match ? match.label : String(val).trim();
+  }
+
+  private areAnswersMatching(
+    options: QuestionOption[] | undefined,
+    userVal: string | number | undefined | null,
+    expectedVal: string | number | undefined | null,
+  ): boolean {
+    const u = String(userVal ?? '').trim().toLowerCase();
+    const e = String(expectedVal ?? '').trim().toLowerCase();
+    if (!u || !e) return false;
+    if (u === e) return true;
+    if (options && options.length > 0) {
+      const uOpt = this.findMatchingOption(options, u);
+      const eOpt = this.findMatchingOption(options, e);
+      if (uOpt && eOpt && uOpt.id === eOpt.id) return true;
+      if (uOpt && (uOpt.label.trim().toLowerCase() === e || uOpt.value.trim().toLowerCase() === e)) {
+        return true;
+      }
+      if (eOpt && (eOpt.label.trim().toLowerCase() === u || eOpt.value.trim().toLowerCase() === u)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   submitAssessment(autoTimeOver = false): void {
     const set = this.activeSet();
     if (!set) return;
@@ -800,53 +849,70 @@ export class AssessmentTestService implements OnDestroy {
       let possible = q.weight;
       let correct = false;
       let feedback = 'No response provided.';
+      let userAnswerText = '';
+      let correctAnswerText = '';
+      let status: 'correct' | 'incorrect' | 'unanswered' = 'unanswered';
 
-      const normalizeAnswer = (input: AssessmentResponseValue): string[] => {
-        if (Array.isArray(input)) return input.map((item) => String(item).trim().toLowerCase());
-        if (typeof input === 'object' && input !== null) {
-          return Object.values(input)
-            .flatMap((inner) => (Array.isArray(inner) ? inner : [String(inner)]))
-            .map((item) => item.trim().toLowerCase());
-        }
-        return [String(input).trim().toLowerCase()];
-      };
-
-      const responseValues = normalizeAnswer(value);
       if (q.type === 'mixed' && q.controls?.length) {
         let subEarned = 0;
         let subMax = 0;
         const subDetails: string[] = [];
-        const responseObject = value as Record<string, AssessmentResponseValue>;
+        const subUserAnswers: string[] = [];
+        const subCorrectAnswers: string[] = [];
+        const responseObject = (
+          value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+        ) as Record<string, AssessmentResponseValue>;
+
+        let allSubCorrect = true;
+        let anyAnswered = false;
 
         for (const control of q.controls) {
           const controlResponse = responseObject?.[control.id];
+          if (
+            controlResponse !== undefined &&
+            controlResponse !== null &&
+            controlResponse !== '' &&
+            (!Array.isArray(controlResponse) || controlResponse.length > 0)
+          ) {
+            anyAnswered = true;
+          }
           const detail = this.computeSingleControlScore(control, controlResponse);
           subEarned += detail.earned;
           subMax += detail.possible;
           subDetails.push(detail.feedback);
+          if (!detail.correct) allSubCorrect = false;
+          if (detail.userAnswerText) {
+            subUserAnswers.push(`${control.title}: ${detail.userAnswerText}`);
+          }
+          if (detail.correctAnswerText) {
+            subCorrectAnswers.push(`${control.title}: ${detail.correctAnswerText}`);
+          }
         }
 
         earned = Math.max(0, Math.min(subEarned, q.weight));
         possible = q.weight;
-        correct = subDetails.every((text) => text.startsWith('Correct'));
+        correct = allSubCorrect;
         feedback = subDetails.join(' ');
+        userAnswerText = subUserAnswers.join(' | ');
+        correctAnswerText = subCorrectAnswers.join(' | ');
+        status = correct ? 'correct' : anyAnswered ? 'incorrect' : 'unanswered';
       } else {
         const detail = this.computeSingleControlScore(q, value);
         earned = detail.earned;
         possible = detail.possible;
         correct = detail.correct;
         feedback = detail.feedback;
+        userAnswerText = detail.userAnswerText;
+        correctAnswerText = detail.correctAnswerText;
+        status = detail.status;
       }
 
-      if (correct) correctCount += 1;
-      if (!correct && !this.hasResponseForQuestion(q)) skippedCount += 1;
-      if (!correct && this.hasResponseForQuestion(q) && q.required) incorrectCount += 1;
-
-      let correctAnswerText = '';
-      if (q.type === 'checkbox' && q.correctAnswers) {
-        correctAnswerText = q.correctAnswers.join(', ');
-      } else if (q.correctAnswer) {
-        correctAnswerText = String(q.correctAnswer);
+      if (status === 'correct') {
+        correctCount += 1;
+      } else if (status === 'unanswered') {
+        skippedCount += 1;
+      } else {
+        incorrectCount += 1;
       }
 
       return {
@@ -856,8 +922,10 @@ export class AssessmentTestService implements OnDestroy {
         earned,
         possible,
         feedback,
+        userAnswerText,
         correctAnswerText,
         correctAnswerReason: q.correctAnswerReason,
+        status,
       };
     };
 
@@ -918,14 +986,42 @@ export class AssessmentTestService implements OnDestroy {
   private computeSingleControlScore(
     question: AssessmentQuestion,
     response: AssessmentResponseValue,
-  ): { earned: number; possible: number; correct: boolean; feedback: string } {
+  ): {
+    earned: number;
+    possible: number;
+    correct: boolean;
+    feedback: string;
+    userAnswerText: string;
+    correctAnswerText: string;
+    status: 'correct' | 'incorrect' | 'unanswered';
+  } {
     const possible = question.weight;
     const required = question.required;
     const emptyResponse =
       response === undefined ||
       response === null ||
       (typeof response === 'string' && response.trim() === '') ||
-      (Array.isArray(response) && response.length === 0);
+      (Array.isArray(response) && response.length === 0) ||
+      (typeof response === 'object' && !Array.isArray(response) && Object.keys(response).length === 0);
+
+    // Extract expected answers
+    const expectedList: string[] = [];
+    if (question.correctAnswers && question.correctAnswers.length > 0) {
+      expectedList.push(...question.correctAnswers.filter(Boolean));
+    } else if (question.correctAnswer) {
+      expectedList.push(
+        ...question.correctAnswer
+          .split(/[;,]+/)
+          .map((s) => s.trim())
+          .filter(Boolean),
+      );
+    }
+
+    // Format human readable expected answer text
+    const expectedLabels = expectedList.map((exp) =>
+      this.getHumanReadableOptionLabel(question.options, exp),
+    );
+    const correctAnswerText = expectedLabels.join(', ');
 
     if (emptyResponse) {
       return {
@@ -933,57 +1029,97 @@ export class AssessmentTestService implements OnDestroy {
         possible,
         correct: false,
         feedback: required ? 'Required question not answered.' : 'No answer provided.',
+        userAnswerText: '',
+        correctAnswerText,
+        status: 'unanswered',
       };
     }
 
     if (question.type === 'checkbox') {
-      const selected = Array.isArray(response)
-        ? response.map((item) => String(item).trim().toLowerCase())
-        : [];
-      const expected = (question.correctAnswers ?? []).map((item) => item.trim().toLowerCase());
-      const matched = expected.filter((value) => selected.includes(value));
-      const missed = expected.filter((value) => !selected.includes(value));
-      const incorrect = selected.filter((value) => !expected.includes(value));
-      const earned =
-        Math.max(0, matched.length - incorrect.length) * (possible / Math.max(expected.length, 1));
-      const correct = missed.length === 0 && incorrect.length === 0;
+      const selectedArray: string[] = Array.isArray(response)
+        ? (response as string[]).map((item) => String(item).trim()).filter(Boolean)
+        : typeof response === 'string' && response.trim()
+          ? [response.trim()]
+          : [];
+
+      const userLabels = selectedArray.map((item) =>
+        this.getHumanReadableOptionLabel(question.options, item),
+      );
+      const userAnswerText = userLabels.join(', ');
+
+      const matchedExpected = expectedList.filter((exp) =>
+        selectedArray.some((sel) => this.areAnswersMatching(question.options, sel, exp)),
+      );
+      const missedExpected = expectedList.filter(
+        (exp) => !selectedArray.some((sel) => this.areAnswersMatching(question.options, sel, exp)),
+      );
+      const incorrectSelected = selectedArray.filter(
+        (sel) => !expectedList.some((exp) => this.areAnswersMatching(question.options, sel, exp)),
+      );
+
+      const correct =
+        missedExpected.length === 0 &&
+        incorrectSelected.length === 0 &&
+        selectedArray.length > 0;
+      const earned = correct
+        ? possible
+        : Math.max(0, matchedExpected.length - incorrectSelected.length) *
+          (possible / Math.max(expectedList.length, 1));
+
       return {
         earned: Number(earned.toFixed(2)),
         possible,
         correct,
         feedback: correct
           ? 'Correct selection.'
-          : `Selected ${selected.length} choice(s). ${missed.length ? `${missed.length} correct answer(s) missing.` : ''} ${incorrect.length ? `${incorrect.length} incorrect answer(s).` : ''}`,
+          : `Selected ${selectedArray.length} choice(s). ${missedExpected.length ? `${missedExpected.length} correct answer(s) missing.` : ''} ${incorrectSelected.length ? `${incorrectSelected.length} incorrect answer(s).` : ''}`.trim(),
+        userAnswerText,
+        correctAnswerText,
+        status: correct ? 'correct' : 'incorrect',
       };
     }
 
     if (question.type === 'radio') {
-      const selected = String(response).trim().toLowerCase();
-      const expected = String(question.correctAnswer ?? '')
-        .trim()
-        .toLowerCase();
-      const correct = selected === expected;
+      const selected = String(response).trim();
+      const userAnswerText = this.getHumanReadableOptionLabel(question.options, selected);
+      const correct = expectedList.some((exp) =>
+        this.areAnswersMatching(question.options, selected, exp),
+      );
+
       return {
-        earned: correct ? possible : -question.negativeMark,
+        earned: correct ? possible : question.negativeMark ? -question.negativeMark : 0,
         possible,
         correct,
         feedback: correct ? 'Correct.' : 'Incorrect choice.',
+        userAnswerText,
+        correctAnswerText,
+        status: correct ? 'correct' : 'incorrect',
       };
     }
 
     if (question.type === 'textbox' || question.type === 'textarea') {
-      const answer = String(response).trim().toLowerCase();
-      const expected = String(question.correctAnswer ?? '')
-        .trim()
-        .toLowerCase();
-      const correct = expected.length > 0 ? answer.includes(expected) : !!answer;
+      const answer = String(response).trim();
+      const userAnswerText = answer;
+      const answerLower = answer.toLowerCase();
+
+      const correct =
+        expectedList.length > 0
+          ? expectedList.some((exp) => {
+              const expLower = exp.trim().toLowerCase();
+              return answerLower === expLower || answerLower.includes(expLower);
+            })
+          : !!answer;
+
       return {
-        earned: correct ? possible : -question.negativeMark,
+        earned: correct ? possible : question.negativeMark ? -question.negativeMark : 0,
         possible,
         correct,
         feedback: correct
           ? 'Answer matches expected keywords.'
           : 'Answer does not match expected response.',
+        userAnswerText,
+        correctAnswerText,
+        status: correct ? 'correct' : 'incorrect',
       };
     }
 
@@ -992,6 +1128,9 @@ export class AssessmentTestService implements OnDestroy {
       possible,
       correct: false,
       feedback: 'Unable to grade this question type automatically.',
+      userAnswerText: String(response ?? ''),
+      correctAnswerText,
+      status: 'incorrect',
     };
   }
 
