@@ -88,6 +88,9 @@ import { ThemeService } from '../../core/services/theme.service';
               <button class="btn btn-ghost btn-sm btn-interactive" (click)="syncToCloud()">
                 ☁️ Sync
               </button>
+              <button class="btn btn-ghost btn-sm btn-interactive btn-clear-all" (click)="clearAllQuestions()">
+                🗑️ Clear All
+              </button>
             </div>
             <div class="sound-toggle-wrapper">
               <label class="sound-toggle">
@@ -307,6 +310,17 @@ import { ThemeService } from '../../core/services/theme.service';
                       <label>Custom Duration (Seconds)</label>
                       <input type="number" [(ngModel)]="setTimer" min="0" placeholder="e.g. 600 for 10 min" />
                     </div>
+
+                    <div class="form-group span-2 flex-row" style="display:flex; gap:20px; align-items:center;">
+                      <label class="sound-toggle">
+                        <input type="checkbox" [(ngModel)]="setShuffleQuestions" />
+                        <span>Shuffle Questions</span>
+                      </label>
+                      <label class="sound-toggle">
+                        <input type="checkbox" [(ngModel)]="setShuffleOptions" />
+                        <span>Shuffle Options</span>
+                      </label>
+                    </div>
                   </div>
 
                   <div class="sheet-meta-grid">
@@ -478,6 +492,26 @@ import { ThemeService } from '../../core/services/theme.service';
                           placeholder="Single value or comma-separated list of values"
                         />
                         <small class="help-text">Enter matching value(s) for automatic grading.</small>
+                      </div>
+
+                      <div class="form-group span-2">
+                        <label>Reason for Correct Answer</label>
+                        <div
+                          class="reason-richtext-editor"
+                          contenteditable="true"
+                          [innerHTML]="correctAnswerReasonText"
+                          (input)="onReasonInput($event)"
+                          (blur)="onReasonInput($event)"
+                          data-placeholder="Enter the reason/explanation for the correct answer (supports rich text formatting)..."
+                        ></div>
+                        <div class="reason-toolbar">
+                          <button type="button" class="reason-fmt-btn" title="Bold" (click)="applyFormat('bold')"><strong>B</strong></button>
+                          <button type="button" class="reason-fmt-btn" title="Italic" (click)="applyFormat('italic')"><em>I</em></button>
+                          <button type="button" class="reason-fmt-btn" title="Underline" (click)="applyFormat('underline')"><u>U</u></button>
+                          <button type="button" class="reason-fmt-btn" title="Bullet List" (click)="applyFormat('insertUnorderedList')">• List</button>
+                          <button type="button" class="reason-fmt-btn" title="Numbered List" (click)="applyFormat('insertOrderedList')">1. List</button>
+                        </div>
+                        <small class="help-text">Explain why the correct answer is right. This will be shown in results after submission.</small>
                       </div>
 
                       <div class="panel-actions">
@@ -844,9 +878,12 @@ import { ThemeService } from '../../core/services/theme.service';
             <!-- Question Feedback Breakdown -->
             <div class="panel glass-card" *ngIf="service.lastResult() as result">
               <h4>Detailed Question Feedback</h4>
-              <div *ngFor="let detail of result.details" class="feedback-row">
+              <div *ngFor="let detail of result.details; let i = index" class="feedback-row">
                 <div class="feedback-top">
-                  <strong>{{ detail.questionTitle }}</strong>
+                  <div class="feedback-title-group">
+                    <span class="feedback-q-number">Q{{ i + 1 }}.</span>
+                    <strong>{{ detail.questionTitle }}</strong>
+                  </div>
                   <span class="earned-badge" [class.earned-full]="detail.correct">
                     {{ detail.earned }} / {{ detail.possible }} pts
                   </span>
@@ -854,6 +891,10 @@ import { ThemeService } from '../../core/services/theme.service';
                 <div class="feedback-text">{{ detail.feedback }}</div>
                 <div class="feedback-correct-answer" *ngIf="!detail.correct && detail.correctAnswerText">
                   Correct answer: {{ detail.correctAnswerText }}
+                </div>
+                <div class="feedback-reason" *ngIf="detail.correctAnswerReason">
+                  <div class="reason-label">💡 Reason for Correct Answer:</div>
+                  <div class="reason-content" [innerHTML]="detail.correctAnswerReason"></div>
                 </div>
               </div>
             </div>
@@ -1791,8 +1832,20 @@ import { ThemeService } from '../../core/services/theme.service';
       }
       .feedback-top {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
+        gap: 1rem;
+      }
+      .feedback-title-group {
+        display: flex;
+        align-items: baseline;
+        gap: 0.45rem;
+        flex: 1;
+        min-width: 0;
+      }
+      .feedback-title-group strong {
+        font-weight: 600;
+        line-height: 1.4;
       }
       .earned-badge {
         font-size: 0.82rem;
@@ -1801,6 +1854,8 @@ import { ThemeService } from '../../core/services/theme.service';
         border-radius: 6px;
         background: rgba(239, 68, 68, 0.12);
         color: #dc2626;
+        white-space: nowrap;
+        flex-shrink: 0;
       }
       .earned-badge.earned-full {
         background: rgba(22, 163, 74, 0.12);
@@ -1986,6 +2041,142 @@ import { ThemeService } from '../../core/services/theme.service';
         color: #00c8ff !important;
       }
 
+      /* Clear All Button */
+      .btn-clear-all {
+        color: #ef4444 !important;
+        border: 1px solid rgba(239, 68, 68, 0.3) !important;
+      }
+      .btn-clear-all:hover {
+        background: rgba(239, 68, 68, 0.1) !important;
+        border-color: rgba(239, 68, 68, 0.5) !important;
+      }
+
+      /* Reason for Correct Answer Rich Text Editor */
+      .reason-richtext-editor {
+        min-height: 100px;
+        max-height: 280px;
+        overflow-y: auto;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 10px;
+        background: var(--bg-surface, #f8fafc);
+        font-size: 0.88rem;
+        line-height: 1.6;
+        color: var(--text-primary, #0f172a);
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        word-wrap: break-word;
+      }
+      .reason-richtext-editor:focus {
+        border-color: var(--accent-primary, #6366f1);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      }
+      .reason-richtext-editor:empty::before {
+        content: attr(data-placeholder);
+        color: var(--text-secondary, #94a3b8);
+        pointer-events: none;
+        font-style: italic;
+      }
+      .reason-toolbar {
+        display: flex;
+        gap: 0.3rem;
+        margin-top: 0.4rem;
+        flex-wrap: wrap;
+      }
+      .reason-fmt-btn {
+        padding: 0.3rem 0.6rem;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 6px;
+        background: var(--bg-card, #ffffff);
+        color: var(--text-primary, #0f172a);
+        font-size: 0.78rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .reason-fmt-btn:hover {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: var(--accent-primary, #6366f1);
+        color: var(--accent-primary, #6366f1);
+      }
+
+      /* Feedback Q number in results */
+      .feedback-q-number {
+        font-weight: 800;
+        color: var(--accent-primary, #6366f1);
+        font-size: 0.95rem;
+        margin-right: 0.35rem;
+        white-space: nowrap;
+      }
+
+      /* Feedback Reason Display in Results */
+      .feedback-reason {
+        margin-top: 0.6rem;
+        padding: 0.75rem 1rem;
+        background: rgba(99, 102, 241, 0.06);
+        border-left: 3px solid var(--accent-primary, #6366f1);
+        border-radius: 0 8px 8px 0;
+      }
+      .reason-label {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--accent-primary, #6366f1);
+        margin-bottom: 0.3rem;
+      }
+      .reason-content {
+        font-size: 0.88rem;
+        line-height: 1.6;
+        color: var(--text-primary, #0f172a);
+      }
+      .reason-content ul, .reason-content ol {
+        padding-left: 1.25rem;
+        margin: 0.3rem 0;
+      }
+
+      /* JARVIS Overrides for new elements */
+      .jarvis-mode .reason-richtext-editor {
+        background: rgba(0, 15, 30, 0.95) !important;
+        border: 1px solid rgba(0, 200, 255, 0.35) !important;
+        color: #c8eeff !important;
+      }
+      .jarvis-mode .reason-richtext-editor:focus {
+        border-color: #00c8ff !important;
+        box-shadow: 0 0 12px rgba(0, 200, 255, 0.35) !important;
+      }
+      .jarvis-mode .reason-richtext-editor:empty::before {
+        color: #2d7a9a !important;
+      }
+      .jarvis-mode .reason-fmt-btn {
+        background: rgba(0, 25, 50, 0.85) !important;
+        border: 1px solid rgba(0, 200, 255, 0.28) !important;
+        color: #c8eeff !important;
+      }
+      .jarvis-mode .reason-fmt-btn:hover {
+        background: rgba(0, 200, 255, 0.18) !important;
+        border-color: #00c8ff !important;
+        color: #00c8ff !important;
+      }
+      .jarvis-mode .feedback-reason {
+        background: rgba(0, 200, 255, 0.08) !important;
+        border-left-color: #00c8ff !important;
+      }
+      .jarvis-mode .reason-label {
+        color: #00c8ff !important;
+      }
+      .jarvis-mode .reason-content {
+        color: #c8eeff !important;
+      }
+      .jarvis-mode .feedback-q-number {
+        color: #00c8ff !important;
+      }
+      .jarvis-mode .btn-clear-all {
+        color: #ff6b6b !important;
+        border-color: rgba(255, 107, 107, 0.3) !important;
+      }
+      .jarvis-mode .btn-clear-all:hover {
+        background: rgba(255, 107, 107, 0.15) !important;
+        border-color: rgba(255, 107, 107, 0.5) !important;
+      }
+
       /* Animations */
       .spin-hud {
         animation: spinClockwise 12s linear infinite;
@@ -2084,6 +2275,9 @@ import { ThemeService } from '../../core/services/theme.service';
           width: 100%;
           justify-content: space-between;
         }
+        .test-overview.sticky-timer {
+          position: static;
+        }
       }
     `,
   ],
@@ -2105,9 +2299,12 @@ export class AssessmentTestComponent {
   setDescription = '';
   setTimer: number | null = null;
   durationPreset = 'custom';
+  setShuffleQuestions = false;
+  setShuffleOptions = false;
 
   currentQuestion: AssessmentQuestion | null = null;
   correctAnswerText = '';
+  correctAnswerReasonText = '';
   questionTypes: QuestionInputType[] = ['radio', 'checkbox', 'textbox', 'textarea', 'mixed'];
 
   get activeSetName(): string {
@@ -2159,11 +2356,14 @@ export class AssessmentTestComponent {
         this.setName = activeSet.name;
         this.setDescription = activeSet.description || '';
         this.setTimer = activeSet.timerSeconds || null;
+        this.setShuffleQuestions = activeSet.shuffleQuestions || false;
+        this.setShuffleOptions = activeSet.shuffleOptions || false;
         this.durationPreset = this.durationPresetForSeconds(activeSet.timerSeconds || 0);
         this.currentQuestion = activeSet.questions[0] || null;
         this.correctAnswerText = this.currentQuestion
           ? this.answerTextForQuestion(this.currentQuestion)
           : '';
+        this.correctAnswerReasonText = this.currentQuestion?.correctAnswerReason || '';
         if (activeSet.categoryId) {
           this.expandedCategories.add(activeSet.categoryId);
         }
@@ -2172,8 +2372,11 @@ export class AssessmentTestComponent {
         this.setDescription = '';
         this.setTimer = null;
         this.durationPreset = 'custom';
+        this.setShuffleQuestions = false;
+        this.setShuffleOptions = false;
         this.currentQuestion = null;
         this.correctAnswerText = '';
+        this.correctAnswerReasonText = '';
       }
     });
 
@@ -2303,6 +2506,7 @@ export class AssessmentTestComponent {
       this.correctAnswerText = this.currentQuestion
         ? this.answerTextForQuestion(this.currentQuestion)
         : '';
+      this.correctAnswerReasonText = this.currentQuestion?.correctAnswerReason || '';
     }
     this.service.sideNavOpenMobile.set(false);
     this.service.playSound('click');
@@ -2356,6 +2560,8 @@ export class AssessmentTestComponent {
       this.setName || 'Untitled',
       this.setDescription,
       this.setTimer || undefined,
+      this.setShuffleQuestions,
+      this.setShuffleOptions
     );
     this.service.playSound('action');
   }
@@ -2366,6 +2572,7 @@ export class AssessmentTestComponent {
     if (activeSet) {
       this.currentQuestion = activeSet.questions[activeSet.questions.length - 1];
       this.correctAnswerText = this.answerTextForQuestion(this.currentQuestion);
+      this.correctAnswerReasonText = this.currentQuestion?.correctAnswerReason || '';
     }
     this.service.playSound('action');
   }
@@ -2374,6 +2581,7 @@ export class AssessmentTestComponent {
     const selectedQuestion = structuredClone(question);
     this.currentQuestion = selectedQuestion;
     this.correctAnswerText = this.answerTextForQuestion(selectedQuestion);
+    this.correctAnswerReasonText = selectedQuestion.correctAnswerReason || '';
     this.service.playSound('click');
   }
 
@@ -2405,6 +2613,7 @@ export class AssessmentTestComponent {
       // Keep correctAnswer (single) in sync for radio/textbox/textarea grading
       correctAnswer: parsedAnswers[0] ?? '',
       correctAnswers: parsedAnswers,
+      correctAnswerReason: this.correctAnswerReasonText,
     };
     this.service.saveQuestion(this.service.selectedSetId()!, question);
     this.currentQuestion = question;
@@ -2575,5 +2784,36 @@ export class AssessmentTestComponent {
   syncToCloud(): void {
     this.service.syncToFirebase();
     this.service.playSound('action');
+  }
+
+  clearAllQuestions(): void {
+    if (!confirm('Are you sure you want to clear ALL imported questions, categories, and sheets? This cannot be undone.')) {
+      return;
+    }
+    this.service.clearAllData();
+    this.currentQuestion = null;
+    this.correctAnswerText = '';
+    this.correctAnswerReasonText = '';
+    this.setName = '';
+    this.setDescription = '';
+    this.setTimer = null;
+    this.durationPreset = 'custom';
+    this.setShuffleQuestions = false;
+    this.setShuffleOptions = false;
+    this.searchQuery = '';
+    this.expandedCategories.clear();
+    this.viewMode.set('builder');
+    this.service.playSound('action');
+    // Reload the page to ensure a clean state for new imports
+    setTimeout(() => window.location.reload(), 300);
+  }
+
+  onReasonInput(event: Event): void {
+    const el = event.target as HTMLElement;
+    this.correctAnswerReasonText = el.innerHTML || '';
+  }
+
+  applyFormat(command: string): void {
+    document.execCommand(command, false, undefined);
   }
 }

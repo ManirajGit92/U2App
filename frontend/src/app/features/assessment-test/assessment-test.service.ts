@@ -24,6 +24,7 @@ export interface AssessmentQuestion {
   options?: QuestionOption[];
   correctAnswer?: string;
   correctAnswers?: string[];
+  correctAnswerReason?: string;
   weight: number;
   negativeMark: number;
   controls?: AssessmentQuestion[];
@@ -36,6 +37,8 @@ export interface QuestionSet {
   categoryId: string;
   timerSeconds?: number;
   passingScore?: number;
+  shuffleQuestions?: boolean;
+  shuffleOptions?: boolean;
   questions: AssessmentQuestion[];
   createdAt: string;
   updatedAt: string;
@@ -58,6 +61,7 @@ export interface AssessmentResultDetail {
   possible: number;
   feedback: string;
   correctAnswerText?: string;
+  correctAnswerReason?: string;
 }
 
 export interface AssessmentResult {
@@ -525,7 +529,14 @@ export class AssessmentTestService implements OnDestroy {
     this.activeQuestionIndex.set(0);
   }
 
-  updateQuestionSet(setId: string, name: string, description: string, timerSeconds?: number): void {
+  updateQuestionSet(
+    setId: string,
+    name: string,
+    description: string,
+    timerSeconds?: number,
+    shuffleQuestions?: boolean,
+    shuffleOptions?: boolean
+  ): void {
     this.questionSets.update((sets) =>
       sets.map((set) =>
         set.id === setId
@@ -535,6 +546,8 @@ export class AssessmentTestService implements OnDestroy {
               description: description.trim(),
               timerSeconds,
               passingScore: set.passingScore,
+              shuffleQuestions,
+              shuffleOptions,
               updatedAt: this.nowIso(),
             }
           : set,
@@ -583,6 +596,7 @@ export class AssessmentTestService implements OnDestroy {
       ],
       correctAnswer: template?.correctAnswer || '',
       correctAnswers: template?.correctAnswers || [],
+      correctAnswerReason: template?.correctAnswerReason || '',
       weight: template?.weight ?? 1,
       negativeMark: template?.negativeMark ?? 0,
       controls: template?.controls || [],
@@ -708,6 +722,26 @@ export class AssessmentTestService implements OnDestroy {
       this.autoSubmitted.set(false);
     }
     if (!this.testStarted()) {
+      const shouldShuffleQuestions = set.shuffleQuestions;
+      const shouldShuffleOptions = set.shuffleOptions;
+      if (shouldShuffleQuestions || shouldShuffleOptions) {
+        this.questionSets.update((sets) =>
+          sets.map((s) => {
+            if (s.id !== set.id) return s;
+            let questions = [...s.questions];
+            if (shouldShuffleQuestions) {
+              questions = this.shuffleArray(questions);
+            }
+            if (shouldShuffleOptions) {
+              questions = questions.map((q) => ({
+                ...q,
+                options: q.options ? this.shuffleArray(q.options) : q.options,
+              }));
+            }
+            return { ...s, questions };
+          }),
+        );
+      }
       this.testStarted.set(true);
       this.testStartTimeIso.set(this.nowIso());
       this.remainingSeconds.set(set.timerSeconds || 0);
@@ -727,6 +761,15 @@ export class AssessmentTestService implements OnDestroy {
         this.submitAssessment(true);
       }
     }, 1000);
+  }
+
+  private shuffleArray<T>(array: T[]): T[] {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
   }
 
   private stopTimer(): void {
@@ -814,6 +857,7 @@ export class AssessmentTestService implements OnDestroy {
         possible,
         feedback,
         correctAnswerText,
+        correctAnswerReason: q.correctAnswerReason,
       };
     };
 
@@ -1233,6 +1277,7 @@ export class AssessmentTestService implements OnDestroy {
           'Weight',
           'Negative Mark',
           'Required',
+          'Reason for Correction',
           'Controls',
         ],
       ];
@@ -1257,6 +1302,7 @@ export class AssessmentTestService implements OnDestroy {
             question.weight,
             question.negativeMark,
             question.required ? 'TRUE' : 'FALSE',
+            question.correctAnswerReason || '',
             question.controls
               ?.map((control) => `${control.type}|${control.title}|${control.correctAnswer || ''}`)
               .join('||') || '',
@@ -1328,6 +1374,7 @@ export class AssessmentTestService implements OnDestroy {
           'Weight',
           'Negative Mark',
           'Required',
+          'Reason for Correction',
           'Controls',
         ];
         if (!expected.every((label, index) => label === String(header[index]).trim())) {
@@ -1379,7 +1426,7 @@ export class AssessmentTestService implements OnDestroy {
                 };
               });
 
-            const controlsText = row[14]?.toString().trim() || '';
+            const controlsText = row[15]?.toString().trim() || '';
             const controls: AssessmentQuestion[] = controlsText
               ? controlsText.split('||').map((controlText) => {
                   const [controlType, controlTitle, controlCorrect] = controlText
@@ -1415,6 +1462,7 @@ export class AssessmentTestService implements OnDestroy {
                 .filter(Boolean),
               weight: Number(row[11]) || 1,
               negativeMark: Number(row[12]) || 0,
+              correctAnswerReason: row[14]?.toString().trim() || undefined,
               controls: controls.length ? controls : undefined,
             };
             set.questions.push(question);
@@ -1448,6 +1496,29 @@ export class AssessmentTestService implements OnDestroy {
       console.error('AssessmentTestService: import failed', error);
       this.importErrors.set(['Failed to read Excel file. Please upload a valid workbook.']);
     }
+  }
+
+  clearAllData(): void {
+    this.stopTimer();
+    this.categories.set([]);
+    this.questionSets.set([]);
+    this.selectedCategoryId.set(null);
+    this.selectedSetId.set(null);
+    this.activeQuestionIndex.set(0);
+    this.responses.set({});
+    this.lastResult.set(null);
+    this.history.set([]);
+    this.testStarted.set(false);
+    this.testSubmitted.set(false);
+    this.testStartTimeIso.set(null);
+    this.remainingSeconds.set(0);
+    this.autoSubmitted.set(false);
+    this.importErrors.set([]);
+    this.exportMessage.set(null);
+    this.syncMessage.set(null);
+    this.errorMessage.set(null);
+    this.certificatePreview.set(null);
+    localStorage.removeItem(STORAGE_KEY);
   }
 
   async syncToFirebase(): Promise<void> {
