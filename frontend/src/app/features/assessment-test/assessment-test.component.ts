@@ -1979,6 +1979,9 @@ import { ThemeService } from '../../core/services/theme.service';
         background: var(--accent-primary, #6366f1);
         color: #ffffff;
         border-color: var(--accent-primary, #6366f1);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
+        transform: scale(1.1);
+        z-index: 2;
       }
       .q-pill.answered {
         border-color: #10b981;
@@ -1987,6 +1990,8 @@ import { ThemeService } from '../../core/services/theme.service';
       .q-pill.active.answered {
         background: #10b981;
         color: #ffffff;
+        border-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
       }
       .q-pill-nav {
         font-size: 1rem;
@@ -2568,6 +2573,20 @@ import { ThemeService } from '../../core/services/theme.service';
         border-color: #ffaa00 !important;
         box-shadow: 0 0 12px rgba(255, 170, 0, 0.25) !important;
         font-family: 'Orbitron', sans-serif;
+      }
+      .jarvis-mode .q-pill.active {
+        background: var(--jarvis-primary, #00c8ff) !important;
+        color: #000 !important;
+        border-color: var(--jarvis-primary, #00c8ff) !important;
+        box-shadow: 0 0 10px var(--jarvis-primary, #00c8ff) !important;
+        transform: scale(1.1);
+        z-index: 2;
+      }
+      .jarvis-mode .q-pill.active.answered {
+        background: #00ff88 !important;
+        color: #000 !important;
+        border-color: #00ff88 !important;
+        box-shadow: 0 0 10px #00ff88 !important;
       }
 
       /* Animations */
