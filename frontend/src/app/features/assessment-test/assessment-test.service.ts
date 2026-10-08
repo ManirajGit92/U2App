@@ -116,6 +116,7 @@ interface PersistedAssessmentState {
   autoSyncEnabled: boolean;
   testStarted?: boolean;
   testSubmitted?: boolean;
+  testPaused?: boolean;
   testStartTimeIso?: string | null;
   remainingSeconds?: number;
   autoSubmitted?: boolean;
@@ -150,6 +151,7 @@ export class AssessmentTestService implements OnDestroy {
   errorMessage = signal<string | null>(null);
   testStarted = signal<boolean>(false);
   testSubmitted = signal<boolean>(false);
+  testPaused = signal<boolean>(false);
   testStartTimeIso = signal<string | null>(null);
   remainingSeconds = signal<number>(0);
   autoSubmitted = signal<boolean>(false);
@@ -392,6 +394,7 @@ export class AssessmentTestService implements OnDestroy {
     this.history.set([]);
     this.testStarted.set(false);
     this.testSubmitted.set(false);
+    this.testPaused.set(false);
     this.testStartTimeIso.set(null);
     this.remainingSeconds.set(defaultSet.timerSeconds || 0);
     this.autoSubmitted.set(false);
@@ -416,11 +419,12 @@ export class AssessmentTestService implements OnDestroy {
       this.autoSyncEnabled.set(parsed.autoSyncEnabled || false);
       this.testStarted.set(parsed.testStarted || false);
       this.testSubmitted.set(parsed.testSubmitted || false);
+      this.testPaused.set(parsed.testPaused || false);
       this.testStartTimeIso.set(parsed.testStartTimeIso ?? null);
       this.remainingSeconds.set(parsed.remainingSeconds ?? this.activeSet()?.timerSeconds ?? 0);
       this.autoSubmitted.set(parsed.autoSubmitted || false);
       this.interactionSoundsEnabled.set(parsed.interactionSoundsEnabled || false);
-      if (this.testStarted() && !this.testSubmitted()) {
+      if (this.testStarted() && !this.testSubmitted() && !this.testPaused()) {
         this.startTimer();
       }
     } catch (error) {
@@ -443,6 +447,7 @@ export class AssessmentTestService implements OnDestroy {
         autoSyncEnabled: this.autoSyncEnabled(),
         testStarted: this.testStarted(),
         testSubmitted: this.testSubmitted(),
+        testPaused: this.testPaused(),
         testStartTimeIso: this.testStartTimeIso(),
         remainingSeconds: this.remainingSeconds(),
         autoSubmitted: this.autoSubmitted(),
@@ -550,6 +555,20 @@ export class AssessmentTestService implements OnDestroy {
               passingScore: set.passingScore,
               shuffleQuestions,
               shuffleOptions,
+              updatedAt: this.nowIso(),
+            }
+          : set,
+      ),
+    );
+  }
+
+  toggleShuffleQuestions(setId: string): void {
+    this.questionSets.update((sets) =>
+      sets.map((set) =>
+        set.id === setId
+          ? {
+              ...set,
+              shuffleQuestions: !set.shuffleQuestions,
               updatedAt: this.nowIso(),
             }
           : set,
@@ -669,7 +688,7 @@ export class AssessmentTestService implements OnDestroy {
   }
 
   updateResponse(questionId: string, value: AssessmentResponseValue): void {
-    if (this.testSubmitted()) return;
+    if (this.testSubmitted() || this.testPaused()) return;
     this.responses.update((current) => ({ ...current, [questionId]: value }));
   }
 
@@ -708,6 +727,7 @@ export class AssessmentTestService implements OnDestroy {
     this.stopTimer();
     this.testStarted.set(false);
     this.testSubmitted.set(false);
+    this.testPaused.set(false);
     this.testStartTimeIso.set(null);
     this.autoSubmitted.set(false);
     this.remainingSeconds.set(this.activeSet()?.timerSeconds || 0);
@@ -717,11 +737,12 @@ export class AssessmentTestService implements OnDestroy {
     const set = this.activeSet();
     if (!set || set.questions.length === 0) return;
     if (this.testSubmitted()) {
-      this.responses.set({});
-      this.lastResult.set(null);
-      this.activeQuestionIndex.set(0);
-      this.testSubmitted.set(false);
-      this.autoSubmitted.set(false);
+      this.restartAssessment();
+      return;
+    }
+    if (this.testStarted() && this.testPaused()) {
+      this.resumeAssessment();
+      return;
     }
     if (!this.testStarted()) {
       const shouldShuffleQuestions = set.shuffleQuestions;
@@ -745,15 +766,82 @@ export class AssessmentTestService implements OnDestroy {
         );
       }
       this.testStarted.set(true);
+      this.testPaused.set(false);
       this.testStartTimeIso.set(this.nowIso());
       this.remainingSeconds.set(set.timerSeconds || 0);
+      this.startTimer();
     }
+  }
+
+  pauseAssessment(): void {
+    if (!this.testStarted() || this.testSubmitted() || this.testPaused()) return;
+    this.testPaused.set(true);
+    this.stopTimer();
+    this.playSound('action');
+  }
+
+  resumeAssessment(): void {
+    if (!this.testStarted() || this.testSubmitted() || !this.testPaused()) return;
+    this.testPaused.set(false);
     this.startTimer();
+    this.playSound('start');
+  }
+
+  togglePauseAssessment(): void {
+    if (!this.testStarted() || this.testSubmitted()) {
+      this.startOrResumeAssessment();
+      return;
+    }
+    if (this.testPaused()) {
+      this.resumeAssessment();
+    } else {
+      this.pauseAssessment();
+    }
+  }
+
+  restartAssessment(shuffleOverride?: boolean): void {
+    const set = this.activeSet();
+    if (!set || set.questions.length === 0) return;
+    this.stopTimer();
+    this.responses.set({});
+    this.lastResult.set(null);
+    this.activeQuestionIndex.set(0);
+    this.testSubmitted.set(false);
+    this.autoSubmitted.set(false);
+    this.testPaused.set(false);
+
+    const shouldShuffleQuestions =
+      shuffleOverride !== undefined ? shuffleOverride : (set.shuffleQuestions || false);
+    const shouldShuffleOptions = set.shuffleOptions || false;
+
+    if (shouldShuffleQuestions || shouldShuffleOptions) {
+      this.questionSets.update((sets) =>
+        sets.map((s) => {
+          if (s.id !== set.id) return s;
+          let questions = [...s.questions];
+          if (shouldShuffleQuestions) {
+            questions = this.shuffleArray(questions);
+          }
+          if (shouldShuffleOptions) {
+            questions = questions.map((q) => ({
+              ...q,
+              options: q.options ? this.shuffleArray(q.options) : q.options,
+            }));
+          }
+          return { ...s, questions };
+        }),
+      );
+    }
+    this.testStarted.set(true);
+    this.testStartTimeIso.set(this.nowIso());
+    this.remainingSeconds.set(set.timerSeconds || 0);
+    this.startTimer();
+    this.playSound('start');
   }
 
   private startTimer(): void {
     this.stopTimer();
-    if (!this.testStarted() || this.testSubmitted()) return;
+    if (!this.testStarted() || this.testSubmitted() || this.testPaused()) return;
     const duration = this.activeSet()?.timerSeconds || 0;
     if (duration <= 0) return;
     this.timerHandle = setInterval(() => {
@@ -833,6 +921,7 @@ export class AssessmentTestService implements OnDestroy {
     if (!set) return;
     if (this.testSubmitted()) return;
     this.stopTimer();
+    this.testPaused.set(false);
 
     const details: AssessmentResultDetail[] = [];
     let score = 0;

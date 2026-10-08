@@ -562,13 +562,19 @@ import { ThemeService } from '../../core/services/theme.service';
                       <span class="summary-pill">{{ activeSetTotalMarks }} Marks</span>
                       <span class="summary-pill">Duration: {{ formatSeconds(service.activeSet()?.timerSeconds || 0) }}</span>
                       <span class="summary-pill">Pass: 60%</span>
-                      <span class="summary-pill badge-attempt">{{ attemptLabel }}</span>
+                      <span class="summary-pill badge-attempt" [class.pill-paused]="service.testPaused()">{{ attemptLabel }}</span>
+                      <span class="summary-pill highlight-shuffle" *ngIf="service.activeSet()?.shuffleQuestions">🔀 Shuffled</span>
                     </div>
                   </div>
                 </div>
 
-                <div class="timer-display-badge" *ngIf="service.testStarted() || service.testSubmitted()">
-                  ⏱️ {{ formatSeconds(service.remainingSeconds()) }}
+                <div
+                  class="timer-display-badge"
+                  *ngIf="service.testStarted() || service.testSubmitted()"
+                  [class.timer-paused]="service.testPaused()"
+                >
+                  <span *ngIf="!service.testPaused()">⏱️ {{ formatSeconds(service.remainingSeconds()) }}</span>
+                  <span *ngIf="service.testPaused()">⏸️ {{ formatSeconds(service.remainingSeconds()) }} (Paused)</span>
                 </div>
 
                 <span class="chevron" [class.expanded]="overviewOpen()">
@@ -586,7 +592,10 @@ import { ThemeService } from '../../core/services/theme.service';
                 <div class="timer-strip" *ngIf="service.testStarted() || service.testSubmitted()">
                   <div class="timer-metric">
                     <small>Time Remaining</small>
-                    <strong class="timer-val">{{ formatSeconds(service.remainingSeconds()) }}</strong>
+                    <strong class="timer-val" [class.text-paused]="service.testPaused()">
+                      {{ formatSeconds(service.remainingSeconds()) }}
+                      <span *ngIf="service.testPaused()" class="sub-paused">(Paused)</span>
+                    </strong>
                   </div>
                   <div class="timer-metric">
                     <small>Total Duration</small>
@@ -596,18 +605,53 @@ import { ThemeService } from '../../core/services/theme.service';
                     <small>Answered Progress</small>
                     <strong>{{ service.progress() }}%</strong>
                   </div>
+                  <div class="timer-metric shuffle-metric">
+                    <label class="sound-toggle test-shuffle-toggle" title="When enabled, questions are randomized when starting or restarting the exam">
+                      <input
+                        type="checkbox"
+                        [checked]="service.activeSet()?.shuffleQuestions || false"
+                        (change)="toggleActiveSetShuffleQuestions()"
+                      />
+                      <span>🔀 Shuffle Questions</span>
+                    </label>
+                  </div>
                   <div class="progress-bar-container">
                     <div class="progress-bar-fill" [style.width.%]="service.progress()"></div>
                   </div>
                 </div>
 
                 <div class="panel-actions">
-                  <button class="btn btn-primary btn-lg btn-interactive" (click)="startAssessment()">
+                  <button
+                    *ngIf="!service.testStarted() || service.testSubmitted()"
+                    class="btn btn-primary btn-lg btn-interactive"
+                    (click)="startAssessment()"
+                  >
                     {{ testStartLabel }}
                   </button>
                   <button
+                    *ngIf="service.testStarted() && !service.testSubmitted() && !service.testPaused()"
+                    class="btn btn-warning btn-lg btn-interactive btn-pause"
+                    (click)="pauseAssessment()"
+                  >
+                    ⏸️ Pause Exam
+                  </button>
+                  <button
+                    *ngIf="service.testStarted() && !service.testSubmitted() && service.testPaused()"
+                    class="btn btn-primary btn-lg btn-interactive btn-resume"
+                    (click)="resumeAssessment()"
+                  >
+                    ▶️ Resume Exam
+                  </button>
+                  <button
+                    *ngIf="service.testStarted() || service.testSubmitted()"
+                    class="btn btn-outline-warning btn-lg btn-interactive btn-restart"
+                    (click)="restartAssessment()"
+                  >
+                    🔄 Restart Exam
+                  </button>
+                  <button
                     class="btn btn-secondary btn-lg btn-interactive"
-                    [disabled]="!service.testStarted() || service.testSubmitted()"
+                    [disabled]="!service.testStarted() || service.testSubmitted() || service.testPaused()"
                     (click)="submitAndShowResults()"
                   >
                     Submit Assessment
@@ -626,6 +670,25 @@ import { ThemeService } from '../../core/services/theme.service';
               class="panel glass-card test-question-card"
               *ngIf="service.activeQuestion() as question"
             >
+              <!-- Paused Test Overlay (Frosted Shield) -->
+              <div class="paused-test-overlay glass-card" *ngIf="service.testPaused()">
+                <div class="paused-overlay-content">
+                  <div class="paused-icon-pulse">⏸️</div>
+                  <h3 class="paused-title">Assessment is Paused</h3>
+                  <p class="paused-subtitle">
+                    The timer and question navigation are paused. Your answers are safely stored.
+                  </p>
+                  <div class="paused-actions">
+                    <button class="btn btn-primary btn-lg btn-interactive" (click)="resumeAssessment()">
+                      ▶️ Resume Exam
+                    </button>
+                    <button class="btn btn-outline-warning btn-lg btn-interactive" (click)="restartAssessment()">
+                      🔄 Restart Exam
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div class="question-card-top-bar">
                 <div class="q-badge">
                   Question {{ service.activeQuestionIndex() + 1 }} of {{ activeSetQuestionCount }}
@@ -748,10 +811,10 @@ import { ThemeService } from '../../core/services/theme.service';
               </div>
 
               <!-- Question Action Controls -->
-              <div class="question-nav-bar">
+              <div class="question-nav-bar" [class.nav-disabled]="service.testPaused()">
                 <button
                   class="btn btn-secondary btn-interactive"
-                  [disabled]="service.activeQuestionIndex() === 0"
+                  [disabled]="service.activeQuestionIndex() === 0 || service.testPaused()"
                   (click)="service.previousQuestion(); syncPillPage(); service.playSound('navigate')"
                 >
                   ← Previous
@@ -762,6 +825,7 @@ import { ThemeService } from '../../core/services/theme.service';
                   <button
                     *ngIf="pillPage() > 0"
                     class="q-pill q-pill-nav btn-interactive"
+                    [disabled]="service.testPaused()"
                     title="Previous 10 questions"
                     (click)="prevPillPage()"
                   >
@@ -771,6 +835,7 @@ import { ThemeService } from '../../core/services/theme.service';
                   <button
                     *ngFor="let q of visiblePills(); let idx = index"
                     class="q-pill btn-interactive"
+                    [disabled]="service.testPaused()"
                     [class.active]="pillPage() * 10 + idx === service.activeQuestionIndex()"
                     [class.answered]="service.hasResponseForQuestion(q)"
                     (click)="service.jumpToQuestion(pillPage() * 10 + idx); service.playSound('navigate')"
@@ -782,6 +847,7 @@ import { ThemeService } from '../../core/services/theme.service';
                   <button
                     *ngIf="(pillPage() + 1) * 10 < activeSetQuestionCount"
                     class="q-pill q-pill-nav btn-interactive"
+                    [disabled]="service.testPaused()"
                     title="Next 10 questions"
                     (click)="nextPillPage()"
                   >
@@ -792,6 +858,7 @@ import { ThemeService } from '../../core/services/theme.service';
                 <button
                   *ngIf="service.activeQuestionIndex() < activeSetQuestionCount - 1"
                   class="btn btn-primary btn-interactive"
+                  [disabled]="service.testPaused()"
                   (click)="service.nextQuestion(); syncPillPage(); service.playSound('navigate')"
                 >
                   Next →
@@ -800,7 +867,7 @@ import { ThemeService } from '../../core/services/theme.service';
                 <button
                   *ngIf="service.activeQuestionIndex() === activeSetQuestionCount - 1"
                   class="btn btn-success btn-interactive"
-                  [disabled]="!service.testStarted() || service.testSubmitted()"
+                  [disabled]="!service.testStarted() || service.testSubmitted() || service.testPaused()"
                   (click)="submitAndShowResults()"
                 >
                   Submit Test ✓
@@ -1685,9 +1752,126 @@ import { ThemeService } from '../../core/services/theme.service';
 
       /* Question Display Card (Wide) */
       .test-question-card {
+        position: relative;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
+      }
+      .summary-pill.pill-paused {
+        background: rgba(245, 158, 11, 0.18) !important;
+        color: #f59e0b !important;
+        border: 1px solid rgba(245, 158, 11, 0.45) !important;
+        font-weight: 700;
+      }
+      .summary-pill.highlight-shuffle {
+        background: rgba(168, 85, 247, 0.15);
+        color: #a855f7;
+        font-weight: 700;
+      }
+      .timer-display-badge.timer-paused {
+        color: #f59e0b;
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.45);
+        box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+      }
+      .timer-metric .text-paused {
+        color: #f59e0b;
+      }
+      .sub-paused {
+        font-size: 0.75rem;
+        font-weight: normal;
+        margin-left: 0.25rem;
+        opacity: 0.9;
+      }
+      .shuffle-metric {
+        align-self: center;
+      }
+      .test-shuffle-toggle {
+        font-weight: 600;
+        padding: 0.35rem 0.65rem;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.04);
+        border: 1px solid var(--border-color, #e2e8f0);
+        transition: all 0.2s ease;
+      }
+      .test-shuffle-toggle:hover {
+        border-color: var(--accent-primary, #6366f1);
+      }
+      .btn-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: #ffffff;
+        border: none;
+        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+      }
+      .btn-warning:hover {
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+        transform: translateY(-1px);
+      }
+      .btn-outline-warning {
+        background: transparent;
+        border: 1px solid #f59e0b;
+        color: #f59e0b;
+      }
+      .btn-outline-warning:hover {
+        background: rgba(245, 158, 11, 0.12);
+        border-color: #d97706;
+        color: #d97706;
+      }
+
+      /* Paused Test Overlay */
+      .paused-test-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 80;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        background: rgba(15, 23, 42, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        animation: fadeIn 0.25s ease-out;
+      }
+      .paused-overlay-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        max-width: 480px;
+        color: #ffffff;
+      }
+      .paused-icon-pulse {
+        font-size: 3rem;
+        animation: pulsePause 1.6s infinite ease-in-out;
+      }
+      .paused-title {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #ffffff;
+      }
+      .paused-subtitle {
+        margin: 0 0 1rem;
+        font-size: 0.95rem;
+        color: #cbd5e1;
+        line-height: 1.5;
+      }
+      .paused-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      @keyframes pulsePause {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.15); opacity: 0.8; }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
       }
       .question-card-top-bar {
         display: flex;
@@ -2333,6 +2517,59 @@ import { ThemeService } from '../../core/services/theme.service';
         color: #5fb4d8 !important;
       }
 
+      .jarvis-mode .summary-pill.pill-paused {
+        background: rgba(255, 170, 0, 0.2) !important;
+        color: #ffaa00 !important;
+        border-color: #ffaa00 !important;
+        box-shadow: 0 0 10px rgba(255, 170, 0, 0.35) !important;
+        font-family: 'Orbitron', monospace;
+      }
+      .jarvis-mode .summary-pill.highlight-shuffle {
+        background: rgba(168, 85, 247, 0.2) !important;
+        color: #d8b4fe !important;
+        border-color: rgba(168, 85, 247, 0.5) !important;
+        font-family: 'Orbitron', monospace;
+      }
+      .jarvis-mode .timer-display-badge.timer-paused {
+        color: #ffaa00 !important;
+        background: rgba(255, 170, 0, 0.18) !important;
+        border-color: #ffaa00 !important;
+        box-shadow: 0 0 14px rgba(255, 170, 0, 0.4) !important;
+        font-family: 'Orbitron', monospace !important;
+      }
+      .jarvis-mode .paused-test-overlay {
+        background: rgba(0, 15, 30, 0.88) !important;
+        border: 1px solid rgba(0, 200, 255, 0.4) !important;
+        box-shadow: 0 0 30px rgba(0, 200, 255, 0.2) !important;
+      }
+      .jarvis-mode .paused-title {
+        font-family: 'Orbitron', sans-serif !important;
+        color: #00c8ff !important;
+        text-shadow: 0 0 12px rgba(0, 200, 255, 0.6);
+      }
+      .jarvis-mode .paused-subtitle {
+        color: #c8eeff !important;
+      }
+      .jarvis-mode .test-shuffle-toggle {
+        background: rgba(0, 25, 50, 0.85) !important;
+        border-color: rgba(0, 200, 255, 0.3) !important;
+        color: #c8eeff !important;
+      }
+      .jarvis-mode .btn-warning {
+        background: linear-gradient(135deg, rgba(255, 170, 0, 0.9) 0%, rgba(200, 100, 0, 0.9) 100%) !important;
+        border: 1px solid #ffaa00 !important;
+        box-shadow: 0 0 16px rgba(255, 170, 0, 0.4) !important;
+        font-family: 'Orbitron', sans-serif;
+      }
+      .jarvis-mode .btn-outline-warning {
+        background: rgba(255, 170, 0, 0.12) !important;
+        border: 1px solid #ffaa00 !important;
+        color: #ffaa00 !important;
+        border-color: #ffaa00 !important;
+        box-shadow: 0 0 12px rgba(255, 170, 0, 0.25) !important;
+        font-family: 'Orbitron', sans-serif;
+      }
+
       /* Animations */
       .spin-hud {
         animation: spinClockwise 12s linear infinite;
@@ -2480,11 +2717,12 @@ export class AssessmentTestComponent {
   }
 
   get answersLocked(): boolean {
-    return !this.service.testStarted() || this.service.testSubmitted();
+    return !this.service.testStarted() || this.service.testSubmitted() || this.service.testPaused();
   }
 
   get attemptLabel(): string {
     if (this.service.testSubmitted()) return 'Submitted';
+    if (this.service.testPaused()) return 'Paused';
     if (this.service.testStarted()) return 'In progress';
     if (this.service.lastResult()) return 'Completed';
     return 'Not started';
@@ -2492,7 +2730,8 @@ export class AssessmentTestComponent {
 
   get testStartLabel(): string {
     if (this.service.testSubmitted()) return 'Start New Test';
-    return this.service.testStarted() ? 'Resume Test' : 'Start Test';
+    if (!this.service.testStarted()) return 'Start Test';
+    return this.service.testPaused() ? 'Resume Test' : 'Pause Test';
   }
 
   get timerState(): 'normal' | 'low' | 'critical' {
@@ -2889,10 +3128,42 @@ export class AssessmentTestComponent {
   }
 
   startAssessment(): void {
+    if (this.service.testStarted() && !this.service.testSubmitted()) {
+      this.service.togglePauseAssessment();
+      return;
+    }
     this.pillPage.set(0);
     this.service.startOrResumeAssessment();
     this.viewMode.set('test');
     this.service.playSound('start');
+  }
+
+  pauseAssessment(): void {
+    this.service.pauseAssessment();
+  }
+
+  resumeAssessment(): void {
+    this.service.resumeAssessment();
+  }
+
+  restartAssessment(): void {
+    if (this.service.testStarted() && !this.service.testSubmitted()) {
+      const ok = confirm(
+        'Are you sure you want to restart the exam from the beginning? All your current responses will be reset.',
+      );
+      if (!ok) return;
+    }
+    this.pillPage.set(0);
+    this.service.restartAssessment();
+    this.viewMode.set('test');
+  }
+
+  toggleActiveSetShuffleQuestions(): void {
+    const set = this.service.activeSet();
+    if (!set) return;
+    this.service.toggleShuffleQuestions(set.id);
+    this.setShuffleQuestions = !set.shuffleQuestions;
+    this.service.playSound('action');
   }
 
   submitAndShowResults(): void {

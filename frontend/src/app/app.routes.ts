@@ -154,14 +154,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'youtube-manager',
-    data: { navLabel: 'YouTube Video Manager', showInNav: true },
-    loadComponent: () =>
-      import('./features/youtube-manager/youtube-manager.component').then(
-        (m) => m.YouTubeManagerComponent,
-      ),
-  },
-  {
     path: 'assessment-test',
     data: { navLabel: 'Assessment Test', showInNav: true },
     loadComponent: () =>

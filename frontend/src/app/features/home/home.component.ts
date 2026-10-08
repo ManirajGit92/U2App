@@ -812,6 +812,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     //   color: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(168,85,247,0.2))',
     // },
     {
+      id: 'assessment-test',
+      title: 'Assessment Test',
+      description:
+        'Create, manage, and take rich interactive quizzes and assessments with auto-grading, timer, pause/resume, and certificates.',
+      icon: '📝',
+      route: '/assessment-test',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(99,102,241,0.2))',
+    },
+    {
       id: 'flip-book',
       title: 'Flip Book Viewer',
       description:
