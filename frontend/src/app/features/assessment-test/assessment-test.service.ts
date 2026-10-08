@@ -1093,23 +1093,44 @@ export class AssessmentTestService implements OnDestroy {
       (Array.isArray(response) && response.length === 0) ||
       (typeof response === 'object' && !Array.isArray(response) && Object.keys(response).length === 0);
 
-    // Extract expected answers
+    // Extract expected answers.
+    // IMPORTANT: Do NOT blindly split correctAnswer by commas — option labels often
+    // contain commas (e.g. "Apply permissions, tool restrictions, ..."). We first try
+    // the full string. Only fall back to comma-splitting if no option matches the full
+    // string AND the question type is one that typically stores multiple values.
     const expectedList: string[] = [];
     if (question.correctAnswers && question.correctAnswers.length > 0) {
       expectedList.push(...question.correctAnswers.filter(Boolean));
     } else if (question.correctAnswer) {
-      expectedList.push(
-        ...question.correctAnswer
-          .split(/[;,]+/)
-          .map((s) => s.trim())
-          .filter(Boolean),
-      );
+      const fullAnswer = question.correctAnswer.trim();
+      if (fullAnswer) {
+        // Always add the full string as the primary candidate.
+        expectedList.push(fullAnswer);
+        // Only add comma-split fragments when the full string does NOT resolve to a
+        // known option (i.e. it is a free-text or multi-value semicolon/comma list).
+        const fullMatchesOption = !!(question.options?.length && this.findMatchingOption(question.options, fullAnswer));
+        if (!fullMatchesOption) {
+          const parts = fullAnswer
+            .split(/[;,]+/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (parts.length > 1) {
+            expectedList.push(...parts);
+          }
+        }
+      }
     }
 
-    // Format human readable expected answer text
-    const expectedLabels = expectedList.map((exp) =>
-      this.getHumanReadableOptionLabel(question.options, exp),
-    );
+    // Format human readable expected answer text (deduplicated).
+    const seenLabels = new Set<string>();
+    const expectedLabels: string[] = [];
+    for (const exp of expectedList) {
+      const label = this.getHumanReadableOptionLabel(question.options, exp);
+      if (!seenLabels.has(label)) {
+        seenLabels.add(label);
+        expectedLabels.push(label);
+      }
+    }
     const correctAnswerText = expectedLabels.join(', ');
 
     if (emptyResponse) {

@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+﻿import { Component, ElementRef, ViewChild, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -499,7 +499,7 @@ import { ThemeService } from '../../core/services/theme.service';
                         <div
                           class="reason-richtext-editor"
                           contenteditable="true"
-                          [innerHTML]="correctAnswerReasonText"
+                          #reasonEditor
                           (input)="onReasonInput($event)"
                           (blur)="onReasonInput($event)"
                           data-placeholder="Enter the reason/explanation for the correct answer (supports rich text formatting)..."
@@ -2717,6 +2717,18 @@ export class AssessmentTestComponent {
   currentQuestion: AssessmentQuestion | null = null;
   correctAnswerText = '';
   correctAnswerReasonText = '';
+  @ViewChild('reasonEditor') reasonEditorRef?: ElementRef<HTMLElement>;
+
+  /** Safely sets the richtext editor content imperatively (avoids cursor-jump bug from [innerHTML] binding). */
+  private setReasonEditorContent(html: string): void {
+    this.correctAnswerReasonText = html;
+    // Use setTimeout to ensure the DOM has rendered before we write to it.
+    setTimeout(() => {
+      if (this.reasonEditorRef?.nativeElement) {
+        this.reasonEditorRef.nativeElement.innerHTML = html;
+      }
+    }, 0);
+  }
   questionTypes: QuestionInputType[] = ['radio', 'checkbox', 'textbox', 'textarea', 'mixed'];
 
   get activeSetName(): string {
@@ -2777,7 +2789,7 @@ export class AssessmentTestComponent {
         this.correctAnswerText = this.currentQuestion
           ? this.answerTextForQuestion(this.currentQuestion)
           : '';
-        this.correctAnswerReasonText = this.currentQuestion?.correctAnswerReason || '';
+        this.setReasonEditorContent(this.currentQuestion?.correctAnswerReason || '');
         if (activeSet.categoryId) {
           this.expandedCategories.add(activeSet.categoryId);
         }
@@ -2790,7 +2802,7 @@ export class AssessmentTestComponent {
         this.setShuffleOptions = false;
         this.currentQuestion = null;
         this.correctAnswerText = '';
-        this.correctAnswerReasonText = '';
+        this.setReasonEditorContent('');
       }
     });
 
@@ -3255,8 +3267,14 @@ export class AssessmentTestComponent {
   }
 
   onReasonInput(event: Event): void {
+    // Only read from the DOM — NEVER write back during typing.
+    // Writing [innerHTML] during input resets the cursor to position 0, reversing typed text.
     const el = event.target as HTMLElement;
     this.correctAnswerReasonText = el.innerHTML || '';
+    // Keep currentQuestion in sync so Save captures the latest content.
+    if (this.currentQuestion) {
+      this.currentQuestion.correctAnswerReason = this.correctAnswerReasonText;
+    }
   }
 
   applyFormat(command: string): void {
