@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EasyDocumentsService } from '../../easy-documents.service';
+import { ThemeService } from '../../../../core/services/theme.service';
 
 interface SectionLink {
   id: string;
@@ -30,6 +31,7 @@ interface NavTree {
   template: `
     <aside class="doc-sidebar glass-card" 
       [class.collapsed]="isCollapsed"
+      [class.theme-jarvis]="themeService.isJarvis()"
       [class.mobile-open]="docService.isSidebarOpenMobile()">
       <div class="sidebar-header">
         <span class="icon">📁</span>
@@ -100,6 +102,34 @@ interface NavTree {
             </div>
           </div>
 
+          <!-- Holographic HUD Radar / Gyroscope Widget for JARVIS theme -->
+          <div class="hud-sidebar-radar" *ngIf="themeService.isJarvis() && !isCollapsed">
+            <svg viewBox="0 0 160 160" class="hud-radar-svg">
+              <circle cx="80" cy="80" r="72" stroke="rgba(0, 210, 255, 0.22)" stroke-width="1.5" stroke-dasharray="4 8" class="spin-slow" />
+              <circle cx="80" cy="80" r="62" stroke="#00d2ff" stroke-width="1" opacity="0.35" />
+              <circle cx="80" cy="80" r="46" stroke="rgba(0, 210, 255, 0.3)" stroke-width="1" stroke-dasharray="8 6" class="spin-reverse" />
+              <circle cx="80" cy="80" r="28" stroke="#00d2ff" stroke-width="1.5" opacity="0.6" />
+              
+              <!-- Crosshair axes -->
+              <line x1="80" y1="8" x2="80" y2="152" stroke="rgba(0, 210, 255, 0.4)" stroke-width="1" stroke-dasharray="4 4" />
+              <line x1="8" y1="80" x2="152" y2="80" stroke="rgba(0, 210, 255, 0.4)" stroke-width="1" stroke-dasharray="4 4" />
+              
+              <!-- 3D Globe latitude & longitude orbital wireframe -->
+              <ellipse cx="80" cy="80" rx="58" ry="24" stroke="rgba(0, 210, 255, 0.55)" stroke-width="1.2" fill="none" class="spin-globe-lat" />
+              <ellipse cx="80" cy="80" rx="24" ry="58" stroke="rgba(0, 210, 255, 0.4)" stroke-width="1.2" fill="none" />
+              
+              <!-- Center glowing pulse -->
+              <circle cx="80" cy="80" r="5" fill="#00d2ff" class="hud-pulse" />
+              
+              <!-- Amber tech telemetry marks from screenshot -->
+              <circle cx="18" cy="80" r="3.5" fill="#f59e0b" />
+              <circle cx="80" cy="142" r="3.5" fill="#f59e0b" />
+            </svg>
+            <div class="hud-radar-telemetry">
+              <span class="tele-tag">NAV.HUD // ONLINE</span>
+              <span class="tele-val">99.8% SYNC</span>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
@@ -117,6 +147,137 @@ interface NavTree {
       transition: width 0.3s ease;
       background: var(--bg-surface);
       flex-shrink: 0;
+    }
+
+    /* JARVIS Sidebar Styles */
+    .doc-sidebar.theme-jarvis {
+      border: 1.5px solid #00d2ff !important;
+      border-radius: 14px !important;
+      box-shadow: 0 0 20px rgba(0, 210, 255, 0.32), inset 0 0 20px rgba(0, 210, 255, 0.05) !important;
+      background: rgba(2, 14, 32, 0.92) !important;
+      backdrop-filter: blur(14px) !important;
+    }
+
+    .doc-sidebar.theme-jarvis .sidebar-header {
+      border-bottom: 1px solid rgba(0, 210, 255, 0.25);
+    }
+
+    .doc-sidebar.theme-jarvis .sidebar-header .title {
+      font-family: 'Orbitron', var(--font-family);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #ffffff;
+      text-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+    }
+
+    .doc-sidebar.theme-jarvis .collapse-btn {
+      color: #00d2ff;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .doc-sidebar.theme-jarvis .collapse-btn:hover {
+      background: rgba(0, 210, 255, 0.15);
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
+    }
+
+    .doc-sidebar.theme-jarvis .tree-item.active {
+      border: 1.5px solid #00d2ff !important;
+      background: rgba(0, 210, 255, 0.16) !important;
+      box-shadow: 0 0 14px rgba(0, 210, 255, 0.45) !important;
+      border-radius: 20px !important;
+      color: #ffffff !important;
+      font-weight: 600;
+    }
+
+    .doc-sidebar.theme-jarvis .tree-item.active .dot {
+      background: #00d2ff !important;
+      box-shadow: 0 0 8px #00d2ff, 0 0 16px #00d2ff !important;
+      width: 7px !important;
+      height: 7px !important;
+      border-radius: 50% !important;
+    }
+
+    .doc-sidebar.theme-jarvis .group-title-text,
+    .doc-sidebar.theme-jarvis .sub-title-text,
+    .doc-sidebar.theme-jarvis .item-text {
+      color: #c8eeff;
+      transition: color 0.2s;
+    }
+
+    .doc-sidebar.theme-jarvis .tree-item:hover {
+      background: rgba(0, 210, 255, 0.08);
+      color: #ffffff;
+    }
+
+    /* Holographic Radar Widget */
+    .hud-sidebar-radar {
+      margin-top: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid rgba(0, 210, 255, 0.2);
+      background: rgba(0, 15, 35, 0.5);
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+    }
+
+    .hud-radar-svg {
+      width: 130px;
+      height: 130px;
+      filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.4));
+    }
+
+    .hud-radar-telemetry {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.68rem;
+      color: rgba(0, 210, 255, 0.75);
+      letter-spacing: 0.08em;
+    }
+
+    .tele-status, .tele-val {
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    @keyframes spinLinear {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes spinReverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+
+    @keyframes pulseReticle {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(1.4); }
+    }
+
+    .spin-slow {
+      transform-origin: 80px 80px;
+      animation: spinLinear 24s linear infinite;
+    }
+
+    .spin-reverse {
+      transform-origin: 80px 80px;
+      animation: spinReverse 16s linear infinite;
+    }
+
+    .spin-globe-lat {
+      transform-origin: 80px 80px;
+      animation: spinLinear 30s linear infinite;
+    }
+
+    .hud-pulse {
+      animation: pulseReticle 2s ease-in-out infinite;
+      transform-origin: 80px 80px;
     }
 
     .doc-sidebar.collapsed {
@@ -286,6 +447,7 @@ interface NavTree {
 })
 export class DocSidebarComponent implements OnInit, OnDestroy {
   docService = inject(EasyDocumentsService);
+  themeService = inject(ThemeService);
   isCollapsed = false;
   activeSectionId: string | null = null;
 

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { EasyDocumentsService, DocPage, DocSection, toEmbedUrl } from './easy-documents.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { DocHeaderComponent } from './components/doc-header/doc-header.component';
 import { DocSidebarComponent } from './components/doc-sidebar/doc-sidebar.component';
 import { DocContentComponent } from './components/doc-content/doc-content.component';
@@ -18,7 +19,10 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
     DocContentComponent
   ],
   template: `
-    <div class="docs-container" [class.dark-mode]="docService.isDarkMode()" [class.has-content]="hasContent()">
+    <div class="docs-container" 
+      [class.dark-mode]="docService.isDarkMode()" 
+      [class.theme-jarvis]="themeService.isJarvis()"
+      [class.has-content]="hasContent()">
       
       <!-- Loading State -->
       <div class="loading-wrapper" *ngIf="docService.isLoading()">
@@ -72,15 +76,15 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
         <!-- Document Main View -->
         <ng-container *ngIf="hasContent()">
           <app-doc-header></app-doc-header>
-          <div class="docs-layout">
+          <div class="docs-layout" [class.jarvis-layout]="themeService.isJarvis()">
             <app-doc-sidebar></app-doc-sidebar>
-            <main class="docs-main">
+            <main class="docs-main" [class.jarvis-main]="themeService.isJarvis()">
               <app-doc-content></app-doc-content>
             </main>
           </div>
 
           <!-- Content Management Floating Action Button -->
-          <button class="fab-btn" (click)="openEditor()" title="Manage content and sheets without modifying Excel files">
+          <button class="fab-btn" [class.jarvis-fab]="themeService.isJarvis()" (click)="openEditor()" title="Manage content and sheets without modifying Excel files">
             ✏️ Content Editor
           </button>
         </ng-container>
@@ -258,6 +262,68 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
       --text-primary: #f1f5f9;
       --text-secondary: #94a3b8;
       --border-color: #1e293b;
+    }
+
+    /* JARVIS Futuristic Theme */
+    .docs-container.theme-jarvis {
+      background: 
+        radial-gradient(ellipse at 15% 25%, rgba(0, 160, 255, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 75%, rgba(0, 220, 255, 0.08) 0%, transparent 55%),
+        #010915 !important;
+      color: #c8eeff !important;
+      --bg-surface: #010915;
+      --bg-card: rgba(2, 14, 32, 0.9);
+      --text-primary: #c8eeff;
+      --text-secondary: #5fb4d8;
+      --border-color: rgba(0, 210, 255, 0.35);
+      position: relative;
+    }
+
+    .docs-container.theme-jarvis::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(0, 210, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 210, 255, 0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .docs-layout.jarvis-layout {
+      padding: 14px 16px;
+      gap: 16px;
+      background: transparent;
+      box-sizing: border-box;
+      height: calc(100vh - 64px);
+    }
+
+    .docs-main.jarvis-main {
+      border: 1.5px solid #00d2ff;
+      border-radius: 14px;
+      box-shadow: 0 0 20px rgba(0, 210, 255, 0.32), inset 0 0 25px rgba(0, 210, 255, 0.05);
+      background: rgba(2, 14, 32, 0.88);
+      backdrop-filter: blur(14px);
+      position: relative;
+    }
+
+    .fab-btn.jarvis-fab {
+      background: linear-gradient(135deg, #00d2ff 0%, #0066ff 100%) !important;
+      color: #ffffff !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+      border-radius: 28px !important;
+      box-shadow: 0 0 25px rgba(0, 210, 255, 0.65), 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+      font-weight: 700 !important;
+      font-family: 'Orbitron', var(--font-family) !important;
+      letter-spacing: 0.03em !important;
+      padding: 12px 24px !important;
+      transition: all 0.3s ease !important;
+    }
+
+    .fab-btn.jarvis-fab:hover {
+      transform: scale(1.05) translateY(-2px) !important;
+      box-shadow: 0 0 35px rgba(0, 210, 255, 0.9), 0 6px 20px rgba(0, 0, 0, 0.7) !important;
     }
 
     /* Loading states */
@@ -712,6 +778,7 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
 })
 export class EasyDocumentsComponent {
   docService = inject(EasyDocumentsService);
+  themeService = inject(ThemeService);
   sanitizer = inject(DomSanitizer);
   previewIframeCache: { url: string; safeUrl: SafeResourceUrl } | null = null;
 
