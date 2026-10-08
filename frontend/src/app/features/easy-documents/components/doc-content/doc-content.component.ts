@@ -1,8 +1,8 @@
 import { Component, inject, effect, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DomSanitizer } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
-import { EasyDocumentsService, DocSection } from '../../easy-documents.service';
+import { EasyDocumentsService, DocSection, toEmbedUrl } from '../../easy-documents.service';
 import mermaid from 'mermaid';
 
 @Component({
@@ -106,18 +106,18 @@ import mermaid from 'mermaid';
                 </div>
               }
 
-              <!-- Secured Sandboxed Iframe Embed -->
+              <!-- Responsive Media / Video Iframe Embed -->
               @if (section.iframe && isValidUrl(section.iframe)) {
                 <div class="iframe-wrapper">
                   <div class="iframe-spinner" *ngIf="iframeLoading[section.id]">
                     <div class="spinner-small"></div>
                   </div>
                   <iframe 
-                    [src]="sanitizeUrl(section.iframe)" 
+                    [src]="getSanitizedIframeUrl(section)" 
                     frameborder="0" 
-                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowfullscreen="true" 
-                    referrerpolicy="no-referrer"
+                    referrerpolicy="strict-origin-when-cross-origin"
                     (load)="iframeLoading[section.id] = false"
                   ></iframe>
                 </div>
@@ -531,6 +531,8 @@ export class DocContentComponent implements AfterViewInit, OnDestroy {
   
   // Iframe states
   iframeLoading: Record<string, boolean> = {};
+  // Cache of sanitized SafeResourceUrl to prevent blinking on change detection
+  sanitizedIframeUrls: Record<string, SafeResourceUrl> = {};
 
   // Touch swipe states
   touchStartX = 0;
@@ -557,6 +559,17 @@ export class DocContentComponent implements AfterViewInit, OnDestroy {
             }
             if (this.iframeLoading[sec.id] === undefined) {
               this.iframeLoading[sec.id] = true;
+            }
+            // Cache sanitized iframe embed URL once to avoid reload on every CD cycle
+            if (sec.iframe) {
+              const embedUrl = toEmbedUrl(sec.iframe);
+              const cached = this.sanitizedIframeUrls[sec.id];
+              if (!cached || (cached as any)._rawUrl !== embedUrl) {
+                const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
+                (safeUrl as any)._rawUrl = embedUrl;
+                this.sanitizedIframeUrls[sec.id] = safeUrl;
+                this.iframeLoading[sec.id] = true;
+              }
             }
           });
         });
@@ -598,11 +611,41 @@ export class DocContentComponent implements AfterViewInit, OnDestroy {
   }
 
   sanitizeUrl(url: string) {
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    return this.sanitizer.bypassSecurityTrustResourceUrl(toEmbedUrl(url));
   }
 
-  isValidUrl(url: string): boolean {
-    return /^(https?:\/\/)/i.test(url);
+  getSanitizedIframeUrl(sec: DocSection): SafeResourceUrl | null {
+    if (!sec.iframe) return null;
+    const embedUrl = toEmbedUrl(sec.iframe);
+    if (!embedUrl) return null;
+
+    const cached = this.sanitizedIframeUrls[sec.id];
+    if (cached && (cached as any)._rawUrl === embedUrl) {
+      return cached;
+    }
+
+    const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
+    (safeUrl as any)._rawUrl = embedUrl;
+    this.sanitizedIframeUrls[sec.id] = safeUrl;
+    return safeUrl;
+  }
+
+  getCachedIframeUrl(sectionId: string, url: string): SafeResourceUrl {
+    const embedUrl = toEmbedUrl(url);
+    const cached = this.sanitizedIframeUrls[sectionId];
+    if (cached && (cached as any)._rawUrl === embedUrl) {
+      return cached;
+    }
+    const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
+    (safeUrl as any)._rawUrl = embedUrl;
+    this.sanitizedIframeUrls[sectionId] = safeUrl;
+    return safeUrl;
+  }
+
+  isValidUrl(url: string | undefined): boolean {
+    if (!url) return false;
+    const clean = url.trim();
+    return /^(https?:\/\/)/i.test(clean) || /youtube\.com|youtu\.be|vimeo\.com|<iframe/i.test(clean);
   }
 
   speak(section: DocSection) {

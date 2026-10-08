@@ -61,6 +61,62 @@ const DEFAULT_MAPPING: ColumnMapping = {
   iframe: 'iframe'
 };
 
+export function toEmbedUrl(url: string | undefined | null): string {
+  if (!url) return '';
+  let cleanUrl = url.trim();
+
+  // If user pasted an iframe tag: <iframe ... src="..." ...>
+  const iframeSrcMatch = cleanUrl.match(/<iframe[^>]*\s+src=["']([^"']+)["']/i);
+  if (iframeSrcMatch) {
+    cleanUrl = iframeSrcMatch[1];
+  }
+
+  // Already an embed URL
+  if (cleanUrl.includes('youtube.com/embed/') || cleanUrl.includes('youtube-nocookie.com/embed/') || cleanUrl.includes('player.vimeo.com/video/')) {
+    return cleanUrl;
+  }
+
+  // YouTube Shorts: youtube.com/shorts/{id}
+  const shortsMatch = cleanUrl.match(/(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/i);
+  if (shortsMatch) {
+    return `https://www.youtube.com/embed/${shortsMatch[1]}`;
+  }
+
+  // YouTube Live: youtube.com/live/{id}
+  const liveMatch = cleanUrl.match(/(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/live\/([a-zA-Z0-9_-]+)/i);
+  if (liveMatch) {
+    return `https://www.youtube.com/embed/${liveMatch[1]}`;
+  }
+
+  // YouTube youtu.be/{id}
+  const youtuBeMatch = cleanUrl.match(/(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]+)(?:\?.*t=(\d+))?/i);
+  if (youtuBeMatch) {
+    const timeParam = youtuBeMatch[2] ? `?start=${youtuBeMatch[2]}` : '';
+    return `https://www.youtube.com/embed/${youtuBeMatch[1]}${timeParam}`;
+  }
+
+  // YouTube standard watch: youtube.com/watch?v={id}
+  const watchMatch = cleanUrl.match(/(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]+)/i);
+  if (watchMatch) {
+    const timeMatch = cleanUrl.match(/[?&]t=(\d+)/i);
+    const timeParam = timeMatch ? `?start=${timeMatch[1]}` : '';
+    return `https://www.youtube.com/embed/${watchMatch[1]}${timeParam}`;
+  }
+
+  // Vimeo: vimeo.com/{id}
+  const vimeoMatch = cleanUrl.match(/(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/i);
+  if (vimeoMatch) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+
+  // If missing protocol but looks like a domain, prepend https://
+  if (!/^https?:\/\//i.test(cleanUrl) && cleanUrl.includes('.')) {
+    cleanUrl = `https://${cleanUrl}`;
+  }
+
+  return cleanUrl;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -372,7 +428,7 @@ export class EasyDocumentsService {
             const carouselImage = this.getMappedVal(row, mapping, 'carouselImage', ['carouselImage', 'images']);
             const code = this.getMappedVal(row, mapping, 'code', ['code', 'codeBlock']);
             const note = this.getMappedVal(row, mapping, 'note', ['note', 'notes', 'highlights']);
-            const iframe = this.getMappedVal(row, mapping, 'iframe', ['iframe', 'url', 'mediaUrl']);
+            const iframe = toEmbedUrl(this.getMappedVal(row, mapping, 'iframe', ['iframe', 'url', 'mediaUrl']));
 
             return {
               id: uniqueId,

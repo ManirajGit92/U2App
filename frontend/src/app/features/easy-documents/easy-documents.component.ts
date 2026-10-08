@@ -1,7 +1,8 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
-import { EasyDocumentsService, DocPage, DocSection } from './easy-documents.service';
+import { EasyDocumentsService, DocPage, DocSection, toEmbedUrl } from './easy-documents.service';
 import { DocHeaderComponent } from './components/doc-header/doc-header.component';
 import { DocSidebarComponent } from './components/doc-sidebar/doc-sidebar.component';
 import { DocContentComponent } from './components/doc-content/doc-content.component';
@@ -181,7 +182,8 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
                       </div>
                       <div class="field-wrap">
                         <label>Iframe Media Embed URL</label>
-                        <input type="text" [(ngModel)]="formSection.iframe" (ngModelChange)="markDirty()" placeholder="https://www.youtube.com/embed/...">
+                        <input type="text" [(ngModel)]="formSection.iframe" (blur)="formatIframeUrl()" (ngModelChange)="markDirty()" placeholder="https://www.youtube.com/watch?v=... or embed URL">
+                        <small style="color: var(--text-secondary); font-size: 0.72rem; margin-top: 3px;">YouTube watch/shorts URLs auto-convert to embed links.</small>
                       </div>
                     </div>
 
@@ -204,6 +206,15 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
                       </div>
                       <div class="preview-code" *ngIf="formSection.code" style="background: #1e293b; color: white; padding: 12px; font-family: monospace; border-radius: 8px; margin-top: 12px; white-space: pre;">
                         {{ formSection.code }}
+                      </div>
+                      <div class="preview-iframe" *ngIf="formSection.iframe" style="margin-top: 16px; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; background: #000;">
+                        <iframe 
+                          [src]="getPreviewIframeUrl(formSection.iframe)" 
+                          style="width: 100%; height: 100%; border: none; display: block;"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowfullscreen="true"
+                          referrerpolicy="strict-origin-when-cross-origin">
+                        </iframe>
                       </div>
                     </div>
                   </div>
@@ -701,6 +712,8 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
 })
 export class EasyDocumentsComponent {
   docService = inject(EasyDocumentsService);
+  sanitizer = inject(DomSanitizer);
+  previewIframeCache: { url: string; safeUrl: SafeResourceUrl } | null = null;
 
   // Editor states
   showEditorModal = false;
@@ -812,6 +825,10 @@ export class EasyDocumentsComponent {
       return;
     }
 
+    if (this.formSection.iframe) {
+      this.formSection.iframe = toEmbedUrl(this.formSection.iframe);
+    }
+
     // Sync legacy parameters
     const updated: DocSection = {
       ...this.formSection,
@@ -838,6 +855,25 @@ export class EasyDocumentsComponent {
     this.selectedSection = updated;
     this.isDirty = false;
     alert('Row saved successfully.');
+  }
+
+  formatIframeUrl() {
+    if (this.formSection.iframe) {
+      this.formSection.iframe = toEmbedUrl(this.formSection.iframe);
+      this.markDirty();
+    }
+  }
+
+  getPreviewIframeUrl(url: string | undefined): SafeResourceUrl | null {
+    if (!url) return null;
+    const embed = toEmbedUrl(url);
+    if (!embed) return null;
+    if (this.previewIframeCache && this.previewIframeCache.url === embed) {
+      return this.previewIframeCache.safeUrl;
+    }
+    const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embed);
+    this.previewIframeCache = { url: embed, safeUrl };
+    return safeUrl;
   }
 
   duplicateSection() {
