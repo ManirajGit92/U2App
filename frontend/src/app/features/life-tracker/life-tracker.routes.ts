@@ -77,6 +77,89 @@ export const LIFE_TRACKER_ROUTES: Routes = [
           },
         ],
       },
+      {
+        path: 'finance',
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'overview',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'income-expense',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'investment',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'tax',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'profit-loss',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'assets-liabilities',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'goals',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'reports',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'reminders',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+          {
+            path: 'settings',
+            loadComponent: () =>
+              import('./finance/finance-dashboard.component').then(
+                (m) => m.FinanceDashboardComponent,
+              ),
+          },
+        ],
+      },
       { path: 'calendar', component: LifeTrackerCalendarComponent },
       { path: ':type', component: CategoryViewComponent },
     ],

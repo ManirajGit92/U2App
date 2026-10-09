@@ -1,6 +1,6 @@
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, RouterOutlet } from '@angular/router';
+import { Router, RouterModule, RouterOutlet } from '@angular/router';
 import { LifeTrackerService } from './life-tracker.service';
 import { ThemeService } from '../../core/services/theme.service';
 
@@ -92,8 +92,8 @@ interface NavItem {
         </div>
       </aside>
 
-      <section class="lt-main">
-        <header class="lt-topbar">
+      <section class="lt-main" [class.finance-route]="isFinanceRoute()">
+        <header class="lt-topbar" *ngIf="!isFinanceRoute()">
           <div class="welcome-block">
             <button type="button" class="icon-button mobile-menu" aria-label="Open navigation" (click)="openMobileDrawer()">
               <i class="pi pi-bars"></i>
@@ -672,13 +672,16 @@ interface NavItem {
 export class LifeTrackerComponent implements OnInit {
   service = inject(LifeTrackerService);
   theme = inject(ThemeService);
+  router = inject(Router);
 
   userName = 'Mani';
   sidebarCollapsed = signal(false);
   mobileDrawerOpen = signal(false);
-  expandedGroups = signal<string[]>(['Mind & Wellness 🧠']);
+  expandedGroups = signal<string[]>(['Finance', 'Mind & Wellness 🧠']);
   currentHour = signal(new Date().getHours());
   pageTitle = 'Health Overview';
+
+  isFinanceRoute = computed(() => this.router.url.includes('/finance'));
 
   greeting = computed(() => {
     const hour = this.currentHour();
@@ -690,9 +693,9 @@ export class LifeTrackerComponent implements OnInit {
   navItems: NavItem[] = [
     { label: 'Dashboard', route: 'dashboard', icon: 'pi pi-home' },
     {
-      label: 'Mind & Wellness 🧠',
+      label: 'Mind & Wellness',
       route: 'mental-wellness',
-      icon: 'pi pi-heart-fill',
+      icon: 'pi pi-heart',
       children: [
         { label: 'Overview', route: 'mental-wellness', icon: 'pi pi-th-large' },
         { label: 'Add New Entry', route: 'mental-wellness/add', icon: 'pi pi-plus-circle' },
@@ -715,7 +718,7 @@ export class LifeTrackerComponent implements OnInit {
     {
       label: 'Health',
       route: 'health',
-      icon: 'pi pi-heart',
+      icon: 'pi pi-heart-fill',
       children: [
         { label: 'Overview', route: 'health', icon: 'pi pi-th-large' },
         { label: 'Add Health Record', route: 'health/add', icon: 'pi pi-plus-circle' },
@@ -723,18 +726,23 @@ export class LifeTrackerComponent implements OnInit {
         { label: 'Trends & Analytics', route: 'Reports', icon: 'pi pi-chart-line' },
       ],
     },
-    { label: 'Activity', route: 'Fitness', icon: 'pi pi-bolt' },
-    { label: 'Nutrition', route: 'Diet', icon: 'pi pi-apple' },
-    { label: 'Sleep', route: 'MentalHealth', icon: 'pi pi-moon' },
-    { label: 'Medications', route: 'MentalHealth', icon: 'pi pi-briefcase' },
-    { label: 'Appointments', route: 'calendar', icon: 'pi pi-calendar-clock' },
-    { label: 'Reports', route: 'Reports', icon: 'pi pi-chart-bar' },
-    { label: 'Habits', route: 'Routines', icon: 'pi pi-list-check' },
-    { label: 'Water Tracker', route: 'Diet', icon: 'pi pi-filter-fill' },
-    { label: 'Goals', route: 'dashboard', icon: 'pi pi-flag' },
-    { label: 'Reminders', route: 'dashboard', icon: 'pi pi-bell' },
-    { label: 'Insights', route: 'dashboard', icon: 'pi pi-sparkles' },
-    { label: 'Settings', route: 'Settings', icon: 'pi pi-cog' },
+    {
+      label: 'Finance',
+      route: 'finance',
+      icon: 'pi pi-credit-card',
+      children: [
+        { label: 'Overview', route: 'finance', icon: 'pi pi-th-large' },
+        { label: 'Income & Expense', route: 'finance/income-expense', icon: 'pi pi-arrows-h' },
+        { label: 'Investment', route: 'finance/investment', icon: 'pi pi-chart-line' },
+        { label: 'Tax', route: 'finance/tax', icon: 'pi pi-receipt' },
+        { label: 'Profit & Loss', route: 'finance/profit-loss', icon: 'pi pi-chart-bar' },
+        { label: 'Assets & Liabilities', route: 'finance/assets-liabilities', icon: 'pi pi-wallet' },
+      ],
+    },
+    { label: 'Goals', route: 'finance/goals', icon: 'pi pi-flag' },
+    { label: 'Reports', route: 'finance/reports', icon: 'pi pi-chart-bar' },
+    { label: 'Reminders', route: 'finance/reminders', icon: 'pi pi-bell' },
+    { label: 'Settings', route: 'finance/settings', icon: 'pi pi-cog' },
   ];
 
   ngOnInit() {}
