@@ -92,8 +92,8 @@ interface NavItem {
         </div>
       </aside>
 
-      <section class="lt-main" [class.finance-route]="isFinanceRoute()">
-        <header class="lt-topbar" *ngIf="!isFinanceRoute()">
+      <section class="lt-main" [class.finance-route]="isCustomHeaderRoute()">
+        <header class="lt-topbar" *ngIf="!isCustomHeaderRoute()">
           <div class="welcome-block">
             <button type="button" class="icon-button mobile-menu" aria-label="Open navigation" (click)="openMobileDrawer()">
               <i class="pi pi-bars"></i>
@@ -677,11 +677,11 @@ export class LifeTrackerComponent implements OnInit {
   userName = 'Mani';
   sidebarCollapsed = signal(false);
   mobileDrawerOpen = signal(false);
-  expandedGroups = signal<string[]>(['Finance', 'Mind & Wellness 🧠']);
+  expandedGroups = signal<string[]>(['Work Tracker', 'Finance', 'Mind & Wellness 🧠']);
   currentHour = signal(new Date().getHours());
   pageTitle = 'Health Overview';
 
-  isFinanceRoute = computed(() => this.router.url.includes('/finance'));
+  isCustomHeaderRoute = computed(() => this.router.url.includes('/finance') || this.router.url.includes('/work-tracker'));
 
   greeting = computed(() => {
     const hour = this.currentHour();
@@ -739,10 +739,24 @@ export class LifeTrackerComponent implements OnInit {
         { label: 'Assets & Liabilities', route: 'finance/assets-liabilities', icon: 'pi pi-wallet' },
       ],
     },
-    { label: 'Goals', route: 'finance/goals', icon: 'pi pi-flag' },
-    { label: 'Reports', route: 'finance/reports', icon: 'pi pi-chart-bar' },
-    { label: 'Reminders', route: 'finance/reminders', icon: 'pi pi-bell' },
-    { label: 'Settings', route: 'finance/settings', icon: 'pi pi-cog' },
+    {
+      label: 'Work Tracker',
+      route: 'work-tracker',
+      icon: 'pi pi-briefcase',
+      children: [
+        { label: 'Overview', route: 'work-tracker', icon: 'pi pi-th-large' },
+        { label: 'My Tasks', route: 'work-tracker/my-tasks', icon: 'pi pi-check-square' },
+        { label: 'Projects', route: 'work-tracker/projects', icon: 'pi pi-folder' },
+        { label: 'Meetings', route: 'work-tracker/meetings', icon: 'pi pi-calendar' },
+        { label: 'Time Tracking', route: 'work-tracker/time-tracking', icon: 'pi pi-clock' },
+        { label: 'Team', route: 'work-tracker/team', icon: 'pi pi-users' },
+        { label: 'Notes & Documents', route: 'work-tracker/notes-documents', icon: 'pi pi-file' },
+        { label: 'Reports', route: 'work-tracker/reports', icon: 'pi pi-chart-bar' },
+      ],
+    },
+    { label: 'Goals', route: 'work-tracker/goals', icon: 'pi pi-flag' },
+    { label: 'Reminders', route: 'work-tracker/reminders', icon: 'pi pi-bell' },
+    { label: 'Settings', route: 'work-tracker/settings', icon: 'pi pi-cog' },
   ];
 
   ngOnInit() {}

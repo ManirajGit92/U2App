@@ -160,6 +160,96 @@ export const LIFE_TRACKER_ROUTES: Routes = [
           },
         ],
       },
+      {
+        path: 'work-tracker',
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'overview',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'my-tasks',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'projects',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'meetings',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'time-tracking',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'team',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'notes-documents',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'reports',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'goals',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'reminders',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+          {
+            path: 'settings',
+            loadComponent: () =>
+              import('./work-tracker/work-tracker-dashboard.component').then(
+                (m) => m.WorkTrackerDashboardComponent,
+              ),
+          },
+        ],
+      },
       { path: 'calendar', component: LifeTrackerCalendarComponent },
       { path: ':type', component: CategoryViewComponent },
     ],
