@@ -14,6 +14,7 @@ import { TasksComponent } from './tasks/tasks.component';
 import { LeaveTrackingComponent } from './leave-tracking/leave-tracking.component';
 import { ThemeService } from '../../core/services/theme.service';
 import { KnowledgeBaseComponent } from './knowledge-base/knowledge-base.component';
+import { AiAssistantComponent } from './ai-assistant/ai-assistant.component';
 
 type Tab =
   | 'dashboard'
@@ -26,7 +27,8 @@ type Tab =
   | 'calendar'
   | 'tasks'
   | 'leave'
-  | 'qa';
+  | 'qa'
+  | 'ai';
 
 @Component({
   selector: 'app-standup-note',
@@ -45,6 +47,7 @@ type Tab =
     TasksComponent,
     LeaveTrackingComponent,
     KnowledgeBaseComponent,
+    AiAssistantComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
@@ -185,6 +188,7 @@ type Tab =
           <app-tasks *ngIf="activeTab === 'tasks'"></app-tasks>
           <app-leave-tracking *ngIf="activeTab === 'leave'"></app-leave-tracking>
           <app-knowledge-base *ngIf="activeTab === 'qa'"></app-knowledge-base>
+          <app-ai-assistant *ngIf="activeTab === 'ai'"></app-ai-assistant>
 
           <!-- J.A.R.V.I.S. Bottom Operations & Holographic Globe Footer -->
           <div class="jarvis-bottom-banner" *ngIf="themeSvc.isJarvis()">
@@ -891,6 +895,7 @@ export class StandupNoteComponent implements OnInit, OnDestroy {
     { id: 'feedback', label: 'Feedback', icon: '💬', jarvisIcon: '💬' },
     { id: 'calendar', label: 'Office Calendar', icon: '📅', jarvisIcon: '📅' },
     { id: 'qa', label: 'Q&A / Knowledge Base', icon: '❓', jarvisIcon: '🤖' },
+    { id: 'ai', label: 'AI Assistant', icon: '🤖', jarvisIcon: '🧠' },
   ];
 
   ngOnInit() {
