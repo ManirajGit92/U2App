@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { FirebaseSyncService } from '../../../core/services/firebase-sync.service';
 import { FirebaseAuthService } from '../../../core/services/firebase-auth.service';
+import { environment } from '../../../../environments/environment';
 
 export type AiProvider = 'foundry' | 'openai' | 'gemini' | 'anthropic';
 export type AiModel =
@@ -316,13 +317,17 @@ export class AiAssistantService {
       api_key: cfg.apiKey || undefined,
     };
 
+    const pythonBase = (environment.pythonApiBaseUrl || 'https://u2tools.onrender.com').replace(/\/+$/, '');
     const endpoints = [
+      `${pythonBase}/api/standup-ai/chat`,
+      `${pythonBase}/api/chat`,
+      `${pythonBase}/chat`,
+      '/api/standup-ai/chat',
+      '/api/chat',
       'http://127.0.0.1:8000/api/standup-ai/chat',
       'http://localhost:8000/api/standup-ai/chat',
-      '/api/standup-ai/chat',
       'http://127.0.0.1:8000/api/chat',
       'http://localhost:8000/api/chat',
-      '/api/chat',
     ];
 
     let lastError: any = null;
@@ -362,7 +367,7 @@ export class AiAssistantService {
     throw (
       lastError ||
       new Error(
-        'Failed to connect to Python backend service at http://127.0.0.1:8000. Please ensure standup_note/ai_assistent.py is running.'
+        `Failed to connect to Python backend service at ${pythonBase} (or local http://127.0.0.1:8000). Please ensure standup_note/ai_assistent.py is running.`
       )
     );
   }
