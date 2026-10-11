@@ -195,6 +195,9 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                 <rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/>
               </svg>
               <select [(ngModel)]="selectedModel" (ngModelChange)="saveModelSelection()" class="model-select" id="ai-model-select">
+                <optgroup label="Azure AI Foundry (Backend)">
+                  <option value="gpt-5.6-luna">gpt-5.6-luna (Foundry)</option>
+                </optgroup>
                 <optgroup label="OpenAI">
                   <option value="gpt-4o">GPT-4o</option>
                   <option value="gpt-4o-mini">GPT-4o mini</option>
@@ -213,11 +216,11 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
               </select>
             </div>
             <!-- API Key indicator -->
-            <div class="api-key-indicator" [class.configured]="hasApiKey" (click)="showSettings = true" title="API Key">
+            <div class="api-key-indicator" [class.configured]="hasApiKey" (click)="showSettings = true" title="AI Service Status">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
               </svg>
-              <span>{{ hasApiKey ? 'API Key ✓' : 'API Key' }}</span>
+              <span>{{ hasApiKey ? (aiSvc.config().provider === 'foundry' && !aiSvc.config().apiKey ? 'Backend Key ✓' : 'API Key ✓') : 'API Key' }}</span>
             </div>
           </div>
         </div>
@@ -943,6 +946,7 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
             <div class="settings-section">
               <label class="settings-label">AI Provider</label>
               <select [(ngModel)]="localConfig.provider" (ngModelChange)="onProviderChange()" class="settings-input" id="ai-provider-select">
+                <option value="foundry">Azure AI Foundry (Backend Service)</option>
                 <option value="openai">OpenAI</option>
                 <option value="gemini">Google Gemini</option>
                 <option value="anthropic">Anthropic Claude</option>
@@ -951,6 +955,9 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
             <div class="settings-section">
               <label class="settings-label">Model</label>
               <select [(ngModel)]="localConfig.model" class="settings-input" id="ai-settings-model-select">
+                <ng-container *ngIf="localConfig.provider === 'foundry'">
+                  <option value="gpt-5.6-luna">gpt-5.6-luna (Foundry)</option>
+                </ng-container>
                 <ng-container *ngIf="localConfig.provider === 'openai'">
                   <option value="gpt-4o">GPT-4o</option>
                   <option value="gpt-4o-mini">GPT-4o mini</option>
@@ -974,7 +981,7 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                 <input
                   [type]="showApiKey ? 'text' : 'password'"
                   [(ngModel)]="localConfig.apiKey"
-                  placeholder="Enter your API key..."
+                  [placeholder]="localConfig.provider === 'foundry' ? 'Optional (uses backend API key if blank)' : 'Enter your API key...'"
                   class="settings-input"
                   id="ai-api-key-input"
                 />
@@ -982,7 +989,11 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                   {{ showApiKey ? '👁️' : '🙈' }}
                 </button>
               </div>
-              <p class="settings-hint">Your API key is stored locally on your device and never sent to our servers.</p>
+              <p class="settings-hint">
+                {{ localConfig.provider === 'foundry'
+                  ? 'For Azure AI Foundry, the backend python service uses its configured API key automatically when this is blank.'
+                  : 'Your API key is stored locally on your device.' }}
+              </p>
             </div>
             <div class="settings-section">
               <label class="settings-label">System Instructions</label>
@@ -2245,7 +2256,7 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   get hasApiKey(): boolean {
-    return !!this.aiSvc.config().apiKey;
+    return this.aiSvc.config().provider === 'foundry' || !!this.aiSvc.config().apiKey;
   }
 
   get extractedItems(): ExtractedItem[] {
@@ -2729,11 +2740,12 @@ Quick update from this week:
 
   onProviderChange() {
     const defaults: Record<string, AiModel> = {
+      foundry: 'gpt-5.6-luna',
       openai: 'gpt-4o',
       gemini: 'gemini-2.0-flash',
       anthropic: 'claude-3-5-sonnet-20241022',
     };
-    this.localConfig.model = defaults[this.localConfig.provider] || 'gpt-4o';
+    this.localConfig.model = defaults[this.localConfig.provider] || 'gpt-5.6-luna';
   }
 
   saveModelSelection() {

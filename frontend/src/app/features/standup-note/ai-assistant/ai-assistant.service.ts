@@ -3,8 +3,9 @@ import { BehaviorSubject } from 'rxjs';
 import { FirebaseSyncService } from '../../../core/services/firebase-sync.service';
 import { FirebaseAuthService } from '../../../core/services/firebase-auth.service';
 
-export type AiProvider = 'openai' | 'gemini' | 'anthropic';
+export type AiProvider = 'foundry' | 'openai' | 'gemini' | 'anthropic';
 export type AiModel =
+  | 'gpt-5.6-luna'
   | 'gpt-4o'
   | 'gpt-4o-mini'
   | 'gpt-4-turbo'
@@ -211,10 +212,8 @@ export class AiAssistantService {
     }
 
     const cfg = this._config();
-    if (!cfg.apiKey) {
-      this.error.set('API key is not configured. Please add your API key in Settings.');
-      return;
-    }
+    // Do not restrict if API key is not configured in frontend.
+    // The backend Python service (standup_note/ai_assistent.py) handles the request with the backend API key.
 
     const userMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -289,6 +288,11 @@ export class AiAssistantService {
     history: ChatMessage[],
     cfg: AiConfig
   ): Promise<string> {
+    // If provider is foundry, or if no frontend API key is set, route to backend Python service
+    if (cfg.provider === 'foundry' || !cfg.apiKey) {
+      return this.callFoundryBackend(userMessage, history, cfg);
+    }
+
     switch (cfg.provider) {
       case 'gemini':
         return this.callGemini(userMessage, history, cfg);
@@ -297,6 +301,70 @@ export class AiAssistantService {
       default:
         return this.callOpenAI(userMessage, history, cfg);
     }
+  }
+
+  private async callFoundryBackend(
+    userMessage: string,
+    history: ChatMessage[],
+    cfg: AiConfig
+  ): Promise<string> {
+    const payload = {
+      message: userMessage,
+      history: history.map((m) => ({ role: m.role, content: m.content })),
+      system_instructions: cfg.systemInstructions || DEFAULT_SYSTEM_INSTRUCTIONS,
+      model: cfg.model || 'gpt-5.6-luna',
+      api_key: cfg.apiKey || undefined,
+    };
+
+    const endpoints = [
+      'http://127.0.0.1:8000/api/standup-ai/chat',
+      'http://localhost:8000/api/standup-ai/chat',
+      '/api/standup-ai/chat',
+      'http://127.0.0.1:8000/api/chat',
+      'http://localhost:8000/api/chat',
+      '/api/chat',
+    ];
+
+    let lastError: any = null;
+
+    for (const url of endpoints) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          const data = (await response.json()) as any;
+          if (data && data.response) {
+            return data.response;
+          }
+          if (typeof data === 'string') {
+            return data;
+          }
+        } else {
+          const errData = (await response.json().catch(() => ({}))) as any;
+          lastError = new Error(
+            errData?.detail || errData?.message || `Backend error: ${response.status}`
+          );
+          if (response.status !== 404) {
+            throw lastError;
+          }
+        }
+      } catch (err: any) {
+        lastError = err;
+      }
+    }
+
+    throw (
+      lastError ||
+      new Error(
+        'Failed to connect to Python backend service at http://127.0.0.1:8000. Please ensure standup_note/ai_assistent.py is running.'
+      )
+    );
   }
 
   private async callOpenAI(
@@ -571,13 +639,21 @@ export class AiAssistantService {
       const uid = this.authService.user()?.uid;
       const key = `${uid ? `${AI_STORAGE_KEY_PREFIX}.${uid}` : AI_STORAGE_KEY_PREFIX}.config`;
       const data = localStorage.getItem(key);
-      if (data) return JSON.parse(data);
+      if (data) {
+        const parsed = JSON.parse(data);
+        return {
+          provider: parsed.provider || 'foundry',
+          model: parsed.model || 'gpt-5.6-luna',
+          apiKey: parsed.apiKey || '',
+          systemInstructions: parsed.systemInstructions || DEFAULT_SYSTEM_INSTRUCTIONS,
+        };
+      }
     } catch (e) {
       console.error('AiAssistantService: failed to load config', e);
     }
     return {
-      provider: 'openai',
-      model: 'gpt-4o',
+      provider: 'foundry',
+      model: 'gpt-5.6-luna',
       apiKey: '',
       systemInstructions: DEFAULT_SYSTEM_INSTRUCTIONS,
     };
