@@ -146,7 +146,7 @@ import mermaid from 'mermaid';
     .content-wrapper {
       max-width: 100%;
       margin: 0 auto;
-      padding: 32px 48px;
+      padding: 0px 48px 32px;
       display: flex;
       flex-direction: column;
       gap: 64px;
@@ -227,6 +227,7 @@ import mermaid from 'mermaid';
       font-size: 1.08rem;
       line-height: 1.7;
       color: var(--text-primary);
+      white-space: pre-wrap;
     }
 
     .rich-content b, .rich-content strong {

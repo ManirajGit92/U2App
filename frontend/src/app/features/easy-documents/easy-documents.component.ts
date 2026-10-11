@@ -243,7 +243,8 @@ import { DocContentComponent } from './components/doc-content/doc-content.compon
   `,
   styles: [`
     .docs-container {
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
       background: var(--bg-surface);
       color: var(--text-primary);
       transition: all 0.3s ease;

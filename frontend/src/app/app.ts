@@ -38,12 +38,18 @@ export class App {
   router = inject(Router);
 
   constructor() {
+    this.checkFullScreen(window.location.pathname);
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
-      this.isFullScreen =
-        event.urlAfterRedirects.includes('/free-billing') ||
-        event.urlAfterRedirects.includes('/lodge-booking');
+      this.checkFullScreen(event.urlAfterRedirects);
     });
+  }
+
+  private checkFullScreen(url: string) {
+    this.isFullScreen =
+      url.includes('/free-billing') ||
+      url.includes('/lodge-booking') ||
+      url.includes('/easy-documents');
   }
 }
