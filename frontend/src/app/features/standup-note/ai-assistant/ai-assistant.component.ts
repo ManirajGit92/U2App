@@ -14,6 +14,7 @@ import {
   AiAssistantService,
   ChatSession,
   ExtractedItem,
+  ExtractedData,
   AiModel,
   DEFAULT_SYSTEM_INSTRUCTIONS,
 } from './ai-assistant.service';
@@ -27,7 +28,7 @@ import {
   StandupNote,
 } from '../standup-note.service';
 
-type MainTab = 'chat' | 'extracted';
+type MainTab = 'chat' | 'extracted' | 'extracted-json';
 type HistoryGroup = { label: string; sessions: ChatSession[] };
 
 @Component({
@@ -122,6 +123,16 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
           </div>
         </div>
 
+        <!-- Sidebar Footer Clear Action -->
+        <div class="sidebar-footer" *ngIf="sessions.length > 0">
+          <button class="clear-all-history-btn" (click)="confirmClearAllHistory()" id="ai-clear-all-history-btn" title="Clear all chat history and extracted information">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            <span *ngIf="chatSidebarOpen">Clear All History</span>
+          </button>
+        </div>
+
         <!-- Collapse Toggle -->
         <button class="sidebar-collapse-btn" (click)="chatSidebarOpen = !chatSidebarOpen" title="Collapse sidebar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -165,9 +176,15 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
             <button class="btn-header btn-settings" (click)="showSettings = true" id="ai-settings-btn">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83-2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
               Settings
+            </button>
+            <button class="btn-header btn-danger-header" (click)="confirmClearAllHistory()" id="ai-header-clear-btn" title="Clear all chat history and extracted information">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+              Clear All History
             </button>
           </div>
         </div>
@@ -186,6 +203,14 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                 <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
               </svg>
               Extracted Information
+            </button>
+            <button class="tab-btn" [class.active]="activeTab === 'extracted-json'" (click)="openExtractedJsonTab()" id="ai-tab-extracted-json">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"/>
+                <polyline points="8 6 2 12 8 18"/>
+              </svg>
+              Extracted Json
+              <span class="tab-badge" *ngIf="extractedItems.length > 0">{{ extractedItems.length }}</span>
             </button>
           </div>
           <div class="tab-bar-tools">
@@ -395,13 +420,21 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                 <option value="meeting">Meetings</option>
               </select>
             </div>
-            <button class="apply-all-btn" (click)="applyAllItems()" id="ai-apply-all-btn"
-              [disabled]="isApplying || pendingCount === 0">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-              </svg>
-              {{ isApplying ? 'Applying...' : 'Apply All to U2Tools' }}
-            </button>
+            <div class="extracted-header-actions">
+              <button class="clear-extracted-btn" (click)="confirmClearExtracted()" id="ai-clear-extracted-btn" title="Clear extracted information for this session">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                Clear Extracted
+              </button>
+              <button class="apply-all-btn" (click)="applyAllItems()" id="ai-apply-all-btn"
+                [disabled]="isApplying || pendingCount === 0">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+                {{ isApplying ? 'Applying...' : 'Apply All to U2Tools' }}
+              </button>
+            </div>
           </div>
 
           <!-- Empty extracted state -->
@@ -933,6 +966,116 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
 
           </div>
         </div>
+
+        <!-- ==================== EXTRACTED JSON TAB ==================== -->
+        <div class="tab-content extracted-json-tab" *ngIf="activeTab === 'extracted-json'">
+          <div class="json-header">
+            <div class="json-header-left">
+              <div class="json-title-row">
+                <h3>Extracted JSON</h3>
+                <span class="json-badge" [class.valid]="isJsonValid" [class.invalid]="!isJsonValid && extractedJsonText.trim().length > 0">
+                  {{ jsonBadgeText }}
+                </span>
+              </div>
+              <p class="json-subtitle">
+                View, edit or paste extracted JSON data below. Click <strong>Update Extracted Info</strong> to load it into the Extracted Information section.
+              </p>
+            </div>
+            <div class="json-actions">
+              <button class="btn-json-action" (click)="formatJson()" title="Format and indent JSON" [disabled]="!extractedJsonText.trim()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/>
+                </svg>
+                Format
+              </button>
+              <button class="btn-json-action" (click)="copyJson()" title="Copy JSON to clipboard" [disabled]="!extractedJsonText.trim()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                {{ copyButtonText }}
+              </button>
+              <button class="btn-json-action" (click)="syncJsonFromSession()" title="Reload JSON from current extracted items">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                Reload from Items
+              </button>
+              <button class="btn-json-action" (click)="loadSampleJson()" title="Load sample JSON template">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Sample Template
+              </button>
+              <button class="btn-json-action danger" (click)="clearJson()" title="Clear JSON content" [disabled]="!extractedJsonText.trim()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                Clear
+              </button>
+              <button class="btn-json-update" (click)="updateExtractedFromJson()" [disabled]="!extractedJsonText.trim() || isUpdatingJson" id="ai-update-json-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                {{ isUpdatingJson ? 'Updating...' : 'Update Extracted Info' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Error message if invalid JSON -->
+          <div class="json-alert error" *ngIf="jsonError">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>{{ jsonError }}</span>
+          </div>
+
+          <!-- Success message -->
+          <div class="json-alert success" *ngIf="jsonSuccessMsg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>{{ jsonSuccessMsg }}</span>
+          </div>
+
+          <!-- JSON Editor Area -->
+          <div class="json-editor-wrapper">
+            <div class="editor-statusbar">
+              <span class="file-tag">extracted-data.json</span>
+              <span class="editor-stats">{{ jsonStatsText }}</span>
+            </div>
+            <textarea
+              class="json-textarea"
+              [(ngModel)]="extractedJsonText"
+              (ngModelChange)="onJsonChange()"
+              (keydown)="onJsonEditorKeydown($event)"
+              placeholder="Paste extracted JSON here or edit the existing data...&#10;&#10;Example:&#10;{&#10;  &quot;items&quot;: [&#10;    {&#10;      &quot;category&quot;: &quot;standup&quot;,&#10;      &quot;data&quot;: { &quot;employeeName&quot;: &quot;John Doe&quot;, &quot;todayPlan&quot;: &quot;...&quot; }&#10;    }&#10;  ]&#10;}"
+              spellcheck="false"
+              id="ai-extracted-json-textarea"
+            ></textarea>
+          </div>
+
+          <!-- Quick Schema Reference -->
+          <div class="json-schema-guide">
+            <button class="guide-toggle-btn" (click)="showSchemaGuide = !showSchemaGuide">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <span>{{ showSchemaGuide ? 'Hide Supported Categories & Schema Reference' : 'Show Supported Categories & Schema Reference' }}</span>
+              <span class="arrow">{{ showSchemaGuide ? '▲' : '▼' }}</span>
+            </button>
+            <div class="guide-content" *ngIf="showSchemaGuide">
+              <div class="category-pills">
+                <div class="cat-pill"><strong>standup:</strong> employeeName, date, previousWork, todayPlan, blockers, notes, projectName</div>
+                <div class="cat-pill"><strong>employee:</strong> name, position, team, email</div>
+                <div class="cat-pill"><strong>project:</strong> name, status, notes, lead</div>
+                <div class="cat-pill"><strong>task:</strong> title, employeeName, projectName, description, endDate, priority</div>
+                <div class="cat-pill"><strong>leave:</strong> employeeName, fromDate, toDate, reason, leaveType, duration</div>
+                <div class="cat-pill"><strong>reminder:</strong> title, description, deadline, priority, assignedTo</div>
+                <div class="cat-pill"><strong>meeting:</strong> title, description, date, time, attendees</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ==================== SETTINGS MODAL ==================== -->
@@ -1007,6 +1150,26 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
               <button class="reset-instructions-btn" (click)="resetSystemInstructions()">
                 Reset to Default
               </button>
+            </div>
+
+            <!-- Data Management Section -->
+            <div class="settings-section data-mgmt-section">
+              <label class="settings-label">Data Management</label>
+              <div class="data-mgmt-btns">
+                <button class="btn-data-action" (click)="confirmClearExtracted()" [disabled]="extractedItems.length === 0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                  Clear Current Extracted Data ({{ extractedItems.length }})
+                </button>
+                <button class="btn-data-action danger" (click)="confirmClearAllHistory()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                  Clear All History & Extracted Data
+                </button>
+              </div>
+              <p class="settings-hint danger-hint">Clearing history permanently removes all chat sessions and extracted items.</p>
             </div>
           </div>
           <div class="modal-footer">
@@ -1323,6 +1486,14 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
     }
     .btn-header:hover { background: var(--bg-tertiary); color: var(--text-primary); }
     .btn-header.btn-settings:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+    .btn-header.btn-danger-header {
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+    .btn-header.btn-danger-header:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+    }
 
     /* ── Tab Bar ── */
     .tab-bar-row {
@@ -2181,6 +2352,395 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
       .msg-bubble { max-width: 90%; }
       .extracted-tab { padding: 12px 14px; }
       .editable-fields { grid-template-columns: 1fr; }
+      .extracted-json-tab { padding: 12px 14px; }
+      .json-header { flex-direction: column; align-items: stretch; }
+      .json-actions { justify-content: flex-start; }
+    }
+
+    /* ── Tab Badge ── */
+    .tab-badge {
+      font-size: 0.72rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: var(--accent-surface);
+      color: var(--accent-primary);
+      font-weight: 600;
+    }
+
+    /* ── Extracted JSON Tab Styles ── */
+    .extracted-json-tab {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      height: 100%;
+      padding: 20px 24px;
+      overflow-y: auto;
+      box-sizing: border-box;
+      gap: 12px;
+    }
+
+    .json-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .json-header-left {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .json-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .json-title-row h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .json-subtitle {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .json-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .json-badge.valid {
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--success);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .json-badge.invalid {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .json-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-json-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-json-action:hover:not(:disabled) {
+      background: var(--bg-tertiary);
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+
+    .btn-json-action.danger:hover:not(:disabled) {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn-json-action:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-json-update {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+      transition: all 0.2s ease;
+    }
+
+    .btn-json-update:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-json-update:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .json-alert {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .json-alert.error {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+    }
+
+    .json-alert.success {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--success);
+    }
+
+    .json-editor-wrapper {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 280px;
+      background: #181926;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .editor-statusbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 14px;
+      background: #1e2030;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.75rem;
+      color: #a5adcb;
+    }
+
+    .file-tag {
+      font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+      font-weight: 600;
+      color: #8aadf4;
+    }
+
+    .editor-stats {
+      font-size: 0.72rem;
+      opacity: 0.85;
+      font-family: monospace;
+    }
+
+    .json-textarea {
+      flex: 1;
+      width: 100%;
+      min-height: 240px;
+      box-sizing: border-box;
+      padding: 14px 16px;
+      border: none;
+      outline: none;
+      resize: vertical;
+      background: transparent;
+      color: #cad3f5;
+      font-family: 'Fira Code', 'Cascadia Code', Consolas, Monaco, monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      tab-size: 2;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow-x: auto;
+    }
+
+    .json-textarea:focus {
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .json-textarea::placeholder {
+      color: #5b6078;
+    }
+
+    .json-schema-guide {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .guide-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 14px;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .guide-toggle-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .guide-toggle-btn .arrow {
+      margin-left: auto;
+      font-size: 0.7rem;
+    }
+
+    .guide-content {
+      padding: 10px 14px 12px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+    }
+
+    .category-pills {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .cat-pill {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      font-family: monospace;
+    }
+
+    .cat-pill strong {
+      color: var(--accent-primary);
+      font-weight: 700;
+    }
+
+    /* ── Sidebar Clear All History Button ── */
+    .sidebar-footer {
+      padding: 8px 10px;
+      border-top: 1px solid var(--border-color);
+    }
+    .clear-all-history-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 8px;
+      background: none;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: var(--danger);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .clear-all-history-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+    }
+
+    /* ── Extracted Header Actions ── */
+    .extracted-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .clear-extracted-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: none;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: var(--danger);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .clear-extracted-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+    }
+
+    /* ── Settings Data Management ── */
+    .data-mgmt-section {
+      border-top: 1px solid var(--border-color);
+      padding-top: 16px;
+      margin-top: 20px;
+    }
+    .data-mgmt-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-data-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+    }
+    .btn-data-action:hover:not(:disabled) {
+      background: var(--bg-tertiary);
+      border-color: var(--accent-primary);
+    }
+    .btn-data-action.danger {
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+      background: rgba(239, 68, 68, 0.05);
+    }
+    .btn-data-action.danger:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: var(--danger);
+    }
+    .btn-data-action:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .danger-hint {
+      color: var(--danger) !important;
+      opacity: 0.85;
     }
   `],
 })
@@ -2201,6 +2761,13 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
   showSettings = false;
   showHowItWorks = false;
   showApiKey = false;
+
+  extractedJsonText = '';
+  jsonError = '';
+  jsonSuccessMsg = '';
+  isUpdatingJson = false;
+  showSchemaGuide = false;
+  copyButtonText = 'Copy';
 
   sessions: ChatSession[] = [];
   pinnedSessions: ChatSession[] = [];
@@ -2223,6 +2790,10 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
         this.pinnedSessions = sessions.filter((s) => s.pinned)
           .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
         this.shouldScrollToBottom = true;
+        // Keep JSON in sync if empty on JSON tab
+        if (this.activeTab === 'extracted-json' && !this.extractedJsonText.trim()) {
+          this.syncJsonFromSession();
+        }
       })
     );
 
@@ -2276,17 +2847,59 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
   newChat() {
     this.aiSvc.createNewSession();
     this.activeTab = 'chat';
+    this.extractedJsonText = '';
+    this.jsonError = '';
+    this.jsonSuccessMsg = '';
   }
 
   selectSession(id: string) {
     this.aiSvc.setActiveSession(id);
     this.activeTab = 'chat';
     this.shouldScrollToBottom = true;
+    this.syncJsonFromSession();
   }
 
   confirmDelete(id: string) {
     if (confirm('Delete this chat? This action cannot be undone.')) {
       this.aiSvc.deleteSession(id);
+    }
+  }
+
+  confirmClearAllHistory() {
+    if (
+      confirm(
+        'Are you sure you want to delete ALL chat history and extracted information?\n\nThis will permanently remove all conversations and extracted items. This action cannot be undone.'
+      )
+    ) {
+      this.aiSvc.clearAllSessions();
+      this.extractedJsonText = '';
+      this.jsonError = '';
+      this.jsonSuccessMsg = '';
+      this.categoryFilter = '';
+      this.activeTab = 'chat';
+      if (this.showSettings) {
+        this.showSettings = false;
+      }
+      this.showSuccess('All chat history and extracted information have been cleared.');
+    }
+  }
+
+  confirmClearExtracted() {
+    if (!this.currentSession || this.extractedItems.length === 0) return;
+    if (
+      confirm(
+        `Are you sure you want to clear all ${this.extractedItems.length} extracted items from the current conversation?`
+      )
+    ) {
+      this.aiSvc.clearSessionExtractedData(this.currentSession.id);
+      this.extractedJsonText = '';
+      this.jsonError = '';
+      this.jsonSuccessMsg = '';
+      this.categoryFilter = '';
+      if (this.showSettings) {
+        this.showSettings = false;
+      }
+      this.showSuccess('Extracted information has been cleared.');
     }
   }
 
@@ -2764,5 +3377,395 @@ Quick update from this week:
 
   resetSystemInstructions() {
     this.localConfig.systemInstructions = this.aiSvc.getDefaultSystemInstructions();
+  }
+
+  // ── Extracted JSON Tab Support ─────────────────────────────────────────────
+
+  get isJsonValid(): boolean {
+    if (!this.extractedJsonText.trim()) return false;
+    try {
+      JSON.parse(this.extractedJsonText);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  get jsonBadgeText(): string {
+    if (!this.extractedJsonText.trim()) return 'Empty';
+    try {
+      const parsed = JSON.parse(this.extractedJsonText);
+      let count = 0;
+      if (Array.isArray(parsed)) count = parsed.length;
+      else if (parsed && Array.isArray(parsed.items)) count = parsed.items.length;
+      else if (parsed && typeof parsed === 'object') count = 1;
+      return `✓ Valid JSON (${count} item${count === 1 ? '' : 's'})`;
+    } catch {
+      return '⚠️ Syntax Error';
+    }
+  }
+
+  get jsonStatsText(): string {
+    const text = this.extractedJsonText;
+    const lines = text ? text.split('\n').length : 0;
+    const chars = text.length;
+    return `${lines} lines, ${chars} chars`;
+  }
+
+  openExtractedJsonTab() {
+    this.activeTab = 'extracted-json';
+    if (!this.extractedJsonText.trim()) {
+      this.syncJsonFromSession();
+    } else {
+      this.validateJsonInput();
+    }
+  }
+
+  syncJsonFromSession() {
+    const current = this.currentSession;
+    if (!current?.extractedData) {
+      this.extractedJsonText = '';
+      this.validateJsonInput();
+      return;
+    }
+
+    if (current.extractedData.rawJson) {
+      this.extractedJsonText = current.extractedData.rawJson;
+    } else if (current.extractedData.items?.length) {
+      const formatted = {
+        summary: 'Extracted standup data',
+        items: current.extractedData.items.map((item) => ({
+          category: item.category,
+          data: item.data,
+          sourceContext: item.sourceContext,
+          confidence: item.confidence,
+          status: item.status,
+        })),
+      };
+      this.extractedJsonText = JSON.stringify(formatted, null, 2);
+    } else {
+      this.extractedJsonText = '';
+    }
+    this.jsonError = '';
+    this.jsonSuccessMsg = '';
+    this.validateJsonInput();
+  }
+
+  onJsonChange() {
+    this.validateJsonInput();
+  }
+
+  validateJsonInput() {
+    if (!this.extractedJsonText.trim()) {
+      this.jsonError = '';
+      return;
+    }
+    try {
+      JSON.parse(this.extractedJsonText);
+      this.jsonError = '';
+    } catch (e: any) {
+      this.jsonError = `JSON syntax error: ${e.message}`;
+    }
+  }
+
+  onJsonEditorKeydown(e: KeyboardEvent) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const textarea = e.target as HTMLTextAreaElement;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = textarea.value;
+      textarea.value = val.substring(0, start) + '  ' + val.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + 2;
+      this.extractedJsonText = textarea.value;
+      this.onJsonChange();
+    }
+  }
+
+  formatJson() {
+    if (!this.extractedJsonText.trim()) return;
+    try {
+      const parsed = JSON.parse(this.extractedJsonText);
+      this.extractedJsonText = JSON.stringify(parsed, null, 2);
+      this.jsonError = '';
+      this.validateJsonInput();
+    } catch (e: any) {
+      this.jsonError = `Cannot format: ${e.message}`;
+    }
+  }
+
+  copyJson() {
+    if (!this.extractedJsonText.trim()) return;
+    navigator.clipboard.writeText(this.extractedJsonText).then(
+      () => {
+        this.copyButtonText = 'Copied!';
+        setTimeout(() => (this.copyButtonText = 'Copy'), 2000);
+      },
+      () => {
+        this.copyButtonText = 'Copied!';
+        setTimeout(() => (this.copyButtonText = 'Copy'), 2000);
+      }
+    );
+  }
+
+  clearJson() {
+    if (confirm('Are you sure you want to clear the JSON editor?')) {
+      this.extractedJsonText = '';
+      this.jsonError = '';
+      this.jsonSuccessMsg = '';
+      this.validateJsonInput();
+    }
+  }
+
+  loadSampleJson() {
+    const today = new Date().toISOString().split('T')[0];
+    const sample = {
+      summary: 'Daily standup notes & updates',
+      items: [
+        {
+          category: 'standup',
+          data: {
+            employeeName: 'Alice Smith',
+            date: today,
+            previousWork: 'Completed login API integration for portal',
+            todayPlan: 'Implement dashboard filter components',
+            blockers: 'None',
+            notes: 'Working with backend team on API response',
+            projectName: 'Customer Portal',
+          },
+          sourceContext: 'Alice: Completed login API, today working on filters',
+          confidence: 95,
+        },
+        {
+          category: 'employee',
+          data: {
+            name: 'Rahul Verma',
+            position: 'Frontend Developer',
+            team: 'Web Engineering',
+            email: 'rahul@example.com',
+          },
+          sourceContext: 'Rahul joins as Frontend Developer next week',
+          confidence: 90,
+        },
+        {
+          category: 'project',
+          data: {
+            name: 'Mobile App for Field Agents',
+            status: 'Active',
+            lead: 'Alice Smith',
+            notes: 'Cross-platform mobile application',
+          },
+          sourceContext: 'Arjun brought up new project Mobile App for Field Agents',
+          confidence: 90,
+        },
+        {
+          category: 'task',
+          data: {
+            title: 'Deploy dashboard to staging',
+            employeeName: 'Alice Smith',
+            projectName: 'Customer Portal',
+            description: 'Configure CI/CD and deploy latest build to staging',
+            endDate: today,
+            priority: 'important-urgent',
+          },
+          sourceContext: 'Alice will deploy to staging by EOD',
+          confidence: 85,
+        },
+        {
+          category: 'leave',
+          data: {
+            employeeName: 'Alice Smith',
+            fromDate: today,
+            toDate: today,
+            leaveType: 'planned',
+            duration: 'full-day',
+            reason: 'Personal appointment',
+          },
+          sourceContext: 'Alice on leave today for personal appointment',
+          confidence: 95,
+        },
+        {
+          category: 'reminder',
+          data: {
+            title: 'Resolve API contract delay',
+            description: 'Follow up with backend team regarding contract finalization',
+            deadline: today,
+            priority: 'High',
+            assignedTo: 'Alice Smith',
+          },
+          sourceContext: 'Reminder to follow up on backend API contract delay',
+          confidence: 90,
+        },
+        {
+          category: 'meeting',
+          data: {
+            title: 'Sprint Retrospective',
+            description: 'Bi-weekly sprint retrospective',
+            date: today,
+            time: '16:00',
+            attendees: 'Alice, Bob, Team',
+          },
+          sourceContext: 'Sprint retrospective scheduled for 4 PM today',
+          confidence: 90,
+        },
+      ],
+    };
+    this.extractedJsonText = JSON.stringify(sample, null, 2);
+    this.jsonError = '';
+    this.jsonSuccessMsg = 'Sample JSON loaded. Review or edit, then click "Update Extracted Info".';
+    this.validateJsonInput();
+  }
+
+  updateExtractedFromJson() {
+    if (!this.extractedJsonText.trim()) {
+      this.jsonError = 'Please enter or paste JSON data first.';
+      return;
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(this.extractedJsonText);
+      this.jsonError = '';
+    } catch (e: any) {
+      this.jsonError = `Invalid JSON syntax: ${e.message}`;
+      return;
+    }
+
+    let itemsList: any[] = [];
+    if (Array.isArray(parsed)) {
+      itemsList = parsed;
+    } else if (parsed && Array.isArray(parsed.items)) {
+      itemsList = parsed.items;
+    } else if (parsed && (parsed.category || parsed.data)) {
+      itemsList = [parsed];
+    } else if (parsed && typeof parsed === 'object') {
+      for (const key of Object.keys(parsed)) {
+        if (Array.isArray(parsed[key])) {
+          const cat = this.normalizeCategory(key);
+          parsed[key].forEach((subItem: any) => {
+            itemsList.push({
+              category: cat,
+              data: subItem.data || subItem,
+            });
+          });
+        }
+      }
+      if (itemsList.length === 0) {
+        itemsList = [parsed];
+      }
+    }
+
+    if (itemsList.length === 0) {
+      this.jsonError =
+        'No extractable items found in the JSON. Expected { "items": [ ... ] } or an array of items.';
+      return;
+    }
+
+    let session = this.currentSession;
+    if (!session) {
+      session = this.aiSvc.createNewSession();
+    }
+
+    const items: ExtractedItem[] = itemsList.map((item: any, idx: number) => {
+      let category = this.normalizeCategory(item.category);
+      let data = item.data;
+
+      if (!category && !data) {
+        data = { ...item };
+        category = this.inferCategory(data);
+      } else if (!data && typeof item === 'object') {
+        data = { ...item };
+        delete data.category;
+        delete data.sourceContext;
+        delete data.confidence;
+        delete data.status;
+        delete data.id;
+        delete data.isExisting;
+        delete data.existingId;
+        delete data.edited;
+      }
+
+      if (!category) {
+        category = this.inferCategory(data || {});
+      }
+
+      return {
+        id: item.id || `ei-${Date.now()}-${idx}`,
+        category: category as any,
+        data: data || {},
+        sourceContext: item.sourceContext || 'Manually entered / edited JSON',
+        confidence: typeof item.confidence === 'number' ? item.confidence : 100,
+        status: ['pending', 'approved', 'rejected', 'applied'].includes(item.status)
+          ? item.status
+          : 'pending',
+        isExisting: false,
+        edited: false,
+      };
+    });
+
+    const extractedData: ExtractedData = {
+      items,
+      extractedAt: new Date().toISOString(),
+      sourceText: session.extractedData?.sourceText || 'Manually entered JSON',
+      rawJson: this.extractedJsonText,
+    };
+
+    this.aiSvc.setSessionExtractedData(session.id, extractedData);
+    this.runDuplicateCheck();
+
+    this.showSuccess(`Updated ${items.length} extracted items from JSON!`);
+    // Immediately display the Extracted Information tab
+    this.activeTab = 'extracted';
+  }
+
+  private normalizeCategory(
+    cat: string | undefined
+  ): 'standup' | 'employee' | 'project' | 'task' | 'leave' | 'reminder' | 'meeting' {
+    if (!cat) return 'standup';
+    const c = cat.toLowerCase();
+    if (c.includes('standup') || c.includes('note')) return 'standup';
+    if (c.includes('emp')) return 'employee';
+    if (c.includes('proj')) return 'project';
+    if (c.includes('task')) return 'task';
+    if (c.includes('leave')) return 'leave';
+    if (c.includes('remind')) return 'reminder';
+    if (c.includes('meet') || c.includes('event') || c.includes('calendar')) return 'meeting';
+    return 'standup';
+  }
+
+  private inferCategory(
+    data: Record<string, any>
+  ): 'standup' | 'employee' | 'project' | 'task' | 'leave' | 'reminder' | 'meeting' {
+    if (
+      data['employeeName'] &&
+      (data['previousWork'] !== undefined ||
+        data['todayPlan'] !== undefined ||
+        data['blockers'] !== undefined)
+    ) {
+      return 'standup';
+    }
+    if (data['fromDate'] || data['toDate'] || data['leaveType']) {
+      return 'leave';
+    }
+    if (data['position'] || data['team'] || (data['email'] && !data['employeeName'])) {
+      return 'employee';
+    }
+    if (
+      data['progress'] ||
+      data['column'] ||
+      (data['title'] && data['employeeName'] && data['projectName'])
+    ) {
+      return 'task';
+    }
+    if (data['lead'] || (data['name'] && data['status'])) {
+      return 'project';
+    }
+    if (data['time'] && data['date']) {
+      return 'meeting';
+    }
+    if (data['deadline'] || data['assignedTo']) {
+      return 'reminder';
+    }
+    return 'standup';
   }
 }

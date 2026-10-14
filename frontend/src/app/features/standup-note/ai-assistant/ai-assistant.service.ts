@@ -69,6 +69,7 @@ export interface ExtractedData {
   items: ExtractedItem[];
   extractedAt: string;
   sourceText: string;
+  rawJson?: string;
 }
 
 const AI_STORAGE_KEY_PREFIX = 'u2app.aiAssistant';
@@ -183,6 +184,28 @@ export class AiAssistantService {
     this.persistSessions();
   }
 
+  clearAllSessions() {
+    const id = `chat-${Date.now()}`;
+    const freshSession: ChatSession = {
+      id,
+      title: 'New Chat',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: [],
+      pinned: false,
+    };
+    this.sessionsSubject.next([freshSession]);
+    this._activeSessionId.set(id);
+    this.persistSessions();
+  }
+
+  clearSessionExtractedData(sessionId: string) {
+    this.sessionsSubject.next(
+      this.sessions.map((s) => (s.id === sessionId ? { ...s, extractedData: undefined } : s))
+    );
+    this.persistSessions();
+  }
+
   togglePin(id: string) {
     this.sessionsSubject.next(
       this.sessions.map((s) => (s.id === id ? { ...s, pinned: !s.pinned } : s))
@@ -261,6 +284,7 @@ export class AiAssistantService {
           })),
           extractedAt: new Date().toISOString(),
           sourceText: content,
+          rawJson: JSON.stringify({ summary: parsed.summary, items: parsed.items }, null, 2),
         };
         this.updateSessionExtractedData(session.id, extractedData);
       }
@@ -475,10 +499,13 @@ export class AiAssistantService {
 
   private parseAIResponse(text: string): { summary: string; items: any[] } {
     const jsonMatch =
-      text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/(\{[\s\S]*\})/);
+      text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        if (Array.isArray(parsed)) {
+          return { summary: text, items: parsed };
+        }
         return { summary: parsed.summary || text, items: parsed.items || [] };
       } catch {
         // fall through
@@ -486,6 +513,9 @@ export class AiAssistantService {
     }
     try {
       const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        return { summary: text, items: parsed };
+      }
       return { summary: parsed.summary || text, items: parsed.items || [] };
     } catch {
       return { summary: text, items: [] };
@@ -601,6 +631,10 @@ export class AiAssistantService {
       )
     );
     this.persistSessions();
+  }
+
+  setSessionExtractedData(sessionId: string, data: ExtractedData) {
+    this.updateSessionExtractedData(sessionId, data);
   }
 
   private updateSessionExtractedData(sessionId: string, data: ExtractedData) {
