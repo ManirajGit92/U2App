@@ -556,6 +556,14 @@ export class WorkTrackerService {
     XLSX.writeFile(wb, 'WorkTracker_Template.xlsx');
   }
 
+  exportExcel(): void {
+    this.downloadTemplate();
+  }
+
+  async importExcel(file: File): Promise<void> {
+    return this.processLocalUpload(file);
+  }
+
   private createId(prefix: string, seed: number): string {
     const existingIds = new Set([
       ...this.dataSubject.value.developerTasks.map((task) => task.taskId),

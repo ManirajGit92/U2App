@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, NgZone, OnDestroy, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, NgZone, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WorkTrackerService, DeveloperTask, HourlyUpdateStatus, HourlyWorkUpdate, ReleaseTrack } from '../work-tracker.service';
@@ -19,13 +19,10 @@ interface HourlyReminderPopup {
   imports: [CommonModule, FormsModule],
   template: `
     <div class="dashboard-container">
-      <div class="dashboard-controls" *ngIf="!themeService.isJarvis()">
-        <button class="btn-table secondary" type="button" (click)="expandAllSections()">Expand All</button>
-        <button class="btn-table secondary" type="button" (click)="collapseAllSections()">Collapse All</button>
-      </div>
-      
       <!-- Filters Section -->
+      @if (activeView === 'dashboard' || activeView === 'weekly-status' || activeView === 'project-status') {
       <div class="glass-card filters-section">
+        @if (activeView === 'dashboard' || activeView === 'weekly-status') {
         <div class="table-header compact-header">
           <div class="hud-header-title">
             <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#00c8ff" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="#00c8ff"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="#00c8ff" stroke-width="2"/></svg>
@@ -76,13 +73,18 @@ interface HourlyReminderPopup {
             </select>
           </div>
         </div>
+        }
+        }
 
-        <div class="table-header compact-header margin-top-section">
+        @if (activeView === 'dashboard' || activeView === 'project-status') {
+        <div class="table-header compact-header" [class.margin-top-section]="activeView === 'dashboard'">
           <div class="hud-header-title">
             <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="#00c8ff" stroke-width="2"/><polyline points="3.27 6.96 12 12.01 20.73 6.96" fill="none" stroke="#00c8ff" stroke-width="2"/><line x1="12" y1="22.08" x2="12" y2="12" stroke="#00c8ff" stroke-width="2"/></svg>
             <h3>Release Data Filters</h3>
           </div>
+          <button *ngIf="activeView === 'project-status'" class="btn-table secondary" type="button" (click)="toggleSection('filters')">{{ sections.filters ? 'Collapse' : 'Expand' }}</button>
         </div>
+        @if (sections.filters) {
         <div class="filters-grid">
           <div class="filter-group">
             <label>
@@ -126,9 +128,12 @@ interface HourlyReminderPopup {
           </div>
         </div>
         }
+        }
       </div>
+      }
 
       <!-- Widgets Section -->
+      @if (activeView === 'dashboard') {
       <div class="section-shell">
         <div class="table-header">
           <div class="hud-header-title">
@@ -220,8 +225,10 @@ interface HourlyReminderPopup {
       </div>
       }
       </div>
+      }
 
       <!-- Hourly Updates Charts -->
+      @if (activeView === 'dashboard') {
       <div class="glass-card hourly-analytics">
         <div class="table-header">
           <div class="hud-header-title">
@@ -284,8 +291,10 @@ interface HourlyReminderPopup {
         </div>
         }
       </div>
+      }
 
       <!-- Data Table Section (Hourly Updates) -->
+      @if (activeView === 'day-work') {
       <div class="glass-card table-section">
         <div class="table-header">
           <div class="hud-header-title">
@@ -369,8 +378,10 @@ interface HourlyReminderPopup {
         </div>
         }
       </div>
+      }
 
       <!-- Data Table Section (Developer Tasks) -->
+      @if (activeView === 'weekly-status') {
       <div class="glass-card table-section">
         <div class="table-header">
           <div class="hud-header-title">
@@ -475,8 +486,10 @@ interface HourlyReminderPopup {
         </div>
         }
       </div>
+      }
 
       <!-- Data Table Section (Release Tracks) -->
+      @if (activeView === 'project-status') {
       <div class="glass-card table-section">
         <div class="table-header">
           <div class="hud-header-title">
@@ -579,6 +592,7 @@ interface HourlyReminderPopup {
         </div>
         }
       </div>
+      }
 
       @if (showHourlyModal) {
         <div class="modal-backdrop" role="presentation" (click)="closeHourlyModal()">
@@ -1447,6 +1461,7 @@ interface HourlyReminderPopup {
   `]
 })
 export class DashboardComponent implements OnDestroy {
+  @Input() activeView: 'dashboard' | 'weekly-status' | 'project-status' | 'day-work' = 'dashboard';
   workTrackerService = inject(WorkTrackerService);
   themeService = inject(ThemeService);
   private notificationReminderService = inject(NotificationReminderService);
