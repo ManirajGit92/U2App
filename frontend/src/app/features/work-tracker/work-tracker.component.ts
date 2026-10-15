@@ -120,7 +120,7 @@ interface NavItem {
         </div>
 
         <!-- Fixed Header -->
-        <header class="app-header">
+        <header class="app-header" *ngIf="activeTab !== 'dashboard'">
           <div class="header-title-wrapper">
             <button class="hamburger-btn" (click)="isMobileMenuOpen = !isMobileMenuOpen" aria-label="Toggle Navigation">
               ☰
@@ -156,7 +156,7 @@ interface NavItem {
 
         <!-- Tab Content -->
         <main class="page-content">
-          <app-dashboard *ngIf="activeTab !== 'ai'" [activeView]="getDashboardActiveView()"></app-dashboard>
+          <app-dashboard *ngIf="activeTab !== 'ai'" [activeView]="getDashboardActiveView()" (viewChange)="activeTab = $event" (toggleSidebar)="toggleSidebar()"></app-dashboard>
           <app-ai-assistant *ngIf="activeTab === 'ai'"></app-ai-assistant>
 
           <!-- J.A.R.V.I.S. Bottom Operations & Holographic Globe Footer -->
