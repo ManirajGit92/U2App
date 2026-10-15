@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, EventEmitter, Input, NgZone, OnDestroy, Output, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, NgZone, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WorkTrackerService, DeveloperTask, HourlyUpdateStatus, HourlyWorkUpdate, ReleaseTrack, WorkTrackerData } from '../work-tracker.service';
@@ -12,6 +12,43 @@ interface HourlyReminderPopup {
   hour: string;
   taskDescription: string;
   status: string;
+}
+
+interface DayScheduleSlot {
+  id: string;
+  hour: string;
+  taskTitle: string;
+  taskDescription: string;
+  projectName: string;
+  status: 'Pending' | 'In Progress' | 'Completed';
+  isLeave: boolean;
+  isLunch: boolean;
+  leaveType: 'none' | 'full' | 'half';
+  date: string;
+  durationHours?: number;
+  trackingMode?: 'hourly' | 'day-wise' | 'actual-hours';
+}
+
+interface LeaveDayEntry {
+  dayName: string;
+  date: string;
+  leaveType: 'none' | 'full' | 'half';
+}
+
+interface OverdueTaskItem {
+  id: string;
+  slotIds: string[];
+  hour: string;
+  taskTitle: string;
+  taskDescription: string;
+  projectName: string;
+  date: string;
+  newStatus: string;
+  reason: string;
+  projectChoice: 'same' | 'other';
+  otherProjectName: string;
+  continuedOnProject?: string;
+  durationHours?: number;
 }
 
 @Component({
@@ -567,6 +604,15 @@ interface HourlyReminderPopup {
         <div class="filters-grid">
           <div class="filter-group">
             <label>
+              <i *ngIf="themeService.isJarvis()" class="pi pi-calendar filter-icon"></i>
+              Week Period
+            </label>
+            <select [ngModel]="currentPeriodSelection" (ngModelChange)="onWeekNavSelect($event)">
+              <option *ngFor="let opt of weekPeriodOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>
               <i *ngIf="themeService.isJarvis()" class="pi pi-user filter-icon"></i>
               Resource Name
             </label>
@@ -665,30 +711,366 @@ interface HourlyReminderPopup {
       </div>
       }
 
-      <!-- Data Table Section (Hourly Updates) -->
+      <!-- YOUR DAY WORK TRACK (Comprehensive) -->
       @if (activeView === 'day-work') {
-      <div class="glass-card table-section">
+      <!-- Overdue Task Status Update Popup (Consolidated) -->
+      @if (showOverdueTaskPopup) {
+      <div class="modal-backdrop" role="presentation">
+        <section class="modal-panel wide-modal overdue-modal-panel" role="dialog" aria-modal="true" aria-labelledby="overduePopupTitle" (click)="$event.stopPropagation()">
+          <div class="modal-header overdue-modal-header">
+            <div class="overdue-header-content">
+              <div class="overdue-badge-pill">ACTION REQUIRED</div>
+              <h2 id="overduePopupTitle">⏰ Overdue Tasks — Status Update Required</h2>
+              <p class="overdue-subtitle">Resource: <strong>{{ dayWorkResource }}</strong> • Mode: <strong>{{ getTrackingModeLabel() }}</strong> • {{ overdueTaskItems.length }} task{{ overdueTaskItems.length > 1 ? 's' : '' }} need status update</p>
+            </div>
+          </div>
+
+          <div class="overdue-popup-note">
+            ℹ️ You have <strong>{{ overdueTaskItems.length }}</strong> scheduled task(s) in <strong>{{ getTrackingModeLabel() }}</strong> mode whose time has elapsed without being marked Completed.
+            Please update the status for <em>each</em> task below. All tasks must be updated before you can proceed.
+          </div>
+
+          <!-- Reminder Frequency Controls -->
+          <div class="overdue-freq-section">
+            <div class="overdue-freq-header">
+              <span class="freq-header-title">🔔 Reminder Frequency:</span>
+              <span class="freq-header-sub">Controls when this overdue popup automatically prompts you</span>
+            </div>
+            <div class="overdue-freq-pills">
+              <label class="freq-pill" [class.active]="overdueReminderFrequency === 'until-completed'">
+                <input type="radio" name="overdueReminderFreq" [(ngModel)]="overdueReminderFrequency" (ngModelChange)="onOverdueFrequencyChange()" value="until-completed">
+                <span class="freq-pill-title">Until Task Completed</span>
+              </label>
+              <label class="freq-pill" [class.active]="overdueReminderFrequency === 'every-hour'">
+                <input type="radio" name="overdueReminderFreq" [(ngModel)]="overdueReminderFrequency" (ngModelChange)="onOverdueFrequencyChange()" value="every-hour">
+                <span class="freq-pill-title">Every One Hour</span>
+              </label>
+              <label class="freq-pill" [class.active]="overdueReminderFrequency === 'daily-eod'">
+                <input type="radio" name="overdueReminderFreq" [(ngModel)]="overdueReminderFrequency" (ngModelChange)="onOverdueFrequencyChange()" value="daily-eod">
+                <span class="freq-pill-title">Daily at EOD</span>
+              </label>
+              <label class="freq-pill" [class.active]="overdueReminderFrequency === 'manual'">
+                <input type="radio" name="overdueReminderFreq" [(ngModel)]="overdueReminderFrequency" (ngModelChange)="onOverdueFrequencyChange()" value="manual">
+                <span class="freq-pill-title">Only on Button Click</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="overdue-quick-actions">
+            <button class="btn-quick-fill" type="button" (click)="quickMarkAllCompleted()">⚡ Quick-Set Remaining as Completed</button>
+          </div>
+
+          <!-- Alert banner if validation fails on submit -->
+          <div class="overdue-popup-warning" *ngIf="overduePopupSubmitted && !isOverduePopupValid()">
+            ⚠️ <strong>Update Incomplete:</strong> Please select a status for all tasks. For any task marked <em>"In Progress"</em>, the reason is mandatory and project choice must be specified.
+          </div>
+
+          <div class="overdue-tasks-scroll-container">
+            <div *ngFor="let item of overdueTaskItems; let i = index" 
+                 class="overdue-task-card" 
+                 [class.card-invalid]="overduePopupSubmitted && !isItemValid(item)"
+                 [class.card-valid]="isItemValid(item)">
+              
+              <div class="overdue-task-header">
+                <span class="overdue-seq-badge">#{{ i + 1 }}</span>
+                <span class="overdue-task-date">📅 {{ item.date }}</span>
+                <span class="overdue-task-time">⏰ {{ item.hour }}</span>
+                <span class="overdue-duration-badge" *ngIf="item.durationHours">{{ item.durationHours }}h</span>
+                <span class="overdue-task-project">📁 {{ item.projectName || 'General' }}</span>
+                <span class="overdue-task-title">{{ item.taskTitle }}</span>
+                <span class="overdue-task-desc" *ngIf="item.taskDescription && item.taskDescription !== item.taskTitle">— {{ item.taskDescription }}</span>
+                <span class="overdue-status-indicator" *ngIf="item.newStatus" [ngClass]="normalizeStatus(item.newStatus)">
+                  {{ item.newStatus }}
+                </span>
+              </div>
+
+              <div class="overdue-task-fields">
+                <!-- Status Control (Required) -->
+                <div class="overdue-field-group">
+                  <label>Status <span class="req">*</span></label>
+                  <select [(ngModel)]="item.newStatus" (ngModelChange)="onOverdueStatusChange(item)" class="overdue-select" [class.field-error]="overduePopupSubmitted && !item.newStatus">
+                    <option value="">-- Select Status * --</option>
+                    <option value="Completed">Completed</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Pending">Pending</option>
+                  </select>
+                  <span class="field-error-msg" *ngIf="overduePopupSubmitted && !item.newStatus">Status selection is mandatory</span>
+                </div>
+
+                <!-- If In Progress: Mandatory Reason + Project Choice -->
+                @if (item.newStatus === 'In Progress') {
+                <div class="overdue-inprogress-box">
+                  <!-- Reason (Mandatory) -->
+                  <div class="overdue-field-group modal-wide">
+                    <label>Reason for In Progress <span class="req">* (Mandatory)</span></label>
+                    <textarea rows="2" 
+                              [(ngModel)]="item.reason" 
+                              class="overdue-textarea"
+                              [class.field-error]="overduePopupSubmitted && !item.reason.trim()"
+                              placeholder="Please explain why this task is still in progress (e.g. dependency waiting, extra testing required)..."></textarea>
+                    <span class="field-error-msg" *ngIf="overduePopupSubmitted && !item.reason.trim()">Reason is required for In Progress status</span>
+                  </div>
+
+                  <!-- Project Choice Control: Work in this project or other project -->
+                  <div class="overdue-field-group modal-wide project-choice-group">
+                    <label>Working Project Continuation <span class="req">*</span></label>
+                    <div class="project-choice-radios">
+                      <label class="choice-radio-label">
+                        <input type="radio" [name]="'proj_choice_' + item.id" [(ngModel)]="item.projectChoice" value="same">
+                        <span>Work in this project (<strong>{{ item.projectName || 'Current Project' }}</strong>)</span>
+                      </label>
+                      <label class="choice-radio-label">
+                        <input type="radio" [name]="'proj_choice_' + item.id" [(ngModel)]="item.projectChoice" value="other">
+                        <span>Work in other project</span>
+                      </label>
+                    </div>
+
+                    <!-- If Other Project: Dropdown to pick which project -->
+                    @if (item.projectChoice === 'other') {
+                    <div class="other-project-select-wrap">
+                      <label class="sub-label">Select Other Project <span class="req">*</span></label>
+                      <select [(ngModel)]="item.otherProjectName" class="overdue-select" [class.field-error]="overduePopupSubmitted && !item.otherProjectName">
+                        <option value="">-- Choose Other Project --</option>
+                        <option *ngFor="let p of dayWorkProjectList" [value]="p">{{ p }}</option>
+                      </select>
+                      <span class="field-error-msg" *ngIf="overduePopupSubmitted && !item.otherProjectName">Please select which other project</span>
+                    </div>
+                    }
+                  </div>
+                </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions overdue-modal-actions">
+            <div class="overdue-modal-status-text">
+              <span *ngIf="!isOverduePopupValid()" class="text-pending">
+                ⚠️ {{ getInvalidItemCount() }} task(s) still require updates
+              </span>
+              <span *ngIf="isOverduePopupValid()" class="text-ready">
+                ✅ All {{ overdueTaskItems.length }} task(s) ready to submit
+              </span>
+            </div>
+            <div class="overdue-action-buttons">
+              <button class="btn-table secondary overdue-cancel-btn" type="button" (click)="cancelOverduePopup()" title="Close popup without updating tasks">
+                Cancel
+              </button>
+              <button class="btn-table overdue-submit-btn" type="button" (click)="submitOverduePopup()">
+                Submit & Close
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+      }
+
+      <!-- Main Day Work Track Card -->
+      <div class="glass-card day-work-card">
         <div class="table-header">
           <div class="hud-header-title">
             <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#00c8ff" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="#00c8ff" stroke-width="2"/></svg>
-            <h2>Hourly Updates Data</h2>
+            <h2>Your Day Work Track</h2>
           </div>
           <div class="table-actions">
+            <button class="btn-table secondary" type="button" (click)="checkAndShowOverduePopup(true)" title="Check for overdue tasks">
+              ⏰ Check Overdue
+            </button>
             <button class="btn-table secondary" type="button" (click)="enableHourlyReminders()">
               {{ reminderPermissionLabel }}
             </button>
             <label class="voice-toggle">
               <input type="checkbox" [(ngModel)]="voiceRemindersEnabled" (ngModelChange)="rescheduleHourlyReminders()">
-              Voice Reminder
+              Voice
             </label>
-            <button class="btn-table" type="button" (click)="openHourlyModal()">Add Update</button>
+            <button class="btn-table" type="button" (click)="generateDaySchedule()" [disabled]="!dayWorkResource">Generate Schedule</button>
+            <button class="btn-table secondary" type="button" (click)="openHourlyModal()">+ Manual Entry</button>
+          </div>
+        </div>
+
+        <!-- Schedule Configuration Panel -->
+        <div class="day-work-config">
+          <!-- Work Tracking Mode Selector Pills -->
+          <div class="tracking-mode-bar">
+            <span class="tracking-mode-label">⚡ Work Tracking Mode:</span>
+            <div class="tracking-mode-pills">
+              <button type="button" class="mode-pill-btn" [class.active]="dayWorkTrackingMode === 'hourly'" (click)="setTrackingMode('hourly')" title="Split tasks into 1-hour slots with status updates for each hour">
+                ⏱️ Hourly (1-Hour Slots)
+              </button>
+              <button type="button" class="mode-pill-btn" [class.active]="dayWorkTrackingMode === 'day-wise'" (click)="setTrackingMode('day-wise')" title="Allocate tasks based on 8-hour working days">
+                📅 Day-wise (8 Hours)
+              </button>
+              <button type="button" class="mode-pill-btn" [class.active]="dayWorkTrackingMode === 'actual-hours'" (click)="setTrackingMode('actual-hours')" title="Allocate tasks according to exact hours defined in Weekly Status">
+                🎯 Actual Hours
+              </button>
+            </div>
+          </div>
+
+          <div class="config-section-title">📋 Schedule Configuration</div>
+          <div class="day-work-config-grid">
+            <!-- Mode dropdown for direct selection -->
+            <div class="config-field">
+              <label>Tracking Mode <span class="req">*</span></label>
+              <select [(ngModel)]="dayWorkTrackingMode" (ngModelChange)="onTrackingModeChange()" class="config-select">
+                <option value="hourly">⏱️ Hourly (1-Hour Slots)</option>
+                <option value="day-wise">📅 Day-wise (8 Hours)</option>
+                <option value="actual-hours">🎯 Actual Hours (Weekly Status)</option>
+              </select>
+            </div>
+
+            <!-- Resource Selector -->
+            <div class="config-field">
+              <label>Resource <span class="req">*</span></label>
+              <select [(ngModel)]="dayWorkResource" (ngModelChange)="onDayWorkResourceChange()" class="config-select">
+                <option value="">-- Select Resource --</option>
+                <option *ngFor="let r of dayWorkResourceList" [value]="r">{{ r }}</option>
+              </select>
+            </div>
+
+            <!-- Current Week Info (from weekly status) -->
+            <div class="config-field" *ngIf="dayWorkCurrentWeekInfo">
+              <label>Current Week</label>
+              <div class="week-info-badge">{{ dayWorkCurrentWeekInfo }}</div>
+            </div>
+
+            <!-- Work Login Hours -->
+            <div class="config-field">
+              <label>Login Time</label>
+              <input type="time" [(ngModel)]="dayWorkLoginTime" class="config-input">
+            </div>
+
+            <!-- Work Logoff Hours -->
+            <div class="config-field">
+              <label>Logoff Time</label>
+              <input type="time" [(ngModel)]="dayWorkLogoffTime" class="config-input">
+            </div>
+
+            <!-- Total working hours per day -->
+            <div class="config-field">
+              <label>Working Hrs/Day</label>
+              <input type="number" min="1" max="24" [(ngModel)]="dayWorkHoursPerDay" class="config-input small-input">
+            </div>
+
+            <!-- Lunch break duration (minutes) -->
+            <div class="config-field">
+              <label>Lunch Break (min)</label>
+              <input type="number" min="0" max="120" [(ngModel)]="dayWorkLunchMinutes" class="config-input small-input">
+            </div>
+          </div>
+
+          <!-- Leave Calendar -->
+          <div class="leave-section" *ngIf="dayWorkResource">
+            <div class="leave-section-title">🗓️ Mark Leave Days (current week)</div>
+            <div class="leave-days-grid">
+              <div class="leave-day-card" *ngFor="let ld of dayWorkLeaveDays">
+                <div class="leave-day-name">{{ ld.dayName }}</div>
+                <div class="leave-day-date">{{ ld.date }}</div>
+                <div class="leave-options">
+                  <label class="leave-radio">
+                    <input type="radio" [name]="'leave_' + ld.date" [(ngModel)]="ld.leaveType" value="none">
+                    <span>Work</span>
+                  </label>
+                  <label class="leave-radio">
+                    <input type="radio" [name]="'leave_' + ld.date" [(ngModel)]="ld.leaveType" value="full">
+                    <span>Full Leave</span>
+                  </label>
+                  <label class="leave-radio">
+                    <input type="radio" [name]="'leave_' + ld.date" [(ngModel)]="ld.leaveType" value="half">
+                    <span>Half Leave</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Task List from current week weekly status -->
+          <div class="current-week-tasks" *ngIf="dayWorkCurrentWeekTasks.length > 0">
+            <div class="leave-section-title">📌 Tasks This Week ({{ dayWorkResource }})</div>
+            <div class="week-tasks-list">
+              <div class="week-task-chip" *ngFor="let t of dayWorkCurrentWeekTasks">
+                <span class="chip-project">{{ t.projectName }}</span>
+                <span class="chip-title">{{ t.taskTitle }}</span>
+                <span class="chip-hours">{{ t.hours ?? 8 }}h</span>
+                <span class="chip-status" [ngClass]="normalizeStatus(t.status)">{{ t.status }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generated Day Schedule -->
+        @if (dayScheduleSlots.length > 0) {
+        <div class="day-schedule-section">
+          <div class="day-schedule-header">
+            <div class="schedule-header-left">
+              <span class="leave-section-title">⏰ Generated Schedule</span>
+              <span class="mode-active-badge">{{ getTrackingModeLabel() }}</span>
+            </div>
+            <div class="schedule-legend">
+              <span class="sched-leg completed">Completed</span>
+              <span class="sched-leg inprogress">In Progress</span>
+              <span class="sched-leg pending">Pending</span>
+            </div>
+          </div>
+          <div class="schedule-slots-grid">
+            <div class="schedule-slot" *ngFor="let slot of dayScheduleSlots"
+              [ngClass]="{'slot-completed': slot.status === 'Completed', 'slot-inprogress': slot.status === 'In Progress', 'slot-pending': slot.status === 'Pending', 'slot-leave': slot.isLeave, 'slot-lunch': slot.isLunch, 'slot-mode-daywise': slot.trackingMode === 'day-wise', 'slot-mode-actual': slot.trackingMode === 'actual-hours'}">
+              <div class="slot-time">
+                <span>{{ slot.hour }}</span>
+                <span class="slot-mode-tag" *ngIf="slot.durationHours">{{ slot.durationHours }}h</span>
+              </div>
+              <div class="slot-body">
+                @if (slot.isLeave) {
+                  <div class="slot-label leave-label">🌴 {{ slot.leaveType === 'half' ? 'Half Day Leave' : 'Full Day Leave' }}</div>
+                } @else if (slot.isLunch) {
+                  <div class="slot-label lunch-label">🍽️ Lunch Break</div>
+                } @else {
+                  @if (editingSlotId === slot.id) {
+                    <input class="slot-title-input" [(ngModel)]="slot.taskTitle" placeholder="Task title...">
+                    <input class="slot-project-input" [(ngModel)]="slot.projectName" list="projectOptions" placeholder="Project...">
+                    <datalist id="projectOptions">
+                      <option *ngFor="let p of dayWorkProjectList" [value]="p"></option>
+                    </datalist>
+                    <select class="slot-status-select" [(ngModel)]="slot.status">
+                      <option value="Pending">Pending</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                    <textarea class="slot-desc-area" rows="2" [(ngModel)]="slot.taskDescription" placeholder="Description..."></textarea>
+                    <div class="slot-edit-actions">
+                      <button class="row-button save" type="button" (click)="saveSlotEdit(slot)">Save</button>
+                      <button class="row-button" type="button" (click)="editingSlotId = ''">Cancel</button>
+                    </div>
+                  } @else {
+                    <div class="slot-title">{{ slot.taskTitle }}</div>
+                    <div class="slot-project">{{ slot.projectName }}</div>
+                    <div class="slot-desc">{{ slot.taskDescription }}</div>
+                    <div class="slot-footer">
+                      <span class="slot-status-badge" [ngClass]="normalizeStatus(slot.status)">{{ slot.status }}</span>
+                      <button class="row-button" type="button" (click)="editingSlotId = slot.id" style="font-size:0.7rem;padding:2px 8px">Edit</button>
+                      <button class="row-button save" type="button" (click)="saveSlotToHourlyUpdates(slot)" title="Save to hourly log">💾 Log</button>
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Hourly Updates Log Table (compact) -->
+      <div class="glass-card table-section">
+        <div class="table-header">
+          <div class="hud-header-title">
+            <h3 style="font-size:1rem">📋 Hourly Log</h3>
+          </div>
+          <div class="table-actions">
             <button class="btn-table secondary" type="button" (click)="toggleHiddenHourlyRows()">
-              {{ showHiddenHourlyRows ? 'Hide Hidden Rows' : 'Show Hidden Rows' }}
+              {{ showHiddenHourlyRows ? 'Hide Hidden' : 'Show Hidden' }}
             </button>
             <button class="btn-table secondary" type="button" (click)="toggleSection('hourly')">{{ sections.hourly ? 'Collapse' : 'Expand' }}</button>
           </div>
         </div>
-
         @if (sections.hourly) {
         <div class="table-responsive">
           <table>
@@ -696,7 +1078,7 @@ interface HourlyReminderPopup {
               <tr>
                 <th>ID</th>
                 <th>Date</th>
-                <th>Time / Hour</th>
+                <th>Time</th>
                 <th>Task Description</th>
                 <th>Status</th>
                 <th>Visibility</th>
@@ -742,7 +1124,7 @@ interface HourlyReminderPopup {
               </tr>
               <tr *ngIf="(visibleHourlyUpdates$ | async)?.length === 0">
                 <td colspan="7" class="text-center">
-                  {{ showHiddenHourlyRows ? 'No hourly updates found.' : 'No visible hourly updates found.' }}
+                  {{ showHiddenHourlyRows ? 'No hourly updates found.' : 'No visible hourly updates found. Generate a schedule or add a manual entry.' }}
                 </td>
               </tr>
             </tbody>
@@ -760,6 +1142,19 @@ interface HourlyReminderPopup {
             <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6" fill="none" stroke="#00c8ff" stroke-width="2"/><polyline points="8 6 2 12 8 18" fill="none" stroke="#00c8ff" stroke-width="2"/></svg>
             <h2>Developer Tasks Data</h2>
           </div>
+
+          <!-- Week Navigation Toolbar on Weekly Status Screen -->
+          <div class="week-nav-toolbar">
+            <button class="week-nav-arrow-btn" type="button" (click)="navigateWeek(-1)" title="Previous Week">‹ Prev</button>
+            <div class="week-nav-pill">
+              <span class="week-pill-icon">📅</span>
+              <span class="week-pill-text">{{ getCurrentPeriodLabel() }}</span>
+            </div>
+            <button class="week-nav-arrow-btn" type="button" (click)="navigateWeek(1)" title="Next Week">Next ›</button>
+            <button *ngIf="currentPeriodSelection !== 'all'" class="week-nav-toggle-btn" type="button" (click)="onWeekNavSelect('all')" title="Show All Weeks">All Weeks</button>
+            <button *ngIf="currentPeriodSelection === 'all'" class="week-nav-toggle-btn active" type="button" (click)="onWeekNavSelect('W2')" title="Show Current Week">Current Week</button>
+          </div>
+
           <div class="table-actions">
             <!-- Column Visibility Picker -->
             <div class="col-picker-wrap">
@@ -3258,9 +3653,222 @@ interface HourlyReminderPopup {
     .dash-theme-btn:hover {
       background: #f8fafc;
     }
+
+    /* ── YOUR DAY WORK TRACK ── */
+    .day-work-card { padding: 0; }
+    .day-work-config { padding: 1rem 1.25rem; border-top: 1px solid #f1f5f9; }
+    .tracking-mode-bar { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem; padding-bottom: 0.75rem; border-bottom: 1px dashed #e2e8f0; flex-wrap: wrap; }
+    .tracking-mode-label { font-size: 0.82rem; font-weight: 700; color: #475569; }
+    .tracking-mode-pills { display: flex; gap: 0.4rem; background: #f1f5f9; padding: 3px; border-radius: 10px; border: 1px solid #e2e8f0; }
+    .mode-pill-btn { border: none; background: transparent; padding: 0.35rem 0.85rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; }
+    .mode-pill-btn:hover { color: #1e293b; background: rgba(255,255,255,0.7); }
+    .mode-pill-btn.active { background: #3b82f6; color: #fff; font-weight: 700; box-shadow: 0 2px 6px rgba(59,130,246,0.35); }
+    .config-section-title { font-size: 0.9rem; font-weight: 700; color: #374151; margin-bottom: 0.75rem; }
+    .day-work-config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem; }
+    .config-field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .config-field label { font-size: 0.78rem; font-weight: 600; color: #475569; }
+    .config-select, .config-input { padding: 0.42rem 0.75rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 0.84rem; color: #1e293b; background: #fff; outline: none; transition: border-color 0.15s; }
+    .config-select:focus, .config-input:focus { border-color: #3b82f6; }
+    .week-info-badge { display: inline-flex; align-items: center; padding: 0.38rem 0.75rem; background: linear-gradient(135deg, #dbeafe, #eff6ff); border: 1px solid #bfdbfe; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #1d4ed8; }
+
+    /* Week Navigation Toolbar on Weekly Status Screen */
+    .week-nav-toolbar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #f1f5f9;
+      padding: 3px 6px;
+      border-radius: 10px;
+      border: 1.5px solid #cbd5e1;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .week-nav-arrow-btn {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 0.28rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .week-nav-arrow-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+      border-color: #94a3b8;
+    }
+    .week-nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.22rem 0.6rem;
+      background: #ffffff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+    }
+    .week-pill-icon {
+      font-size: 0.82rem;
+    }
+    .week-pill-text {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #1d4ed8;
+      white-space: nowrap;
+    }
+    .week-nav-toggle-btn {
+      background: transparent;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 0.28rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .week-nav-toggle-btn:hover {
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+    .week-nav-toggle-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #1d4ed8;
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(37,99,235,0.3);
+    }
+
+    body.theme-dark .week-nav-toolbar {
+      background: #1e293b;
+      border-color: #475569;
+    }
+    body.theme-dark .week-nav-arrow-btn {
+      background: #0f172a;
+      border-color: #475569;
+      color: #cbd5e1;
+    }
+    body.theme-dark .week-nav-pill {
+      background: #0f172a;
+      border-color: #1e40af;
+    }
+    body.theme-dark .week-pill-text {
+      color: #60a5fa;
+    }
+    body.theme-dark .week-nav-toggle-btn {
+      border-color: #475569;
+      color: #94a3b8;
+    }
+    body.theme-dark .week-nav-toggle-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .req { color: #ef4444; margin-left: 2px; }
+    .leave-section { margin-top: 1rem; border-top: 1px dashed #e2e8f0; padding-top: 0.75rem; }
+    .leave-section-title { font-size: 0.88rem; font-weight: 700; color: #374151; margin-bottom: 0.6rem; }
+    .leave-days-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(115px, 1fr)); gap: 0.6rem; }
+    .leave-day-card { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; }
+    .leave-day-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; }
+    .leave-day-date { font-size: 0.72rem; color: #64748b; margin-bottom: 0.25rem; }
+    .leave-options { display: flex; flex-direction: column; gap: 0.2rem; }
+    .leave-radio { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #374151; cursor: pointer; }
+    .leave-radio input[type="radio"] { accent-color: #3b82f6; }
+    .current-week-tasks { margin-top: 0.75rem; border-top: 1px dashed #e2e8f0; padding-top: 0.75rem; }
+    .week-tasks-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .week-task-chip { display: flex; align-items: center; gap: 0.4rem; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 20px; padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+    .chip-project { font-weight: 700; color: #2563eb; }
+    .chip-title { color: #334155; }
+    .chip-hours { background: #fef3c7; color: #b45309; border-radius: 8px; padding: 1px 6px; font-weight: 700; font-size: 0.72rem; }
+    .chip-status { border-radius: 8px; padding: 1px 7px; font-size: 0.7rem; font-weight: 700; }
+    .day-schedule-section { padding: 1rem 1.25rem; border-top: 1px solid #f1f5f9; }
+    .day-schedule-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem; }
+    .schedule-header-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .mode-active-badge { font-size: 0.74rem; font-weight: 700; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 20px; padding: 2px 10px; display: inline-flex; align-items: center; }
+    .schedule-legend { display: flex; gap: 0.6rem; }
+    .sched-leg { display: inline-flex; align-items: center; font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 20px; }
+    .sched-leg.completed { background: #dcfce7; color: #15803d; }
+    .sched-leg.inprogress { background: #dbeafe; color: #1d4ed8; }
+    .sched-leg.pending { background: #f1f5f9; color: #475569; }
+    .schedule-slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.75rem; }
+    .schedule-slot { border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; transition: box-shadow 0.15s, transform 0.15s; }
+    .schedule-slot:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .schedule-slot.slot-completed { border-color: #86efac; background: #f0fdf4; }
+    .schedule-slot.slot-inprogress { border-color: #93c5fd; background: #eff6ff; }
+    .schedule-slot.slot-pending { border-color: #e2e8f0; background: #f8fafc; }
+    .schedule-slot.slot-leave { border-color: #fde68a; background: #fffbeb; }
+    .schedule-slot.slot-lunch { border-color: #d1fae5; background: #ecfdf5; }
+    .schedule-slot.slot-mode-daywise { border-left-width: 4px; border-left-color: #3b82f6; }
+    .schedule-slot.slot-mode-actual { border-left-width: 4px; border-left-color: #10b981; }
+    .slot-time { background: rgba(0,0,0,0.04); padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 700; color: #334155; border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; }
+    .slot-mode-tag { background: #fef3c7; color: #92400e; font-size: 0.68rem; font-weight: 800; border-radius: 6px; padding: 1px 6px; border: 1px solid #fde68a; }
+    .overdue-duration-badge { background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+    .slot-body { padding: 0.5rem 0.75rem; }
+    .slot-label { font-size: 0.85rem; font-weight: 600; padding: 0.4rem 0; text-align: center; }
+    .leave-label { color: #b45309; }
+    .lunch-label { color: #059669; }
+    .slot-title { font-size: 0.83rem; font-weight: 700; color: #1e293b; margin-bottom: 0.2rem; }
+    .slot-project { font-size: 0.74rem; font-weight: 600; color: #2563eb; margin-bottom: 0.2rem; }
+    .slot-desc { font-size: 0.72rem; color: #64748b; margin-bottom: 0.35rem; line-height: 1.4; }
+    .slot-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.35rem; }
+    .slot-status-badge { font-size: 0.7rem; font-weight: 700; border-radius: 8px; padding: 2px 7px; }
+    .slot-title-input, .slot-project-input, .slot-status-select, .slot-desc-area { width: 100%; padding: 0.32rem 0.5rem; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.3rem; background: #fff; resize: vertical; outline: none; box-sizing: border-box; }
+    .slot-edit-actions { display: flex; gap: 0.35rem; margin-top: 0.3rem; }
+    .overdue-modal-panel { max-width: 820px; max-height: 88vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.35); }
+    .overdue-modal-header { background: linear-gradient(135deg, #ef4444 0%, #ea580c 100%); color: #fff; padding: 1.1rem 1.4rem; border-radius: 16px 16px 0 0; flex-shrink: 0; }
+    .overdue-header-content { display: flex; flex-direction: column; gap: 0.25rem; }
+    .overdue-badge-pill { display: inline-block; align-self: flex-start; background: rgba(255,255,255,0.22); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; }
+    .overdue-modal-header h2 { color: #fff !important; margin: 0; font-size: 1.15rem; font-weight: 700; }
+    .overdue-subtitle { font-size: 0.8rem; color: rgba(255,255,255,0.92); margin: 0; }
+    .overdue-popup-note { padding: 0.75rem 1.25rem; background: #fff7ed; color: #9a3412; font-size: 0.82rem; border-bottom: 1px solid #fed7aa; flex-shrink: 0; }
+    .overdue-quick-actions { display: flex; justify-content: flex-end; align-items: center; padding: 0.45rem 1.25rem; background: #fefce8; border-bottom: 1px solid #fef08a; flex-shrink: 0; }
+    .btn-quick-fill { background: #fff; border: 1.5px solid #d97706; color: #b45309; border-radius: 6px; padding: 4px 12px; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+    .btn-quick-fill:hover { background: #fef3c7; color: #92400e; }
+    .overdue-popup-warning { padding: 0.65rem 1.25rem; background: #fef2f2; color: #b91c1c; font-size: 0.82rem; font-weight: 600; border-bottom: 1px solid #fecaca; flex-shrink: 0; }
+    .overdue-tasks-scroll-container { flex: 1; min-height: 0; max-height: 55vh; overflow-y: auto; padding: 0.25rem 0; }
+    .overdue-task-card { padding: 0.85rem 1.25rem; border-bottom: 1px solid #f1f5f9; transition: background 0.15s, border-left 0.15s; }
+    .overdue-task-card.card-invalid { border-left: 4px solid #ef4444 !important; background: #fff8f8; }
+    .overdue-task-card.card-valid { border-left: 4px solid #10b981 !important; background: #fafffb; }
+    .overdue-seq-badge { background: #334155; color: #fff; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; }
+    .overdue-task-date { font-size: 0.75rem; color: #64748b; font-weight: 600; }
+    .overdue-task-time { background: #ff6b35; color: #fff; border-radius: 6px; padding: 2px 8px; font-size: 0.76rem; font-weight: 700; }
+    .overdue-task-project { background: #dbeafe; color: #1d4ed8; border-radius: 6px; padding: 2px 8px; font-size: 0.76rem; font-weight: 700; }
+    .overdue-task-title { font-size: 0.85rem; font-weight: 700; color: #1e293b; }
+    .overdue-task-desc { font-size: 0.82rem; color: #475569; font-weight: 500; margin-left: 4px; }
+    .overdue-status-indicator { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    .overdue-task-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.75rem; margin-top: 0.4rem; }
+    .overdue-select, .overdue-textarea { padding: 0.42rem 0.7rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.84rem; background: #fff; outline: none; box-sizing: border-box; width: 100%; }
+    .overdue-select:focus, .overdue-textarea:focus { border-color: #3b82f6; }
+    .overdue-inprogress-box { grid-column: 1 / -1; background: #fff7ed; border: 1.5px dashed #fdba74; border-radius: 10px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.6rem; }
+    .project-choice-group { display: flex; flex-direction: column; gap: 0.35rem; }
+    .project-choice-radios { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+    .choice-radio-label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; color: #374151; cursor: pointer; }
+    .choice-radio-label input { accent-color: #ea580c; }
+    .other-project-select-wrap { margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.25rem; }
+    .sub-label { font-size: 0.75rem; font-weight: 600; color: #64748b; }
+    .field-error { border-color: #ef4444 !important; background: #fff5f5; }
+    .field-error-msg { font-size: 0.72rem; color: #ef4444; font-weight: 600; margin-top: 2px; }
+    .overdue-modal-actions { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.4rem; border-top: 1px solid #e2e8f0; background: #f8fafc; border-radius: 0 0 16px 16px; flex-shrink: 0; }
+    .overdue-modal-status-text { font-size: 0.82rem; font-weight: 600; }
+    .text-pending { color: #b45309; }
+    .text-ready { color: #15803d; }
+    .overdue-freq-section { padding: 0.75rem 1.25rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .overdue-freq-header { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .freq-header-title { font-size: 0.82rem; font-weight: 700; color: #1e293b; }
+    .freq-header-sub { font-size: 0.72rem; color: #64748b; }
+    .overdue-freq-pills { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.5rem; }
+    .freq-pill { display: flex; align-items: center; gap: 0.45rem; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0.45rem 0.65rem; cursor: pointer; transition: all 0.15s; font-size: 0.78rem; font-weight: 600; color: #334155; }
+    .freq-pill:hover { border-color: #94a3b8; background: #f1f5f9; }
+    .freq-pill.active { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; font-weight: 700; box-shadow: 0 1px 3px rgba(37,99,235,0.15); }
+    .freq-pill input[type="radio"] { accent-color: #2563eb; }
+    .freq-pill-title { font-size: 0.78rem; }
+    .overdue-action-buttons { display: flex; align-items: center; gap: 0.6rem; }
+    .overdue-cancel-btn { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; font-weight: 600; padding: 0.55rem 1.25rem; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+    .overdue-cancel-btn:hover { background: #e2e8f0; color: #1e293b; }
+    .overdue-submit-btn { background: linear-gradient(135deg, #ef4444 0%, #ea580c 100%); color: #fff; font-weight: 700; padding: 0.55rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+    .overdue-submit-btn:hover { filter: brightness(1.08); }
   `]
 })
-export class DashboardComponent implements OnDestroy {
+export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
   @Input() activeView: 'dashboard' | 'weekly-status' | 'project-status' | 'day-work' = 'dashboard';
   @Output() viewChange = new EventEmitter<WorkTrackerTab>();
   @Output() toggleSidebar = new EventEmitter<void>();
@@ -3290,9 +3898,15 @@ export class DashboardComponent implements OnDestroy {
   workTrendsCompletedPath = 'M 32,74 L 84,68 L 136,60 L 188,48 L 240,54 L 292,38';
   maxHoursTeam = 40;
 
-  selectedDateRange = 'Week 6 (Nov 10 - Nov 16, 2025)';
+  selectedDateRange = 'Week 2 (Oct 12 - Oct 18, 2026) [Current]';
   selectedViewMode: 'day' | 'week' | 'month' | 'quarter' | 'half-year' | 'year' = 'week';
-  currentPeriodSelection = 'W6';
+  currentPeriodSelection = 'W2';
+  weekPeriodOptions: Array<{ value: string; label: string }> = [
+    { value: 'W1', label: 'Week 1 (Oct 05 - Oct 11, 2026)' },
+    { value: 'W2', label: 'Week 2 (Oct 12 - Oct 18, 2026) [Current]' },
+    { value: 'W3', label: 'Week 3 (Oct 19 - Oct 25, 2026)' },
+    { value: 'all', label: 'All Weeks (W1 - W3)' }
+  ];
   availablePeriodOptions: Array<{ value: string; label: string }> = [];
   kpiHoursSubtext = 'Live Task Telemetry';
   selectedProjectFilter = 'All Projects';
@@ -3390,45 +4004,37 @@ export class DashboardComponent implements OnDestroy {
 
   buildAvailablePeriodOptions(): void {
     if (this.selectedViewMode === 'week') {
-      this.availablePeriodOptions = [
-        { value: 'W1', label: 'Week 1 (Oct 06 - Oct 12, 2025)' },
-        { value: 'W2', label: 'Week 2 (Oct 13 - Oct 19, 2025)' },
-        { value: 'W3', label: 'Week 3 (Oct 20 - Oct 26, 2025)' },
-        { value: 'W4', label: 'Week 4 (Oct 27 - Nov 02, 2025)' },
-        { value: 'W5', label: 'Week 5 (Nov 03 - Nov 09, 2025)' },
-        { value: 'W6', label: 'Week 6 (Nov 10 - Nov 16, 2025)' },
-        { value: 'all', label: 'All Weeks (W1 - W6)' }
-      ];
+      this.availablePeriodOptions = [...this.weekPeriodOptions];
       if (!this.availablePeriodOptions.some(o => o.value === this.currentPeriodSelection)) {
-        this.currentPeriodSelection = 'W6';
+        this.currentPeriodSelection = 'W2';
       }
     } else if (this.selectedViewMode === 'day') {
       this.availablePeriodOptions = [
-        { value: '2025-10-15', label: 'Oct 15, 2025 (Today)' },
-        { value: '2025-10-14', label: 'Oct 14, 2025 (Yesterday)' },
-        { value: '2025-10-13', label: 'Oct 13, 2025' },
-        { value: '2025-10-12', label: 'Oct 12, 2025' },
-        { value: '2025-10-11', label: 'Oct 11, 2025' },
-        { value: '2025-10-10', label: 'Oct 10, 2025' },
+        { value: '2026-10-15', label: 'Oct 15, 2026 (Today)' },
+        { value: '2026-10-14', label: 'Oct 14, 2026 (Yesterday)' },
+        { value: '2026-10-13', label: 'Oct 13, 2026' },
+        { value: '2026-10-12', label: 'Oct 12, 2026' },
+        { value: '2026-10-11', label: 'Oct 11, 2026' },
+        { value: '2026-10-10', label: 'Oct 10, 2026' },
         { value: 'all', label: 'All Days' }
       ];
       if (!this.availablePeriodOptions.some(o => o.value === this.currentPeriodSelection)) {
-        this.currentPeriodSelection = '2025-10-15';
+        this.currentPeriodSelection = '2026-10-15';
       }
     } else if (this.selectedViewMode === 'month') {
       this.availablePeriodOptions = [
-        { value: '01', label: 'January 2025' },
-        { value: '02', label: 'February 2025' },
-        { value: '03', label: 'March 2025' },
-        { value: '04', label: 'April 2025' },
-        { value: '05', label: 'May 2025' },
-        { value: '06', label: 'June 2025' },
-        { value: '07', label: 'July 2025' },
-        { value: '08', label: 'August 2025' },
-        { value: '09', label: 'September 2025' },
-        { value: '10', label: 'October 2025' },
-        { value: '11', label: 'November 2025' },
-        { value: '12', label: 'December 2025' },
+        { value: '01', label: 'January 2026' },
+        { value: '02', label: 'February 2026' },
+        { value: '03', label: 'March 2026' },
+        { value: '04', label: 'April 2026' },
+        { value: '05', label: 'May 2026' },
+        { value: '06', label: 'June 2026' },
+        { value: '07', label: 'July 2026' },
+        { value: '08', label: 'August 2026' },
+        { value: '09', label: 'September 2026' },
+        { value: '10', label: 'October 2026' },
+        { value: '11', label: 'November 2026' },
+        { value: '12', label: 'December 2026' },
         { value: 'all', label: 'All Months' }
       ];
       if (!this.availablePeriodOptions.some(o => o.value === this.currentPeriodSelection)) {
@@ -3436,10 +4042,10 @@ export class DashboardComponent implements OnDestroy {
       }
     } else if (this.selectedViewMode === 'quarter') {
       this.availablePeriodOptions = [
-        { value: 'Q1', label: 'Q1 2025 (Jan - Mar)' },
-        { value: 'Q2', label: 'Q2 2025 (Apr - Jun)' },
-        { value: 'Q3', label: 'Q3 2025 (Jul - Sep)' },
-        { value: 'Q4', label: 'Q4 2025 (Oct - Dec)' },
+        { value: 'Q1', label: 'Q1 2026 (Jan - Mar)' },
+        { value: 'Q2', label: 'Q2 2026 (Apr - Jun)' },
+        { value: 'Q3', label: 'Q3 2026 (Jul - Sep)' },
+        { value: 'Q4', label: 'Q4 2026 (Oct - Dec)' },
         { value: 'all', label: 'All Quarters' }
       ];
       if (!this.availablePeriodOptions.some(o => o.value === this.currentPeriodSelection)) {
@@ -3447,8 +4053,8 @@ export class DashboardComponent implements OnDestroy {
       }
     } else if (this.selectedViewMode === 'half-year') {
       this.availablePeriodOptions = [
-        { value: 'H1', label: 'H1 2025 (Jan - Jun)' },
-        { value: 'H2', label: 'H2 2025 (Jul - Dec)' },
+        { value: 'H1', label: 'H1 2026 (Jan - Jun)' },
+        { value: 'H2', label: 'H2 2026 (Jul - Dec)' },
         { value: 'all', label: 'All Half-Years' }
       ];
       if (!this.availablePeriodOptions.some(o => o.value === this.currentPeriodSelection)) {
@@ -3456,13 +4062,13 @@ export class DashboardComponent implements OnDestroy {
       }
     } else if (this.selectedViewMode === 'year') {
       this.availablePeriodOptions = [
-        { value: '2024', label: 'Year 2024' },
         { value: '2025', label: 'Year 2025' },
         { value: '2026', label: 'Year 2026' },
+        { value: '2027', label: 'Year 2027' },
         { value: 'all', label: 'All Years' }
       ];
       if (!this.availablePeriodOptions.some(o => o.value === this.currentPeriodSelection)) {
-        this.currentPeriodSelection = '2025';
+        this.currentPeriodSelection = '2026';
       }
     }
     this.updateSelectedDateRangeText();
@@ -3476,6 +4082,18 @@ export class DashboardComponent implements OnDestroy {
   }
 
   onPeriodSelectionChange(): void {
+    this.updateSelectedDateRangeText();
+    if (this.selectedViewMode === 'week') {
+      this.filterWeek.next(this.currentPeriodSelection);
+    }
+    if (this.latestTrackerData) {
+      this.recomputeDashboardData(this.latestTrackerData);
+    }
+  }
+
+  onWeekNavSelect(weekVal: string): void {
+    this.currentPeriodSelection = weekVal;
+    this.filterWeek.next(weekVal);
     this.updateSelectedDateRangeText();
     if (this.latestTrackerData) {
       this.recomputeDashboardData(this.latestTrackerData);
@@ -3494,20 +4112,34 @@ export class DashboardComponent implements OnDestroy {
       nextIndex = 0;
     }
     this.currentPeriodSelection = this.availablePeriodOptions[nextIndex].value;
+    if (this.selectedViewMode === 'week') {
+      this.filterWeek.next(this.currentPeriodSelection);
+    }
     this.onPeriodSelectionChange();
   }
 
   navigateWeek(direction: number): void {
-    this.navigatePeriod(direction);
+    if (this.selectedViewMode === 'week') {
+      const opts = this.weekPeriodOptions;
+      const curIdx = opts.findIndex(o => o.value === this.currentPeriodSelection);
+      let nextIdx = (curIdx >= 0 ? curIdx : 1) + direction;
+      if (nextIdx < 0) nextIdx = opts.length - 1;
+      else if (nextIdx >= opts.length) nextIdx = 0;
+      this.onWeekNavSelect(opts[nextIdx].value);
+    } else {
+      this.navigatePeriod(direction);
+    }
   }
 
   getCurrentPeriodLabel(): string {
-    const opt = this.availablePeriodOptions.find(o => o.value === this.currentPeriodSelection);
+    const opt = this.availablePeriodOptions.find(o => o.value === this.currentPeriodSelection) ||
+      this.weekPeriodOptions.find(o => o.value === this.currentPeriodSelection);
     return opt ? opt.label : this.currentPeriodSelection;
   }
 
   private updateSelectedDateRangeText(): void {
-    const opt = this.availablePeriodOptions.find(o => o.value === this.currentPeriodSelection);
+    const opt = this.availablePeriodOptions.find(o => o.value === this.currentPeriodSelection) ||
+      this.weekPeriodOptions.find(o => o.value === this.currentPeriodSelection);
     this.selectedDateRange = opt ? opt.label : this.currentPeriodSelection;
   }
 
@@ -3574,19 +4206,19 @@ export class DashboardComponent implements OnDestroy {
       if (savedTaskCols) Object.assign(this.taskColumns, JSON.parse(savedTaskCols));
       const savedRelCols = localStorage.getItem('u2app_wt_rel_cols');
       if (savedRelCols) Object.assign(this.releaseColumns, JSON.parse(savedRelCols));
-    } catch {}
+    } catch { }
   }
 
   private saveTaskColumns(): void {
     try {
       localStorage.setItem('u2app_wt_task_cols', JSON.stringify(this.taskColumns));
-    } catch {}
+    } catch { }
   }
 
   private saveReleaseColumns(): void {
     try {
       localStorage.setItem('u2app_wt_rel_cols', JSON.stringify(this.releaseColumns));
-    } catch {}
+    } catch { }
   }
 
   getTasksForCurrentPeriod(tasks: DeveloperTask[]): DeveloperTask[] {
@@ -3681,7 +4313,7 @@ export class DashboardComponent implements OnDestroy {
       ...allTasks.map(t => t.projectName),
       ...allReleases.map(r => r.category || r.module || '').filter(Boolean)
     ])).filter(p => p && p.trim() !== '').sort();
-    
+
     const baseProjects = ['U2Tools', 'Standup Note', 'S2App ECommerce', 'MatchGuide', 'Dweber', 'Excelendsite'];
     this.projectList = Array.from(new Set([...foundProjects, ...baseProjects])).sort();
 
@@ -3695,11 +4327,11 @@ export class DashboardComponent implements OnDestroy {
 
     const filteredReleases = isAll
       ? allReleases
-      : allReleases.filter(r => 
-          (r.title && r.title.toLowerCase().includes(filterProj.toLowerCase())) ||
-          (r.category && r.category.toLowerCase().includes(filterProj.toLowerCase())) ||
-          (r.tags && r.tags.toLowerCase().includes(filterProj.toLowerCase()))
-        );
+      : allReleases.filter(r =>
+        (r.title && r.title.toLowerCase().includes(filterProj.toLowerCase())) ||
+        (r.category && r.category.toLowerCase().includes(filterProj.toLowerCase())) ||
+        (r.tags && r.tags.toLowerCase().includes(filterProj.toLowerCase()))
+      );
 
     // 2. KPI: Total Employees
     const empSet = new Set<string>();
@@ -3759,7 +4391,7 @@ export class DashboardComponent implements OnDestroy {
     const projectsToDisplay = isAll ? this.projectList : [filterProj];
     this.overviewProjects = projectsToDisplay.map((pName, idx) => {
       const pTasks = allTasks.filter(t => t.projectName?.toLowerCase() === pName.toLowerCase());
-      const pRel = allReleases.find(r => 
+      const pRel = allReleases.find(r =>
         (r.title && r.title.toLowerCase().includes(pName.toLowerCase())) ||
         (r.category && r.category.toLowerCase().includes(pName.toLowerCase())) ||
         (r.tags && r.tags.toLowerCase().includes(pName.toLowerCase()))
@@ -3787,7 +4419,7 @@ export class DashboardComponent implements OnDestroy {
         stat = 'Development';
       }
 
-      const timeline = pRel ? `${pRel.createdDate?.substring(0, 7) || 'Jan 2025'} - ${pRel.targetDate?.substring(0, 7) || 'Dec 2025'}` : 'Jan 2025 - Dec 2025';
+      const timeline = pRel ? `${pRel.createdDate?.substring(0, 7) || '2026-01'} - ${pRel.targetDate?.substring(0, 7) || '2026-12'}` : 'Jan 2026 - Dec 2026';
 
       return {
         id: idx + 1,
@@ -3905,15 +4537,15 @@ export class DashboardComponent implements OnDestroy {
       widthPct: Math.min(100, Math.round((m.tasksWorked / maxEmpTasks) * 100))
     }));
 
-    // Chart 4: Work Trends (Tasks Completed vs Assigned across W1-W6)
-    const weeks = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'];
+    // Chart 4: Work Trends (Tasks Completed vs Assigned across W1-W3)
+    const weeks = ['W1', 'W2', 'W3'];
     const trendPts: Array<{ week: string; completed: number; assigned: number; x: number; y: number; assignedY: number }> = [];
     weeks.forEach((w, idx) => {
       const wTasks = allTasks.filter(t => t.week === w);
-      const assigned = Math.max(wTasks.length * 3, 22 + idx * 4);
-      const completed = Math.max(wTasks.filter(t => t.status === 'Completed' || t.progress >= 80).length * 4, 18 + idx * 5);
-      
-      const x = 20 + idx * 52;
+      const assigned = Math.max(wTasks.length * 3, 20 + idx * 8);
+      const completed = Math.max(wTasks.filter(t => t.status === 'Completed' || t.progress >= 80).length * 4, 16 + idx * 10);
+
+      const x = 32 + idx * 110;
       const y = Math.max(20, Math.min(95, 95 - (completed / 60) * 70));
       const assignedY = Math.max(20, Math.min(95, 95 - (assigned / 60) * 70));
       trendPts.push({ week: w, completed, assigned, x, y, assignedY });
@@ -4014,6 +4646,7 @@ export class DashboardComponent implements OnDestroy {
   filterProject = new BehaviorSubject<string>('');
   filterStatus = new BehaviorSubject<string>('');
   filterPriority = new BehaviorSubject<string>('');
+  filterWeek = new BehaviorSubject<string>('W2');
 
   // Release Filters State
   relFilterCategory = new BehaviorSubject<string>('');
@@ -4054,12 +4687,82 @@ export class DashboardComponent implements OnDestroy {
   newReleaseForm: ReleaseTrack = this.createEmptyRelease();
   inlineReleaseForm: ReleaseTrack = this.createEmptyRelease();
 
+  // ── YOUR DAY WORK TRACK state ──
+  dayWorkTrackingMode: 'hourly' | 'day-wise' | 'actual-hours' = 'hourly';
+  dayWorkResource = '';
+  dayWorkResourceList: string[] = [];
+  dayWorkLoginTime = '09:00';
+  dayWorkLogoffTime = '18:00';
+  dayWorkHoursPerDay = 8;
+  dayWorkLunchMinutes = 60;
+  dayWorkCurrentWeekInfo = '';
+  dayWorkCurrentWeekTasks: DeveloperTask[] = [];
+  dayWorkProjectList: string[] = [];
+  dayWorkLeaveDays: LeaveDayEntry[] = [];
+  dayScheduleSlots: DayScheduleSlot[] = [];
+  editingSlotId = '';
+
+  // Overdue popup state
+  showOverdueTaskPopup = false;
+  overdueTaskItems: OverdueTaskItem[] = [];
+  overduePopupSubmitted = false;
+  overdueReminderFrequency: 'until-completed' | 'every-hour' | 'daily-eod' | 'manual' = 'until-completed';
+  lastOverduePopupDismissedTime = 0;
+  lastOverduePopupDismissedDate = '';
+  private overdueCheckIntervalId: any = null;
+
+  private allTasksSnapshot: DeveloperTask[] = [];
+  private previousDayWorkView = false;
+
+  onOverdueFrequencyChange(): void {
+    localStorage.setItem('u2app.overdueReminderFrequency', this.overdueReminderFrequency);
+    if (this.dayWorkResource) {
+      localStorage.setItem(`u2app.overdueReminderFrequency_${this.dayWorkResource}`, this.overdueReminderFrequency);
+    }
+  }
+
+  cancelOverduePopup(): void {
+    this.showOverdueTaskPopup = false;
+    this.overduePopupSubmitted = false;
+    this.lastOverduePopupDismissedTime = Date.now();
+    this.lastOverduePopupDismissedDate = this.formatLocalDate(new Date());
+    localStorage.setItem('u2app.overdueLastDismissedTime', String(this.lastOverduePopupDismissedTime));
+    localStorage.setItem('u2app.overdueLastDismissedDate', this.lastOverduePopupDismissedDate);
+  }
+
+  setTrackingMode(mode: 'hourly' | 'day-wise' | 'actual-hours'): void {
+    if (this.dayWorkTrackingMode === mode) return;
+    this.dayWorkTrackingMode = mode;
+    this.onTrackingModeChange();
+  }
+
+  onTrackingModeChange(): void {
+    localStorage.setItem('u2app.dayWorkTrackingMode', this.dayWorkTrackingMode);
+    if (this.dayWorkResource) {
+      this.generateDaySchedule();
+    }
+  }
+
+  getTrackingModeLabel(): string {
+    switch (this.dayWorkTrackingMode) {
+      case 'day-wise': return 'Day-wise (8 Hours)';
+      case 'actual-hours': return 'Actual Hours';
+      default: return 'Hourly (1-Hour Slots)';
+    }
+  }
+
   constructor() {
     this.buildAvailablePeriodOptions();
     this.loadColumnPreferences();
     this.updateReminderPermissionLabel();
     this.reminderSubscription.add(this.workTrackerService.data$.subscribe(data => {
       this.recomputeDashboardData(data);
+      // Refresh resource list whenever data changes
+      this.allTasksSnapshot = data.developerTasks || [];
+      this.refreshDayWorkResourceList();
+      if (this.dayWorkResource) {
+        this.onDayWorkResourceChange();
+      }
     }));
     this.reminderSubscription.add(this.rawHourlyUpdates$.subscribe(updates => {
       this.hourlyReminderRows = updates;
@@ -4102,9 +4805,68 @@ export class DashboardComponent implements OnDestroy {
     return 'release-purple';
   }
 
+  ngOnInit(): void {
+    const savedMode = localStorage.getItem('u2app.dayWorkTrackingMode') as any;
+    if (savedMode && ['hourly', 'day-wise', 'actual-hours'].includes(savedMode)) {
+      this.dayWorkTrackingMode = savedMode;
+    }
+    const savedFreq = localStorage.getItem('u2app.overdueReminderFrequency') as any;
+    if (savedFreq && ['until-completed', 'every-hour', 'daily-eod', 'manual'].includes(savedFreq)) {
+      this.overdueReminderFrequency = savedFreq;
+    }
+    const savedDismissedTime = localStorage.getItem('u2app.overdueLastDismissedTime');
+    if (savedDismissedTime) {
+      this.lastOverduePopupDismissedTime = Number(savedDismissedTime) || 0;
+    }
+    const savedDismissedDate = localStorage.getItem('u2app.overdueLastDismissedDate');
+    if (savedDismissedDate) {
+      this.lastOverduePopupDismissedDate = savedDismissedDate;
+    }
+
+    const savedResource = localStorage.getItem('u2app.dayWorkResource');
+    if (savedResource) {
+      this.dayWorkResource = savedResource;
+      this.loadSavedDaySchedule(savedResource);
+    }
+    if (this.activeView === 'day-work' && this.dayWorkResource) {
+      setTimeout(() => this.checkAndShowOverduePopup(false), 250);
+    }
+
+    // Periodic check according to reminder frequency (every 30 seconds)
+    this.overdueCheckIntervalId = setInterval(() => {
+      if (this.activeView === 'day-work' && this.dayWorkResource && !this.showOverdueTaskPopup) {
+        this.checkAndShowOverduePopup(false);
+      }
+    }, 30000);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // When navigating TO day-work view, check for overdue tasks if resource is set
+    if (this.activeView === 'day-work' && !this.previousDayWorkView && this.dayWorkResource) {
+      this.checkAndShowOverduePopup(false);
+    }
+    this.previousDayWorkView = this.activeView === 'day-work';
+    if (changes['activeView'] && this.activeView === 'day-work') {
+      if (!this.dayWorkResource) {
+        const savedResource = localStorage.getItem('u2app.dayWorkResource');
+        if (savedResource) {
+          this.dayWorkResource = savedResource;
+          this.loadSavedDaySchedule(savedResource);
+        }
+      }
+      if (this.dayWorkResource) {
+        setTimeout(() => this.checkAndShowOverduePopup(false), 250);
+      }
+    }
+  }
+
   ngOnDestroy(): void {
     this.reminderSubscription.unsubscribe();
     this.cancelHourlyReminders();
+    if (this.overdueCheckIntervalId) {
+      clearInterval(this.overdueCheckIntervalId);
+      this.overdueCheckIntervalId = null;
+    }
   }
 
   // Task Dropdown options
@@ -4170,15 +4932,17 @@ export class DashboardComponent implements OnDestroy {
     this.filterResource,
     this.filterProject,
     this.filterStatus,
-    this.filterPriority
+    this.filterPriority,
+    this.filterWeek
   ]).pipe(
-    map(([tasks, resource, project, status, priority]) => {
+    map(([tasks, resource, project, status, priority, week]) => {
       return tasks.filter(t => {
         const passRes = !resource || t.resourceName === resource;
         const passProj = !project || t.projectName === project;
         const passStat = !status || t.status === status;
         const passPrio = !priority || t.priority === priority;
-        return passRes && passProj && passStat && passPrio;
+        const passWeek = !week || week === 'all' || (t.week || '').trim().toUpperCase() === week.trim().toUpperCase();
+        return passRes && passProj && passStat && passPrio && passWeek;
       });
     })
   );
@@ -4206,16 +4970,16 @@ export class DashboardComponent implements OnDestroy {
   developers$: Observable<any[]> = this.filteredTasks$.pipe(
     map(tasks => {
       const devMap = new Map<string, any>();
-      
+
       tasks.forEach(task => {
         const name = task.resourceName || 'Unassigned';
         if (!devMap.has(name)) {
           devMap.set(name, { name, status: 'On Track', tasksCompleted: 0, totalTasks: 0, hasBlocker: false });
         }
-        
+
         const devEntry = devMap.get(name);
         devEntry.totalTasks++;
-        
+
         if (task.status === 'Completed' || task.progress === 100) {
           devEntry.tasksCompleted++;
         }
@@ -4223,7 +4987,7 @@ export class DashboardComponent implements OnDestroy {
           devEntry.hasBlocker = true;
         }
       });
-      
+
       // Compute final status label for each developer based on their tasks
       return Array.from(devMap.values()).map(dev => {
         if (dev.hasBlocker) {
@@ -4306,6 +5070,7 @@ export class DashboardComponent implements OnDestroy {
       case 'project': this.filterProject.next(value); break;
       case 'status': this.filterStatus.next(value); break;
       case 'priority': this.filterPriority.next(value); break;
+      case 'week': this.onWeekNavSelect(value); break;
     }
   }
 
@@ -4687,6 +5452,727 @@ export class DashboardComponent implements OnDestroy {
 
   private clampProgress(value: number): number {
     return Math.min(Math.max(Number(value) || 0, 0), 100);
+  }
+
+  // ── DAY WORK TRACK helpers ──
+
+  /** Rebuild the resource dropdown from weekly-status tasks */
+  private refreshDayWorkResourceList(): void {
+    const names = [...new Set(this.allTasksSnapshot.map(t => t.resourceName).filter(Boolean))].sort();
+    this.dayWorkResourceList = names;
+    this.dayWorkProjectList = [...new Set(this.allTasksSnapshot.map(t => t.projectName).filter(Boolean))].sort();
+  }
+
+  /** Format a Date object to YYYY-MM-DD in local time */
+  private formatLocalDate(d: Date): string {
+    const y = d.getFullYear();
+    const m = this.pad(d.getMonth() + 1);
+    const day = this.pad(d.getDate());
+    return `${y}-${m}-${day}`;
+  }
+
+  /** Load previously saved schedule from localStorage for a resource */
+  private loadSavedDaySchedule(resource: string): void {
+    try {
+      const savedMode = localStorage.getItem(`u2app.dayWorkTrackingMode_${resource}`) || localStorage.getItem('u2app.dayWorkTrackingMode');
+      if (savedMode && ['hourly', 'day-wise', 'actual-hours'].includes(savedMode)) {
+        this.dayWorkTrackingMode = savedMode as any;
+      }
+      const savedFreq = localStorage.getItem(`u2app.overdueReminderFrequency_${resource}`) || localStorage.getItem('u2app.overdueReminderFrequency');
+      if (savedFreq && ['until-completed', 'every-hour', 'daily-eod', 'manual'].includes(savedFreq)) {
+        this.overdueReminderFrequency = savedFreq as any;
+      }
+      const raw = localStorage.getItem(`u2app.dayScheduleSlots_${resource}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.dayScheduleSlots = parsed;
+        }
+      }
+      const rawLeaves = localStorage.getItem(`u2app.dayWorkLeaveDays_${resource}`);
+      if (rawLeaves) {
+        const parsedLeaves = JSON.parse(rawLeaves);
+        if (Array.isArray(parsedLeaves) && parsedLeaves.length > 0) {
+          this.dayWorkLeaveDays = parsedLeaves;
+        }
+      }
+    } catch (e) {
+      console.warn('Error loading saved schedule from localStorage:', e);
+    }
+  }
+
+  /** Save current schedule to localStorage */
+  private persistDaySchedule(): void {
+    if (!this.dayWorkResource) return;
+    try {
+      localStorage.setItem('u2app.dayWorkTrackingMode', this.dayWorkTrackingMode);
+      localStorage.setItem(`u2app.dayWorkTrackingMode_${this.dayWorkResource}`, this.dayWorkTrackingMode);
+      localStorage.setItem('u2app.overdueReminderFrequency', this.overdueReminderFrequency);
+      localStorage.setItem(`u2app.overdueReminderFrequency_${this.dayWorkResource}`, this.overdueReminderFrequency);
+      localStorage.setItem(`u2app.dayScheduleSlots_${this.dayWorkResource}`, JSON.stringify(this.dayScheduleSlots));
+      localStorage.setItem(`u2app.dayWorkLeaveDays_${this.dayWorkResource}`, JSON.stringify(this.dayWorkLeaveDays));
+    } catch (e) {
+      console.warn('Error saving schedule to localStorage:', e);
+    }
+  }
+
+  /** Get the current week's start/end dates (Mon-Fri) as ISO strings */
+  private getCurrentWeekRange(): { start: string; end: string } {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 1=Mon...
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMon);
+    const fri = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 4);
+    return { start: this.formatLocalDate(mon), end: this.formatLocalDate(fri) };
+  }
+
+  /** Build the 5 leave-day entries for the current week */
+  private buildLeaveDays(): LeaveDayEntry[] {
+    const { start } = this.getCurrentWeekRange();
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const days: LeaveDayEntry[] = [];
+    const [y, m, d] = start.split('-').map(Number);
+    const monDate = new Date(y, m - 1, d);
+    for (let i = 0; i < 5; i++) {
+      const cur = new Date(monDate.getFullYear(), monDate.getMonth(), monDate.getDate() + i);
+      const iso = this.formatLocalDate(cur);
+      days.push({ dayName: dayNames[i], date: iso, leaveType: 'none' });
+    }
+    return days;
+  }
+
+  /** Called when resource dropdown changes */
+  onDayWorkResourceChange(): void {
+    if (!this.dayWorkResource) {
+      this.dayWorkCurrentWeekInfo = '';
+      this.dayWorkCurrentWeekTasks = [];
+      this.dayWorkLeaveDays = [];
+      this.dayScheduleSlots = [];
+      localStorage.removeItem('u2app.dayWorkResource');
+      return;
+    }
+
+    localStorage.setItem('u2app.dayWorkResource', this.dayWorkResource);
+
+    // Build or restore leave days
+    this.dayWorkLeaveDays = this.buildLeaveDays();
+
+    // Try restoring saved schedule
+    this.loadSavedDaySchedule(this.dayWorkResource);
+
+    // Filter tasks for this resource in the current week
+    const { start, end } = this.getCurrentWeekRange();
+    const startDate = new Date(start + 'T00:00:00');
+    const endDate = new Date(end + 'T23:59:59');
+
+    let matching = this.allTasksSnapshot.filter(t => {
+      if (t.resourceName !== this.dayWorkResource) return false;
+      if (!t.startDate && !t.dueDate) return false;
+      const tStart = t.startDate ? new Date(t.startDate + 'T00:00:00') : null;
+      const tEnd = t.dueDate ? new Date(t.dueDate + 'T23:59:59') : null;
+      const startsBeforeWeekEnd = tStart ? tStart <= endDate : true;
+      const endsAfterWeekStart = tEnd ? tEnd >= startDate : true;
+      return startsBeforeWeekEnd && endsAfterWeekStart;
+    });
+
+    // Fallback: if no tasks overlap exact calendar week (e.g. mock data timeframe),
+    // show tasks for this resource from current week period or active tasks
+    if (matching.length === 0) {
+      matching = this.allTasksSnapshot.filter(t => t.resourceName === this.dayWorkResource && (t.week === 'W2' || t.status !== 'Completed'));
+      if (matching.length === 0) {
+        matching = this.allTasksSnapshot.filter(t => t.resourceName === this.dayWorkResource);
+      }
+    }
+
+    this.dayWorkCurrentWeekTasks = matching;
+
+    // Format week info badge
+    const fmtDisplay = (iso: string) => {
+      const [yy, mm, dd] = iso.split('-').map(Number);
+      const dObj = new Date(yy, mm - 1, dd);
+      return dObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    };
+    this.dayWorkCurrentWeekInfo = `${fmtDisplay(start)} – ${fmtDisplay(end)}`;
+
+    // Check overdue tasks when resource changes
+    setTimeout(() => this.checkAndShowOverduePopup(false), 150);
+  }
+
+  /** Generate schedule from config + tasks based on active tracking mode */
+  generateDaySchedule(): void {
+    if (!this.dayWorkResource) return;
+
+    const slots: DayScheduleSlot[] = [];
+    const { start } = this.getCurrentWeekRange();
+    const [startY, startM, startD] = start.split('-').map(Number);
+    const monDate = new Date(startY, startM - 1, startD);
+
+    // Parse login/logoff times
+    const [loginH, loginM] = this.dayWorkLoginTime.split(':').map(Number);
+    const [logoffH, logoffM] = this.dayWorkLogoffTime.split(':').map(Number);
+    const loginMinutes = loginH * 60 + loginM;
+    const logoffMinutes = logoffH * 60 + logoffM;
+    const hoursPerDay = Math.max(1, Math.min(24, Number(this.dayWorkHoursPerDay) || 8));
+
+    // Queue tasks from current week with their hours
+    interface TaskQueue { project: string; title: string; desc: string; hours: number; }
+    const queue: TaskQueue[] = [];
+    this.dayWorkCurrentWeekTasks.forEach(t => {
+      const taskHrs = typeof t.hours === 'number' && t.hours > 0 ? t.hours : hoursPerDay;
+      queue.push({
+        project: t.projectName,
+        title: t.taskTitle,
+        desc: t.taskDescription || t.taskTitle,
+        hours: taskHrs
+      });
+    });
+
+    if (queue.length === 0) {
+      queue.push({
+        project: this.dayWorkProjectList[0] || 'General',
+        title: 'Sprint Development Task',
+        desc: 'General sprint development and feature updates',
+        hours: hoursPerDay
+      });
+    }
+
+    let queueIdx = 0;
+    let remainingHoursInTask = queue[0].hours;
+    let slotId = 1;
+    let taskCounter = 1; // Generates task1, task2, task3... sequentially
+
+    for (let dayOff = 0; dayOff < 5; dayOff++) {
+      const dayDate = new Date(monDate.getFullYear(), monDate.getMonth(), monDate.getDate() + dayOff);
+      const dateStr = this.formatLocalDate(dayDate);
+
+      // Check leave for this day
+      const leaveEntry = this.dayWorkLeaveDays.find(ld => ld.date === dateStr);
+      const leaveType = leaveEntry?.leaveType ?? 'none';
+
+      if (leaveType === 'full') {
+        // Full day leave
+        const hourLabel = `${this.pad(loginH)}:${this.pad(loginM)} – ${this.pad(logoffH)}:${this.pad(logoffM)}`;
+        slots.push({
+          id: `slot-${slotId++}`,
+          hour: hourLabel,
+          date: dateStr,
+          taskTitle: 'Full Day Leave',
+          taskDescription: 'On Leave (Full Day)',
+          projectName: 'Leave',
+          status: 'Pending',
+          isLeave: true,
+          isLunch: false,
+          leaveType: 'full',
+          durationHours: hoursPerDay,
+          trackingMode: this.dayWorkTrackingMode
+        });
+        continue;
+      }
+
+      const halfLeave = leaveType === 'half';
+      const halfHours = Math.floor(hoursPerDay / 2);
+      let currentMinute = loginMinutes;
+
+      // If half leave, the morning half is marked as Leave
+      if (halfLeave) {
+        const leaveEndMin = currentMinute + halfHours * 60;
+        const leaveEndH = Math.floor(leaveEndMin / 60);
+        const leaveEndM = leaveEndMin % 60;
+        const leaveHourLabel = `${this.pad(loginH)}:${this.pad(loginM)} – ${this.pad(leaveEndH)}:${this.pad(leaveEndM)}`;
+        slots.push({
+          id: `slot-${slotId++}`,
+          hour: leaveHourLabel,
+          date: dateStr,
+          taskTitle: 'Half Day Leave',
+          taskDescription: 'On Leave (First Half)',
+          projectName: 'Leave',
+          status: 'Pending',
+          isLeave: true,
+          isLunch: false,
+          leaveType: 'half',
+          durationHours: halfHours,
+          trackingMode: this.dayWorkTrackingMode
+        });
+        currentMinute = leaveEndMin;
+      }
+
+      // Working hours to schedule today
+      const workHoursToday = halfLeave ? (hoursPerDay - halfHours) : hoursPerDay;
+
+      // ── MODE 1: HOURLY (1-Hour Slots) ──
+      if (this.dayWorkTrackingMode === 'hourly') {
+        const morningHours = halfLeave ? 0 : Math.floor(workHoursToday / 2);
+        const afternoonHours = workHoursToday - morningHours;
+
+        // Morning 1-hour slots (before lunch)
+        for (let h = 0; h < morningHours; h++) {
+          const slotStartH = Math.floor(currentMinute / 60);
+          const slotStartM = currentMinute % 60;
+          const slotEndMin = currentMinute + 60;
+          const slotEndH = Math.floor(slotEndMin / 60);
+          const slotEndM = slotEndMin % 60;
+          const hourLabel = `${this.pad(slotStartH)}:${this.pad(slotStartM)} – ${this.pad(slotEndH)}:${this.pad(slotEndM)}`;
+
+          const cur = queue[queueIdx % queue.length];
+          const taskTitle = `task${taskCounter++}`;
+          const taskDesc = cur.title;
+          const projectName = cur.project;
+
+          remainingHoursInTask--;
+          if (remainingHoursInTask <= 0) {
+            queueIdx = (queueIdx + 1) % queue.length;
+            remainingHoursInTask = queue[queueIdx % queue.length]?.hours ?? hoursPerDay;
+          }
+
+          slots.push({
+            id: `slot-${slotId++}`,
+            hour: hourLabel,
+            date: dateStr,
+            taskTitle,
+            taskDescription: taskDesc,
+            projectName,
+            status: 'Pending',
+            isLeave: false,
+            isLunch: false,
+            leaveType: 'none',
+            durationHours: 1,
+            trackingMode: 'hourly'
+          });
+          currentMinute += 60;
+        }
+
+        // Lunch break slot
+        if (this.dayWorkLunchMinutes > 0 && !halfLeave) {
+          const lunchEndMin = currentMinute + this.dayWorkLunchMinutes;
+          const lunchStartH = Math.floor(currentMinute / 60);
+          const lunchStartM = currentMinute % 60;
+          const lunchEndH = Math.floor(lunchEndMin / 60);
+          const lunchEndM = lunchEndMin % 60;
+          const lunchLabel = `${this.pad(lunchStartH)}:${this.pad(lunchStartM)} – ${this.pad(lunchEndH)}:${this.pad(lunchEndM)}`;
+
+          slots.push({
+            id: `slot-${slotId++}`,
+            hour: lunchLabel,
+            date: dateStr,
+            taskTitle: 'Lunch Break',
+            taskDescription: 'Midday meal & rest break',
+            projectName: 'Break',
+            status: 'Pending',
+            isLeave: false,
+            isLunch: true,
+            leaveType: 'none',
+            durationHours: this.dayWorkLunchMinutes / 60,
+            trackingMode: 'hourly'
+          });
+          currentMinute = lunchEndMin;
+        }
+
+        // Afternoon 1-hour slots (after lunch)
+        for (let h = 0; h < afternoonHours; h++) {
+          const slotStartH = Math.floor(currentMinute / 60);
+          const slotStartM = currentMinute % 60;
+          const slotEndMin = currentMinute + 60;
+          const slotEndH = Math.floor(slotEndMin / 60);
+          const slotEndM = slotEndMin % 60;
+          const hourLabel = `${this.pad(slotStartH)}:${this.pad(slotStartM)} – ${this.pad(slotEndH)}:${this.pad(slotEndM)}`;
+
+          const cur = queue[queueIdx % queue.length];
+          const taskTitle = `task${taskCounter++}`;
+          const taskDesc = cur.title;
+          const projectName = cur.project;
+
+          remainingHoursInTask--;
+          if (remainingHoursInTask <= 0) {
+            queueIdx = (queueIdx + 1) % queue.length;
+            remainingHoursInTask = queue[queueIdx % queue.length]?.hours ?? hoursPerDay;
+          }
+
+          slots.push({
+            id: `slot-${slotId++}`,
+            hour: hourLabel,
+            date: dateStr,
+            taskTitle,
+            taskDescription: taskDesc,
+            projectName,
+            status: 'Pending',
+            isLeave: false,
+            isLunch: false,
+            leaveType: 'none',
+            durationHours: 1,
+            trackingMode: 'hourly'
+          });
+          currentMinute += 60;
+        }
+
+      // ── MODE 2: DAY-WISE (8 Hours Allocation) ──
+      } else if (this.dayWorkTrackingMode === 'day-wise') {
+        const cur = queue[queueIdx % queue.length];
+        const taskTitle = `task${taskCounter++}`;
+        const taskDesc = `${cur.title} — ${cur.desc}`;
+        const projectName = cur.project;
+
+        const dayStartH = Math.floor(currentMinute / 60);
+        const dayStartM = currentMinute % 60;
+        const dayEndMin = currentMinute + workHoursToday * 60 + (this.dayWorkLunchMinutes > 0 && !halfLeave ? this.dayWorkLunchMinutes : 0);
+        const dayEndH = Math.floor(dayEndMin / 60);
+        const dayEndM = dayEndMin % 60;
+        const hourLabel = `${this.pad(dayStartH)}:${this.pad(dayStartM)} – ${this.pad(dayEndH)}:${this.pad(dayEndM)} (${workHoursToday} hrs)`;
+
+        slots.push({
+          id: `slot-${slotId++}`,
+          hour: hourLabel,
+          date: dateStr,
+          taskTitle,
+          taskDescription: taskDesc,
+          projectName,
+          status: 'Pending',
+          isLeave: false,
+          isLunch: false,
+          leaveType: 'none',
+          durationHours: workHoursToday,
+          trackingMode: 'day-wise'
+        });
+
+        remainingHoursInTask -= workHoursToday;
+        if (remainingHoursInTask <= 0) {
+          queueIdx = (queueIdx + 1) % queue.length;
+          remainingHoursInTask = queue[queueIdx % queue.length]?.hours ?? hoursPerDay;
+        }
+
+      // ── MODE 3: ACTUAL HOURS (Defined in Weekly Status Screen) ──
+      } else if (this.dayWorkTrackingMode === 'actual-hours') {
+        let availableMinutes = workHoursToday * 60;
+        const morningMinutes = (!halfLeave && this.dayWorkLunchMinutes > 0) ? Math.floor(workHoursToday / 2) * 60 : availableMinutes;
+        let elapsedToday = 0;
+        let lunchInserted = false;
+
+        while (availableMinutes > 0) {
+          const cur = queue[queueIdx % queue.length];
+          const taskRemainingMinutes = remainingHoursInTask * 60;
+
+          // How much time to allocate in this block
+          let blockMinutes = Math.min(taskRemainingMinutes, availableMinutes);
+
+          // Check if lunch break should be inserted before or splitting this block
+          if (!halfLeave && this.dayWorkLunchMinutes > 0 && !lunchInserted && elapsedToday >= morningMinutes) {
+            const lunchStartH = Math.floor(currentMinute / 60);
+            const lunchStartM = currentMinute % 60;
+            const lunchEndMin = currentMinute + this.dayWorkLunchMinutes;
+            const lunchEndH = Math.floor(lunchEndMin / 60);
+            const lunchEndM = lunchEndMin % 60;
+            const lunchLabel = `${this.pad(lunchStartH)}:${this.pad(lunchStartM)} – ${this.pad(lunchEndH)}:${this.pad(lunchEndM)}`;
+
+            slots.push({
+              id: `slot-${slotId++}`,
+              hour: lunchLabel,
+              date: dateStr,
+              taskTitle: 'Lunch Break',
+              taskDescription: 'Midday meal & rest break',
+              projectName: 'Break',
+              status: 'Pending',
+              isLeave: false,
+              isLunch: true,
+              leaveType: 'none',
+              durationHours: this.dayWorkLunchMinutes / 60,
+              trackingMode: 'actual-hours'
+            });
+            currentMinute = lunchEndMin;
+            lunchInserted = true;
+          }
+
+          if (!halfLeave && this.dayWorkLunchMinutes > 0 && !lunchInserted && (elapsedToday + blockMinutes > morningMinutes)) {
+            blockMinutes = morningMinutes - elapsedToday;
+          }
+
+          if (blockMinutes <= 0 && !lunchInserted && this.dayWorkLunchMinutes > 0) {
+            const lunchStartH = Math.floor(currentMinute / 60);
+            const lunchStartM = currentMinute % 60;
+            const lunchEndMin = currentMinute + this.dayWorkLunchMinutes;
+            const lunchEndH = Math.floor(lunchEndMin / 60);
+            const lunchEndM = lunchEndMin % 60;
+            const lunchLabel = `${this.pad(lunchStartH)}:${this.pad(lunchStartM)} – ${this.pad(lunchEndH)}:${this.pad(lunchEndM)}`;
+
+            slots.push({
+              id: `slot-${slotId++}`,
+              hour: lunchLabel,
+              date: dateStr,
+              taskTitle: 'Lunch Break',
+              taskDescription: 'Midday meal & rest break',
+              projectName: 'Break',
+              status: 'Pending',
+              isLeave: false,
+              isLunch: true,
+              leaveType: 'none',
+              durationHours: this.dayWorkLunchMinutes / 60,
+              trackingMode: 'actual-hours'
+            });
+            currentMinute = lunchEndMin;
+            lunchInserted = true;
+            continue;
+          }
+
+          const blockHours = Math.round((blockMinutes / 60) * 10) / 10;
+          const slotStartH = Math.floor(currentMinute / 60);
+          const slotStartM = currentMinute % 60;
+          const slotEndMin = currentMinute + blockMinutes;
+          const slotEndH = Math.floor(slotEndMin / 60);
+          const slotEndM = slotEndMin % 60;
+          const hourLabel = `${this.pad(slotStartH)}:${this.pad(slotStartM)} – ${this.pad(slotEndH)}:${this.pad(slotEndM)} (${blockHours} ${blockHours === 1 ? 'hr' : 'hrs'})`;
+
+          const taskTitle = `task${taskCounter++}`;
+          const taskDesc = `${cur.title} [Actual: ${cur.hours}h]`;
+          const projectName = cur.project;
+
+          slots.push({
+            id: `slot-${slotId++}`,
+            hour: hourLabel,
+            date: dateStr,
+            taskTitle,
+            taskDescription: taskDesc,
+            projectName,
+            status: 'Pending',
+            isLeave: false,
+            isLunch: false,
+            leaveType: 'none',
+            durationHours: blockHours,
+            trackingMode: 'actual-hours'
+          });
+
+          remainingHoursInTask -= blockHours;
+          if (remainingHoursInTask <= 0.05) {
+            queueIdx = (queueIdx + 1) % queue.length;
+            remainingHoursInTask = queue[queueIdx % queue.length]?.hours ?? hoursPerDay;
+          }
+
+          availableMinutes -= blockMinutes;
+          elapsedToday += blockMinutes;
+          currentMinute = slotEndMin;
+        }
+      }
+    }
+
+    this.dayScheduleSlots = slots;
+    this.persistDaySchedule();
+
+    // Check overdue tasks for newly generated schedule
+    setTimeout(() => this.checkAndShowOverduePopup(false), 150);
+  }
+
+  private pad(n: number): string {
+    return n.toString().padStart(2, '0');
+  }
+
+  saveSlotEdit(slot: DayScheduleSlot): void {
+    this.editingSlotId = '';
+    this.persistDaySchedule();
+  }
+
+  saveSlotToHourlyUpdates(slot: DayScheduleSlot): void {
+    const durTag = slot.durationHours ? ` [${slot.durationHours}h]` : '';
+    this.workTrackerService.addHourlyUpdate({
+      id: '',
+      date: slot.date,
+      hour: slot.hour,
+      taskDescription: `[${slot.projectName}] ${slot.taskTitle}: ${slot.taskDescription}${durTag}`,
+      status: slot.status as any,
+      isVisible: true
+    });
+  }
+
+  /** Check if any slots have passed their time and are not completed; tailored to active tracking mode and reminder frequency */
+  checkAndShowOverduePopup(isManual: boolean = false): void {
+    if (!this.dayWorkResource || this.dayScheduleSlots.length === 0) return;
+
+    const now = new Date();
+    const todayStr = this.formatLocalDate(now);
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const overdueSlots = this.dayScheduleSlots.filter(slot => {
+      if (slot.isLeave || slot.isLunch) return false;
+      if (slot.status === 'Completed') return false;
+
+      // Slot on a previous day of current week is overdue
+      if (slot.date < todayStr) {
+        return true;
+      }
+
+      // Slot on today whose end time has passed
+      if (slot.date === todayStr) {
+        const parts = slot.hour.split(/[-–—]/).map(s => s.trim());
+        if (parts.length >= 2) {
+          const timeToken = parts[1].split(' ')[0];
+          const [endH, endM] = timeToken.split(':').map(Number);
+          if (!isNaN(endH) && !isNaN(endM)) {
+            const slotEndMinutes = endH * 60 + endM;
+            return slotEndMinutes <= currentMinutes;
+          }
+        }
+      }
+
+      return false;
+    });
+
+    if (overdueSlots.length === 0) {
+      this.showOverdueTaskPopup = false;
+      return;
+    }
+
+    // If not triggered manually by button click, respect reminder frequency setting
+    if (!isManual) {
+      if (this.overdueReminderFrequency === 'manual') {
+        // Only on Button Click: Do not prompt automatically
+        return;
+      }
+
+      if (this.overdueReminderFrequency === 'every-hour') {
+        // Every One Hour: Display once every hour while overdue tasks remain
+        const oneHourMs = 60 * 60 * 1000;
+        if (this.lastOverduePopupDismissedTime && (Date.now() - this.lastOverduePopupDismissedTime < oneHourMs)) {
+          return;
+        }
+      }
+
+      if (this.overdueReminderFrequency === 'daily-eod') {
+        // Daily at EOD: Display once at the end of each working day (logoff time)
+        const [logoffH, logoffM] = (this.dayWorkLogoffTime || '18:00').split(':').map(Number);
+        const logoffMinutes = (logoffH || 18) * 60 + (logoffM || 0);
+        if (currentMinutes < logoffMinutes) {
+          return;
+        }
+        if (this.lastOverduePopupDismissedDate === todayStr) {
+          return;
+        }
+      }
+
+      // 'until-completed': Continuously prompt whenever overdue tasks exist until completed
+    }
+
+    let items: OverdueTaskItem[] = [];
+
+    // 1. Hourly: Split tasks into hourly slots and require a status update for every hour
+    if (this.dayWorkTrackingMode === 'hourly') {
+      items = overdueSlots.map(slot => ({
+        id: `hourly-${slot.id}`,
+        slotIds: [slot.id],
+        hour: slot.hour,
+        taskTitle: slot.taskTitle,
+        taskDescription: slot.taskDescription || slot.taskTitle,
+        projectName: slot.projectName,
+        date: slot.date,
+        newStatus: '',
+        reason: '',
+        projectChoice: 'same',
+        otherProjectName: '',
+        durationHours: 1
+      }));
+    // 2. Day-wise (8 Hours): Allocate tasks based on an 8-hour working day and track each task's status
+    } else if (this.dayWorkTrackingMode === 'day-wise') {
+      items = overdueSlots.map(slot => ({
+        id: `daywise-${slot.id}`,
+        slotIds: [slot.id],
+        hour: slot.hour,
+        taskTitle: slot.taskTitle,
+        taskDescription: slot.taskDescription || slot.taskTitle,
+        projectName: slot.projectName,
+        date: slot.date,
+        newStatus: '',
+        reason: '',
+        projectChoice: 'same',
+        otherProjectName: '',
+        durationHours: slot.durationHours || 8
+      }));
+    // 3. Actual Hours: Display and split tasks according to the exact hours defined in the Weekly Status screen, and collect status updates for each scheduled hour
+    } else {
+      items = overdueSlots.map(slot => ({
+        id: `actual-${slot.id}`,
+        slotIds: [slot.id],
+        hour: slot.hour,
+        taskTitle: slot.taskTitle,
+        taskDescription: slot.taskDescription || slot.taskTitle,
+        projectName: slot.projectName,
+        date: slot.date,
+        newStatus: '',
+        reason: '',
+        projectChoice: 'same',
+        otherProjectName: '',
+        durationHours: slot.durationHours
+      }));
+    }
+
+    this.overdueTaskItems = items;
+    this.overduePopupSubmitted = false;
+    this.showOverdueTaskPopup = true;
+  }
+
+  quickMarkAllCompleted(): void {
+    this.overdueTaskItems.forEach(item => {
+      if (!item.newStatus) {
+        item.newStatus = 'Completed';
+      }
+    });
+  }
+
+  onOverdueStatusChange(item: OverdueTaskItem): void {
+    if (item.newStatus !== 'In Progress') {
+      item.reason = '';
+      item.projectChoice = 'same';
+      item.otherProjectName = '';
+    }
+  }
+
+  isItemValid(item: OverdueTaskItem): boolean {
+    if (!item.newStatus) return false;
+    if (item.newStatus === 'In Progress') {
+      if (!item.reason || !item.reason.trim()) return false;
+      if (item.projectChoice === 'other' && (!item.otherProjectName || !item.otherProjectName.trim())) return false;
+    }
+    return true;
+  }
+
+  isOverduePopupValid(): boolean {
+    if (this.overdueTaskItems.length === 0) return true;
+    return this.overdueTaskItems.every(item => this.isItemValid(item));
+  }
+
+  getInvalidItemCount(): number {
+    return this.overdueTaskItems.filter(item => !this.isItemValid(item)).length;
+  }
+
+  submitOverduePopup(): void {
+    this.overduePopupSubmitted = true;
+    // Popup WILL NOT CLOSE if any item is invalid!
+    if (!this.isOverduePopupValid()) {
+      return;
+    }
+
+    // Apply all updates back to constituent schedule slots
+    this.overdueTaskItems.forEach(item => {
+      item.slotIds.forEach(slotId => {
+        const slot = this.dayScheduleSlots.find(s => s.id === slotId);
+        if (slot) {
+          slot.status = item.newStatus as any;
+          if (item.newStatus === 'In Progress' && item.reason) {
+            const projNote = item.projectChoice === 'other' ? ` [Working on ${item.otherProjectName}]` : '';
+            slot.taskDescription = `${item.taskDescription} (In Progress: ${item.reason}${projNote})`;
+            if (item.projectChoice === 'other' && item.otherProjectName) {
+              slot.projectName = item.otherProjectName;
+            }
+          }
+          // Save update to hourly log
+          this.saveSlotToHourlyUpdates(slot);
+        }
+      });
+    });
+
+    this.lastOverduePopupDismissedTime = Date.now();
+    this.lastOverduePopupDismissedDate = this.formatLocalDate(new Date());
+    localStorage.setItem('u2app.overdueLastDismissedTime', String(this.lastOverduePopupDismissedTime));
+    localStorage.setItem('u2app.overdueLastDismissedDate', this.lastOverduePopupDismissedDate);
+
+    this.persistDaySchedule();
+    this.showOverdueTaskPopup = false;
+    this.overdueTaskItems = [];
+    this.overduePopupSubmitted = false;
   }
 
   private createEmptyTask(): DeveloperTask {
