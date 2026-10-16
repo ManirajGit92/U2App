@@ -695,7 +695,7 @@ interface OverdueTaskItem {
               
               <div class="overdue-task-header">
                 <span class="overdue-seq-badge">#{{ i + 1 }}</span>
-                <span class="overdue-task-date">📅 {{ item.date }}</span>
+                <span class="overdue-task-date">📅 {{ formatAppDate(item.date) }}</span>
                 <span class="overdue-task-time">⏰ {{ item.hour }}</span>
                 <span class="overdue-duration-badge" *ngIf="item.durationHours">{{ item.durationHours }}h</span>
                 <span class="overdue-task-project">📁 {{ item.projectName || 'General' }}</span>
@@ -886,7 +886,7 @@ interface OverdueTaskItem {
             <div class="leave-days-grid">
               <div class="leave-day-card" *ngFor="let ld of dayWorkLeaveDays">
                 <div class="leave-day-name">{{ ld.dayName }}</div>
-                <div class="leave-day-date">{{ ld.date }}</div>
+                <div class="leave-day-date">{{ formatAppDate(ld.date) }}</div>
                 <div class="leave-options">
                   <label class="leave-radio">
                     <input type="radio" [name]="'leave_' + ld.date" [(ngModel)]="ld.leaveType" value="none">
@@ -927,17 +927,30 @@ interface OverdueTaskItem {
               <span class="leave-section-title">⏰ Generated Schedule</span>
               <span class="mode-active-badge">{{ getTrackingModeLabel() }}</span>
             </div>
-            <div class="schedule-legend">
-              <span class="sched-leg completed">Completed</span>
-              <span class="sched-leg inprogress">In Progress</span>
-              <span class="sched-leg pending">Pending</span>
+            <div class="schedule-header-actions">
+              <label class="toggle-switch-card" for="schedule-break-switch-top" title="Toggle Lunch Break and Half-Day Leave cards">
+                <span class="switch-box">
+                  <input id="schedule-break-switch-top" type="checkbox" [(ngModel)]="showBreaksAndLeaves" class="switch-input">
+                  <span class="switch-slider"></span>
+                </span>
+                <span class="switch-label-text">Show Lunch & Half-Day Leave</span>
+              </label>
+              <div class="schedule-legend">
+                <span class="sched-leg completed">Completed</span>
+                <span class="sched-leg inprogress">In Progress</span>
+                <span class="sched-leg pending">Pending</span>
+              </div>
             </div>
           </div>
           <div class="schedule-slots-grid">
-            <div class="schedule-slot" *ngFor="let slot of dayScheduleSlots"
+            <ng-container *ngFor="let slot of dayScheduleSlots">
+            <div class="schedule-slot" *ngIf="showBreaksAndLeaves || (!slot.isLunch && !(slot.isLeave && slot.leaveType === 'half'))"
               [ngClass]="{'slot-completed': slot.status === 'Completed', 'slot-inprogress': slot.status === 'In Progress', 'slot-pending': slot.status === 'Pending', 'slot-leave': slot.isLeave, 'slot-lunch': slot.isLunch, 'slot-mode-daywise': slot.trackingMode === 'day-wise', 'slot-mode-actual': slot.trackingMode === 'actual-hours'}">
               <div class="slot-time">
-                <span>{{ slot.hour }}</span>
+                <div class="slot-time-content">
+                  <span class="slot-date-text">📅 {{ formatAppDate(slot.date) }}</span>
+                  <span class="slot-hour-text">{{ slot.hour }}</span>
+                </div>
                 <span class="slot-mode-tag" *ngIf="slot.durationHours">{{ slot.durationHours }}h</span>
               </div>
               <div class="slot-body">
@@ -975,7 +988,20 @@ interface OverdueTaskItem {
                 }
               </div>
             </div>
+            </ng-container>
           </div>
+        </div>
+
+        <!-- Switch Control after Generated Schedule Section -->
+        <div class="after-schedule-switch-bar">
+          <label class="toggle-switch-card" for="schedule-break-switch-bottom">
+            <span class="switch-box">
+              <input id="schedule-break-switch-bottom" type="checkbox" [(ngModel)]="showBreaksAndLeaves" class="switch-input">
+              <span class="switch-slider"></span>
+            </span>
+            <span class="switch-label-text">🍽️🌴 Show Lunch Break & Half-Day Leave Cards</span>
+            <span class="switch-status-pill" [class.on]="showBreaksAndLeaves">{{ showBreaksAndLeaves ? 'ON' : 'OFF' }}</span>
+          </label>
         </div>
         }
       </div>
@@ -1028,7 +1054,7 @@ interface OverdueTaskItem {
                   </td>
                 } @else {
                   <td>{{ update.id }}</td>
-                  <td>{{ update.date | date:'mediumDate' }}</td>
+                  <td>{{ formatAppDate(update.date) }}</td>
                   <td>{{ update.hour }}</td>
                   <td class="description-cell">{{ update.taskDescription }}</td>
                   <td><span class="status-tag" [ngClass]="normalizeStatus(update.status)">{{ update.status }}</span></td>
@@ -1259,8 +1285,8 @@ interface OverdueTaskItem {
                     <span>{{ task.progress }}%</span>
                   </div>
                 </td>
-                <td *ngIf="isTaskColVisible('startDate')">{{ task.startDate | date:'shortDate' }}</td>
-                <td *ngIf="isTaskColVisible('dueDate')">{{ task.dueDate | date:'shortDate' }}</td>
+                <td *ngIf="isTaskColVisible('startDate')">{{ formatAppDate(task.startDate) }}</td>
+                <td *ngIf="isTaskColVisible('dueDate')">{{ formatAppDate(task.dueDate) }}</td>
                 <td *ngIf="isTaskColVisible('isVisible')">{{ task.isVisible ?? true ? 'Shown' : 'Hidden' }}</td>
                 <td *ngIf="isTaskColVisible('actions')">
                   <div class="inline-actions">
@@ -1476,8 +1502,8 @@ interface OverdueTaskItem {
                     <span>{{ release.progress }}%</span>
                   </div>
                 </td>
-                <td *ngIf="isReleaseColVisible('targetDate')">{{ release.targetDate | date:'shortDate' }}</td>
-                <td *ngIf="isReleaseColVisible('completedDate')">{{ release.completedDate | date:'shortDate' }}</td>
+                <td *ngIf="isReleaseColVisible('targetDate')">{{ formatAppDate(release.targetDate) }}</td>
+                <td *ngIf="isReleaseColVisible('completedDate')">{{ formatAppDate(release.completedDate) }}</td>
                 <td *ngIf="isReleaseColVisible('isVisible')">{{ release.isVisible ?? true ? 'Shown' : 'Hidden' }}</td>
                 <td *ngIf="isReleaseColVisible('actions')">
                   <div class="inline-actions">
@@ -3973,9 +3999,28 @@ interface OverdueTaskItem {
     .chip-hours { background: #fef3c7; color: #b45309; border-radius: 8px; padding: 1px 6px; font-weight: 700; font-size: 0.72rem; }
     .chip-status { border-radius: 8px; padding: 1px 7px; font-size: 0.7rem; font-weight: 700; }
     .day-schedule-section { padding: 1rem 1.25rem; border-top: 1px solid #f1f5f9; }
-    .day-schedule-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem; }
+    .day-schedule-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.75rem; }
     .schedule-header-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .schedule-header-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .mode-active-badge { font-size: 0.74rem; font-weight: 700; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 20px; padding: 2px 10px; display: inline-flex; align-items: center; }
+    .after-schedule-switch-bar { margin-top: 0.85rem; padding: 0.75rem 1.25rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; display: flex; align-items: center; justify-content: flex-start; }
+    .toggle-switch-card { display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer; user-select: none; font-size: 0.82rem; font-weight: 600; color: #1e293b; }
+    .switch-box { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink: 0; }
+    .switch-box .switch-input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .switch-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .2s ease; border-radius: 22px; }
+    .switch-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .2s ease; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+    .switch-box .switch-input:checked + .switch-slider { background-color: #2563eb; }
+    .switch-box .switch-input:checked + .switch-slider:before { transform: translateX(16px); }
+    .switch-box .switch-input:focus-visible + .switch-slider { box-shadow: 0 0 0 2px #93c5fd; }
+    .switch-label-text { font-size: 0.82rem; font-weight: 600; color: #334155; }
+    .switch-status-pill { font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 12px; background: #e2e8f0; color: #64748b; margin-left: 0.25rem; }
+    .switch-status-pill.on { background: #dbeafe; color: #1d4ed8; }
+    body.theme-dark .after-schedule-switch-bar { background: #0f172a; border-color: #334155; }
+    body.theme-dark .switch-label-text { color: #cbd5e1; }
+    body.theme-dark .switch-slider { background-color: #475569; }
+    body.theme-dark .switch-box .switch-input:checked + .switch-slider { background-color: #3b82f6; }
+    body.theme-dark .switch-status-pill { background: #334155; color: #94a3b8; }
+    body.theme-dark .switch-status-pill.on { background: #1e3a8a; color: #93c5fd; }
     .schedule-legend { display: flex; gap: 0.6rem; }
     .sched-leg { display: inline-flex; align-items: center; font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 20px; }
     .sched-leg.completed { background: #dcfce7; color: #15803d; }
@@ -3991,7 +4036,13 @@ interface OverdueTaskItem {
     .schedule-slot.slot-lunch { border-color: #d1fae5; background: #ecfdf5; }
     .schedule-slot.slot-mode-daywise { border-left-width: 4px; border-left-color: #3b82f6; }
     .schedule-slot.slot-mode-actual { border-left-width: 4px; border-left-color: #10b981; }
-    .slot-time { background: rgba(0,0,0,0.04); padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 700; color: #334155; border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; }
+    .slot-time { background: rgba(0,0,0,0.04); padding: 0.35rem 0.75rem; font-size: 0.78rem; font-weight: 700; color: #334155; border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+    .slot-time-content { display: flex; flex-direction: column; gap: 2px; }
+    .slot-date-text { font-size: 0.72rem; font-weight: 700; color: #2563eb; letter-spacing: 0.2px; }
+    .slot-hour-text { font-size: 0.76rem; font-weight: 600; color: #334155; }
+    body.theme-dark .slot-time { background: rgba(255,255,255,0.04); border-bottom-color: rgba(255,255,255,0.08); }
+    body.theme-dark .slot-date-text { color: #60a5fa; }
+    body.theme-dark .slot-hour-text { color: #cbd5e1; }
     .slot-mode-tag { background: #fef3c7; color: #92400e; font-size: 0.68rem; font-weight: 800; border-radius: 6px; padding: 1px 6px; border: 1px solid #fde68a; }
     .overdue-duration-badge { background: #fef08a; color: #854d0e; font-size: 0.72rem; font-weight: 700; border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
     .slot-body { padding: 0.5rem 0.75rem; }
@@ -4290,13 +4341,13 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
   workTrendsCompletedPath = 'M 32,74 L 84,68 L 136,60 L 188,48 L 240,54 L 292,38';
   maxHoursTeam = 40;
 
-  selectedDateRange = 'Week 2 (Oct 12 - Oct 18, 2026) [Current]';
+  selectedDateRange = 'Week 2 (Oct/12/2026 - Oct/18/2026) [Current]';
   selectedViewMode: 'day' | 'week' | 'month' | 'quarter' | 'half-year' | 'year' = 'week';
   currentPeriodSelection = 'W2';
   weekPeriodOptions: Array<{ value: string; label: string }> = [
-    { value: 'W1', label: 'Week 1 (Oct 05 - Oct 11, 2026)' },
-    { value: 'W2', label: 'Week 2 (Oct 12 - Oct 18, 2026) [Current]' },
-    { value: 'W3', label: 'Week 3 (Oct 19 - Oct 25, 2026)' },
+    { value: 'W1', label: 'Week 1 (Oct/05/2026 - Oct/11/2026)' },
+    { value: 'W2', label: 'Week 2 (Oct/12/2026 - Oct/18/2026) [Current]' },
+    { value: 'W3', label: 'Week 3 (Oct/19/2026 - Oct/25/2026)' },
     { value: 'all', label: 'All Weeks (W1 - W3)' }
   ];
   availablePeriodOptions: Array<{ value: string; label: string }> = [];
@@ -4402,15 +4453,15 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
       }
     } else if (this.selectedViewMode === 'day') {
       this.availablePeriodOptions = [
-        { value: '2026-10-15', label: 'Oct 15, 2026 (Today)' },
-        { value: '2026-10-14', label: 'Oct 14, 2026 (Yesterday)' },
-        { value: '2026-10-13', label: 'Oct 13, 2026' },
-        { value: '2026-10-12', label: 'Oct 12, 2026 (W2 Start)' },
-        { value: '2026-10-09', label: 'Oct 09, 2026 (W1 Completed)' },
-        { value: '2026-10-08', label: 'Oct 08, 2026' },
-        { value: '2026-10-07', label: 'Oct 07, 2026' },
-        { value: '2026-10-06', label: 'Oct 06, 2026' },
-        { value: '2026-10-05', label: 'Oct 05, 2026 (W1 Start)' },
+        { value: '2026-10-15', label: 'Oct/15/2026 (Today)' },
+        { value: '2026-10-14', label: 'Oct/14/2026 (Yesterday)' },
+        { value: '2026-10-13', label: 'Oct/13/2026' },
+        { value: '2026-10-12', label: 'Oct/12/2026 (W2 Start)' },
+        { value: '2026-10-09', label: 'Oct/09/2026 (W1 Completed)' },
+        { value: '2026-10-08', label: 'Oct/08/2026' },
+        { value: '2026-10-07', label: 'Oct/07/2026' },
+        { value: '2026-10-06', label: 'Oct/06/2026' },
+        { value: '2026-10-05', label: 'Oct/05/2026 (W1 Start)' },
         { value: 'all', label: 'All Days' }
       ];
       if (!this.availablePeriodOptions.some(o => o.value === this.currentPeriodSelection)) {
@@ -4984,14 +5035,14 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
         const startStr = starts[0] || '';
         const endStr = dues[dues.length - 1] || dues[0] || '';
         if (startStr && endStr) {
-          timeline = `${startStr} – ${endStr}`;
+          timeline = `${this.formatAppDate(startStr)} – ${this.formatAppDate(endStr)}`;
         } else if (startStr) {
-          timeline = `From ${startStr}`;
+          timeline = `From ${this.formatAppDate(startStr)}`;
         } else {
           timeline = periodLabel;
         }
       } else if (pRel) {
-        timeline = `${pRel.createdDate || '2026-01'} – ${pRel.targetDate || '2026-12'}`;
+        timeline = `${this.formatAppDate(pRel.createdDate || '2026-01-01')} – ${this.formatAppDate(pRel.targetDate || '2026-12-31')}`;
       }
 
       return {
@@ -5363,6 +5414,7 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
   dayWorkLeaveDays: LeaveDayEntry[] = [];
   dayScheduleSlots: DayScheduleSlot[] = [];
   editingSlotId = '';
+  showBreaksAndLeaves = false;
 
   // Overdue popup state
   showOverdueTaskPopup = false;
@@ -6392,6 +6444,35 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
     return `${y}-${m}-${day}`;
   }
 
+  /** Formats a date string or Date object consistently as MMM/DD/YYYY (e.g. Oct/15/2026) */
+  formatAppDate(val: string | Date | null | undefined): string {
+    if (!val) return '';
+    let d: Date;
+    if (val instanceof Date) {
+      d = val;
+    } else if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (!trimmed) return '';
+      const match = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (match) {
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
+        d = new Date(year, month, day);
+      } else {
+        d = new Date(trimmed);
+      }
+    } else {
+      d = new Date(val);
+    }
+    if (isNaN(d.getTime())) return String(val);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthStr = months[d.getMonth()];
+    const dayStr = this.pad(d.getDate());
+    const yearStr = d.getFullYear();
+    return `${monthStr}/${dayStr}/${yearStr}`;
+  }
+
   /** Load previously saved schedule from localStorage for a resource */
   private loadSavedDaySchedule(resource: string): void {
     try {
@@ -6508,12 +6589,7 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
     this.dayWorkCurrentWeekTasks = matching;
 
     // Format week info badge
-    const fmtDisplay = (iso: string) => {
-      const [yy, mm, dd] = iso.split('-').map(Number);
-      const dObj = new Date(yy, mm - 1, dd);
-      return dObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    };
-    this.dayWorkCurrentWeekInfo = `${fmtDisplay(start)} – ${fmtDisplay(end)}`;
+    this.dayWorkCurrentWeekInfo = `${this.formatAppDate(start)} – ${this.formatAppDate(end)}`;
 
     // Check overdue tasks when resource changes
     setTimeout(() => this.checkAndShowOverduePopup(false), 150);
