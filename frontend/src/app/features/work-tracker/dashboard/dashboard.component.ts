@@ -126,6 +126,22 @@ interface OverdueTaskItem {
                 {{ themeService.theme() === 'dark' ? '☀️' : '🌙' }}
               </button>
 
+              <!-- DB Reset Button -->
+              <button
+                id="wt-db-reset-btn"
+                class="dash-db-reset-btn"
+                type="button"
+                (click)="openResetConfirmDialog()"
+                title="Reset all Work Tracker data (tasks, releases, hourly logs)"
+                [disabled]="isResetting"
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="1 4 1 10 7 10"/>
+                  <path d="M3.51 15a9 9 0 1 0 .49-5.51"/>
+                </svg>
+                <span>DB Reset</span>
+              </button>
+
               <div class="user-profile-badge">
                 <div class="user-avatar-circle">M</div>
                 <div class="user-meta">
@@ -270,6 +286,11 @@ interface OverdueTaskItem {
                         </div>
                       </td>
                     </tr>
+                    <tr *ngIf="overviewProjects.length === 0">
+                      <td colspan="6" class="dash-empty-table-cell">
+                        No project status records found. All Work Tracker data is in a clean state.
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -280,7 +301,7 @@ interface OverdueTaskItem {
               <div class="dash-card-header">
                 <h3 class="dash-card-title">Project Timeline / Roadmap</h3>
                 <div class="header-range-tag">
-                  <span>Jan 2025 - Dec 2025</span>
+                  <span>{{ selectedDateRange }}</span>
                   <span class="range-arrow">›</span>
                 </div>
               </div>
@@ -290,7 +311,7 @@ interface OverdueTaskItem {
                 <div class="gantt-header-row">
                   <div class="gantt-project-col">Project</div>
                   <div class="gantt-months-grid">
-                    <div *ngFor="let m of months; let i = index" class="gantt-month-col" [class.is-current-month]="i === 9">
+                    <div *ngFor="let m of months; let i = index" class="gantt-month-col" [class.is-current-month]="isMonthActive(i)">
                       {{ m }}
                     </div>
                   </div>
@@ -318,6 +339,9 @@ interface OverdueTaskItem {
                       </div>
                     </div>
                   </div>
+                  <div *ngIf="roadmapProjects.length === 0" class="dash-empty-chart-box">
+                    <span>No project roadmap data available</span>
+                  </div>
                 </div>
 
                 <!-- Legend Row -->
@@ -335,10 +359,10 @@ interface OverdueTaskItem {
 
           <!-- Bottom Section: 2 Columns (Team Work Summary + Work Analytics) -->
           <div class="dash-row-2col">
-            <!-- Left Card: Team Work Summary (This Week) -->
+            <!-- Left Card: Team Work Summary -->
             <div class="dash-card">
               <div class="dash-card-header">
-                <h3 class="dash-card-title">Team Work Summary (This Week)</h3>
+                <h3 class="dash-card-title">Team Work Summary ({{ getCurrentPeriodLabel() }})</h3>
                 <button class="dash-link-btn" type="button" (click)="onViewDetailsTasks()">View Details</button>
               </div>
               <div class="table-responsive">
@@ -379,6 +403,11 @@ interface OverdueTaskItem {
                           <span class="badge-dot"></span>
                           {{ member.status }}
                         </span>
+                      </td>
+                    </tr>
+                    <tr *ngIf="teamSummary.length === 0">
+                      <td colspan="6" class="dash-empty-table-cell">
+                        No team member records found. All Work Tracker data is in a clean state.
                       </td>
                     </tr>
                   </tbody>
@@ -441,6 +470,9 @@ interface OverdueTaskItem {
                       </div>
                       <span class="proj-comp-pct">{{ p.pct }}%</span>
                     </div>
+                    <div *ngIf="projectCompletions.length === 0" class="dash-empty-chart-box">
+                      <span>No project data available</span>
+                    </div>
                   </div>
                 </div>
 
@@ -457,7 +489,10 @@ interface OverdueTaskItem {
                       </div>
                       <span class="emp-task-count">{{ emp.count }}</span>
                     </div>
-                    <div class="emp-task-scale">
+                    <div *ngIf="employeeTaskCompletions.length === 0" class="dash-empty-chart-box">
+                      <span>No employee data available</span>
+                    </div>
+                    <div class="emp-task-scale" *ngIf="employeeTaskCompletions.length > 0">
                       <span>0</span>
                       <span>2</span>
                       <span>4</span>
@@ -477,7 +512,10 @@ interface OverdueTaskItem {
                     <span class="mini-leg-item"><span class="leg-line-dashed"></span> Tasks Assigned</span>
                   </div>
                   <div class="trends-chart-wrap">
-                    <svg viewBox="0 0 310 110" class="trends-svg">
+                    <div *ngIf="workTrends.length === 0" class="dash-empty-chart-box">
+                      <span>No trend data available</span>
+                    </div>
+                    <svg *ngIf="workTrends.length > 0" viewBox="0 0 310 110" class="trends-svg">
                       <!-- Grid lines -->
                       <line x1="24" y1="20" x2="300" y2="20" stroke="#f1f5f9" stroke-width="1"/>
                       <line x1="24" y1="45" x2="300" y2="45" stroke="#f1f5f9" stroke-width="1"/>
@@ -503,16 +541,16 @@ interface OverdueTaskItem {
                         </text>
                       </g>
                     </svg>
-                    <div class="trends-x-axis">
+                    <div class="trends-x-axis" *ngIf="workTrends.length > 0">
                       <span *ngFor="let pt of workTrends">{{ pt.week }}</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- 5. Hours Spent (This Week) -->
+                <!-- 5. Hours Spent -->
                 <div class="mini-analytic-card">
                   <div class="mini-card-header-row">
-                    <span class="mini-card-title">Hours Spent (This Week)</span>
+                    <span class="mini-card-title">Hours Spent ({{ getCurrentPeriodLabel() }})</span>
                   </div>
                   <div class="mini-legend-row multi-legend">
                     <span class="mini-leg-item"><span class="leg-box bg-cat-frontend"></span> Frontend</span>
@@ -521,14 +559,17 @@ interface OverdueTaskItem {
                     <span class="mini-leg-item"><span class="leg-box bg-cat-paba"></span> PA/BA</span>
                   </div>
                   <div class="stacked-bar-chart-wrap">
-                    <div class="y-axis-labels">
+                    <div *ngIf="hoursSpentTeam.length === 0" class="dash-empty-chart-box">
+                      <span>No hours logged</span>
+                    </div>
+                    <div *ngIf="hoursSpentTeam.length > 0" class="y-axis-labels">
                       <span>40</span>
                       <span>30</span>
                       <span>20</span>
                       <span>10</span>
                       <span>0</span>
                     </div>
-                    <div class="stacked-plot">
+                    <div *ngIf="hoursSpentTeam.length > 0" class="stacked-plot">
                       <div class="bar-grid-line line-40"></div>
                       <div class="bar-grid-line line-30"></div>
                       <div class="bar-grid-line line-20"></div>
@@ -1584,6 +1625,100 @@ interface OverdueTaskItem {
             </div>
           </section>
         </div>
+      }
+
+      <!-- ── DB RESET CONFIRMATION DIALOG ── -->
+      @if (showResetConfirmDialog) {
+      <div class="wt-reset-backdrop" role="presentation" (click)="cancelReset()">
+        <section
+          id="wt-reset-confirm-dialog"
+          class="wt-reset-dialog"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="wtResetDialogTitle"
+          (click)="$event.stopPropagation()"
+        >
+          <!-- Header -->
+          <div class="wt-reset-dialog-header">
+            <div class="wt-reset-icon-ring">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h2 id="wtResetDialogTitle" class="wt-reset-dialog-title">Reset Work Tracker Data?</h2>
+            <button class="wt-reset-close-btn" type="button" (click)="cancelReset()" aria-label="Close">✕</button>
+          </div>
+
+          <!-- Warning body -->
+          <div class="wt-reset-dialog-body">
+            <div class="wt-reset-warning-banner">
+              ⚠️ <strong>This action cannot be undone.</strong>
+            </div>
+            <p class="wt-reset-desc">This will permanently delete <strong>all Work Tracker data</strong> for your account, including:</p>
+            <ul class="wt-reset-list">
+              <li>📋 All developer tasks &amp; weekly status records</li>
+              <li>🚀 All project / release track entries</li>
+              <li>⏱️ All hourly work logs</li>
+              <li>📅 Day Work schedules, leave days &amp; slot history</li>
+              <li>🔔 Overdue-reminder and tracking-mode preferences</li>
+            </ul>
+            <p class="wt-reset-safe-note">
+              ✅ <strong>Preserved:</strong> Application settings, your account, theme, and all other U2Tools module data.
+            </p>
+
+            <!-- Confirmation input -->
+            <div class="wt-reset-confirm-input-wrap">
+              <label class="wt-reset-confirm-label" for="wtResetConfirmInput">
+                Type <strong>RESET</strong> to confirm:
+              </label>
+              <input
+                id="wtResetConfirmInput"
+                class="wt-reset-confirm-input"
+                type="text"
+                [(ngModel)]="resetConfirmText"
+                placeholder="Type RESET here"
+                autocomplete="off"
+                [class.valid]="(resetConfirmText || '').trim().toUpperCase() === 'RESET'"
+              />
+            </div>
+
+            <!-- Result message -->
+            <div
+              *ngIf="resetMessage"
+              class="wt-reset-result-msg"
+              [class.success]="resetMessageType === 'success'"
+              [class.error]="resetMessageType === 'error'"
+            >
+              {{ resetMessage }}
+            </div>
+          </div>
+
+          <!-- Footer actions -->
+          <div class="wt-reset-dialog-footer">
+            <button
+              id="wt-reset-cancel-btn"
+              class="wt-reset-cancel-btn"
+              type="button"
+              (click)="cancelReset()"
+              [disabled]="isResetting"
+            >
+              Cancel
+            </button>
+            <button
+              id="wt-reset-confirm-btn"
+              class="wt-reset-confirm-btn"
+              type="button"
+              (click)="confirmReset()"
+              [disabled]="isResetting || (resetConfirmText || '').trim().toUpperCase() !== 'RESET'"
+            >
+              <span *ngIf="!isResetting">🗑️ Delete All Data</span>
+              <span *ngIf="isResetting">⏳ Resetting…</span>
+            </button>
+          </div>
+        </section>
+      </div>
       }
 
     </div>
@@ -2890,6 +3025,8 @@ interface OverdueTaskItem {
     .status-pill.status-dev { background: #fef3c7; color: #d97706; }
     .status-pill.status-live { background: #dcfce7; color: #16a34a; }
     .status-pill.status-test { background: #d1fae5; color: #059669; }
+    .status-pill.status-blocked { background: #fee2e2; color: #dc2626; }
+    .status-pill.status-planned { background: #f1f5f9; color: #64748b; }
 
     .progress-wrap {
       display: flex;
@@ -3132,7 +3269,17 @@ interface OverdueTaskItem {
       color: #16a34a;
     }
 
+    .team-status-badge.team-status-completed {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
     .team-status-badge.team-status-excellent {
+      background: #dbeafe;
+      color: #2563eb;
+    }
+
+    .team-status-badge.team-status-blocked {
       background: #fee2e2;
       color: #dc2626;
     }
@@ -3140,6 +3287,11 @@ interface OverdueTaskItem {
     .team-status-badge.team-status-dev {
       background: #fef3c7;
       color: #d97706;
+    }
+
+    .team-status-badge.team-status-notasks {
+      background: #f1f5f9;
+      color: #64748b;
     }
 
     /* ─── Work Analytics 2x3 Grid ─── */
@@ -3866,6 +4018,206 @@ interface OverdueTaskItem {
     .overdue-cancel-btn:hover { background: #e2e8f0; color: #1e293b; }
     .overdue-submit-btn { background: linear-gradient(135deg, #ef4444 0%, #ea580c 100%); color: #fff; font-weight: 700; padding: 0.55rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
     .overdue-submit-btn:hover { filter: brightness(1.08); }
+
+    /* ── DB RESET BUTTON ── */
+    .dash-db-reset-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.38rem 0.85rem;
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: all 0.18s;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+      white-space: nowrap;
+    }
+    .dash-db-reset-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45); }
+    .dash-db-reset-btn:active:not(:disabled) { transform: translateY(0); }
+    .dash-db-reset-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* Empty states */
+    .dash-empty-table-cell {
+      text-align: center;
+      padding: 2.5rem 1rem !important;
+      color: var(--text-muted, #94a3b8);
+      font-size: 0.92rem;
+      font-weight: 500;
+    }
+    .dash-empty-chart-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 110px;
+      color: var(--text-muted, #94a3b8);
+      font-size: 0.88rem;
+      font-weight: 500;
+      border-radius: 8px;
+      background: rgba(148, 163, 184, 0.05);
+      border: 1px dashed rgba(148, 163, 184, 0.2);
+      margin: 0.5rem 0;
+    }
+
+    /* ── DB RESET CONFIRMATION DIALOG ── */
+    .wt-reset-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      animation: wtFadeIn 0.18s ease;
+    }
+    @keyframes wtFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .wt-reset-dialog {
+      background: #fff;
+      border-radius: 18px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      animation: wtSlideUp 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes wtSlideUp { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .wt-reset-dialog-header {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 1.25rem 1.4rem 1rem;
+      border-bottom: 1.5px solid #fee2e2;
+      background: linear-gradient(135deg, #fff1f2 0%, #fff5f5 100%);
+    }
+    .wt-reset-icon-ring {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #fee2e2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #dc2626;
+      flex-shrink: 0;
+    }
+    .wt-reset-dialog-title {
+      flex: 1;
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #7f1d1d;
+    }
+    .wt-reset-close-btn {
+      background: none;
+      border: none;
+      font-size: 1rem;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .wt-reset-close-btn:hover { color: #334155; }
+    .wt-reset-dialog-body { padding: 1.25rem 1.4rem; display: flex; flex-direction: column; gap: 0.85rem; }
+    .wt-reset-warning-banner {
+      background: #fef2f2;
+      border: 1.5px solid #fca5a5;
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.88rem;
+      color: #991b1b;
+    }
+    .wt-reset-desc { font-size: 0.88rem; color: #374151; margin: 0; }
+    .wt-reset-list {
+      margin: 0;
+      padding-left: 1.1rem;
+      font-size: 0.85rem;
+      color: #4b5563;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .wt-reset-safe-note {
+      font-size: 0.83rem;
+      color: #15803d;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 7px;
+      padding: 0.55rem 0.85rem;
+      margin: 0;
+    }
+    .wt-reset-confirm-input-wrap { display: flex; flex-direction: column; gap: 0.35rem; }
+    .wt-reset-confirm-label { font-size: 0.83rem; font-weight: 600; color: #374151; }
+    .wt-reset-confirm-input {
+      padding: 0.55rem 0.85rem;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-family: monospace;
+      letter-spacing: 0.08em;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .wt-reset-confirm-input:focus { border-color: #3b82f6; }
+    .wt-reset-confirm-input.valid { border-color: #16a34a; background: #f0fdf4; }
+    .wt-reset-result-msg {
+      padding: 0.55rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .wt-reset-result-msg.success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .wt-reset-result-msg.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .wt-reset-dialog-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.7rem;
+      padding: 1rem 1.4rem;
+      border-top: 1px solid #f1f5f9;
+      background: #f8fafc;
+    }
+    .wt-reset-cancel-btn {
+      padding: 0.55rem 1.3rem;
+      background: #f1f5f9;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .wt-reset-cancel-btn:hover:not(:disabled) { background: #e2e8f0; color: #1e293b; }
+    .wt-reset-cancel-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .wt-reset-confirm-btn {
+      padding: 0.55rem 1.5rem;
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(220, 38, 38, 0.3);
+      transition: all 0.15s;
+    }
+    .wt-reset-confirm-btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+    .wt-reset-confirm-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    body.theme-dark .wt-reset-dialog { background: #1e293b; }
+    body.theme-dark .wt-reset-dialog-header { background: rgba(127, 29, 29, 0.2); border-color: rgba(252, 165, 165, 0.2); }
+    body.theme-dark .wt-reset-dialog-title { color: #fca5a5; }
+    body.theme-dark .wt-reset-desc, body.theme-dark .wt-reset-list { color: #cbd5e1; }
+    body.theme-dark .wt-reset-confirm-input { background: #0f172a; border-color: #475569; color: #e2e8f0; }
+    body.theme-dark .wt-reset-dialog-footer { background: #0f172a; border-color: #334155; }
+    body.theme-dark .wt-reset-cancel-btn { background: #1e293b; border-color: #475569; color: #94a3b8; }
   `]
 })
 export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
@@ -4013,9 +4365,12 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
         { value: '2026-10-15', label: 'Oct 15, 2026 (Today)' },
         { value: '2026-10-14', label: 'Oct 14, 2026 (Yesterday)' },
         { value: '2026-10-13', label: 'Oct 13, 2026' },
-        { value: '2026-10-12', label: 'Oct 12, 2026' },
-        { value: '2026-10-11', label: 'Oct 11, 2026' },
-        { value: '2026-10-10', label: 'Oct 10, 2026' },
+        { value: '2026-10-12', label: 'Oct 12, 2026 (W2 Start)' },
+        { value: '2026-10-09', label: 'Oct 09, 2026 (W1 Completed)' },
+        { value: '2026-10-08', label: 'Oct 08, 2026' },
+        { value: '2026-10-07', label: 'Oct 07, 2026' },
+        { value: '2026-10-06', label: 'Oct 06, 2026' },
+        { value: '2026-10-05', label: 'Oct 05, 2026 (W1 Start)' },
         { value: 'all', label: 'All Days' }
       ];
       if (!this.availablePeriodOptions.some(o => o.value === this.currentPeriodSelection)) {
@@ -4076,6 +4431,11 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
 
   onViewModeChange(): void {
     this.buildAvailablePeriodOptions();
+    if (this.selectedViewMode === 'week') {
+      this.filterWeek.next(this.currentPeriodSelection);
+    } else if (this.currentPeriodSelection === 'all') {
+      this.filterWeek.next('all');
+    }
     if (this.latestTrackerData) {
       this.recomputeDashboardData(this.latestTrackerData);
     }
@@ -4085,6 +4445,8 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
     this.updateSelectedDateRangeText();
     if (this.selectedViewMode === 'week') {
       this.filterWeek.next(this.currentPeriodSelection);
+    } else if (this.currentPeriodSelection === 'all') {
+      this.filterWeek.next('all');
     }
     if (this.latestTrackerData) {
       this.recomputeDashboardData(this.latestTrackerData);
@@ -4114,6 +4476,8 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
     this.currentPeriodSelection = this.availablePeriodOptions[nextIndex].value;
     if (this.selectedViewMode === 'week') {
       this.filterWeek.next(this.currentPeriodSelection);
+    } else if (this.currentPeriodSelection === 'all') {
+      this.filterWeek.next('all');
     }
     this.onPeriodSelectionChange();
   }
@@ -4141,6 +4505,26 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
     const opt = this.availablePeriodOptions.find(o => o.value === this.currentPeriodSelection) ||
       this.weekPeriodOptions.find(o => o.value === this.currentPeriodSelection);
     this.selectedDateRange = opt ? opt.label : this.currentPeriodSelection;
+  }
+
+  isMonthActive(monthIndex: number): boolean {
+    if (this.selectedViewMode === 'month') {
+      if (this.currentPeriodSelection === 'all') return true;
+      return Number(this.currentPeriodSelection) - 1 === monthIndex;
+    }
+    if (this.selectedViewMode === 'quarter') {
+      const q = this.currentPeriodSelection;
+      if (q === 'Q1') return monthIndex >= 0 && monthIndex <= 2;
+      if (q === 'Q2') return monthIndex >= 3 && monthIndex <= 5;
+      if (q === 'Q3') return monthIndex >= 6 && monthIndex <= 8;
+      if (q === 'Q4') return monthIndex >= 9 && monthIndex <= 11;
+      return true;
+    }
+    if (this.selectedViewMode === 'half-year') {
+      if (this.currentPeriodSelection === 'all') return true;
+      return this.currentPeriodSelection === 'H1' ? monthIndex < 6 : monthIndex >= 6;
+    }
+    return monthIndex === 9; // Default to October
   }
 
   // Column Visibility Handlers
@@ -4222,25 +4606,51 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   getTasksForCurrentPeriod(tasks: DeveloperTask[]): DeveloperTask[] {
-    if (this.currentPeriodSelection === 'all') {
+    if (!this.currentPeriodSelection || this.currentPeriodSelection === 'all') {
       return tasks;
     }
 
     if (this.selectedViewMode === 'week') {
       const target = this.currentPeriodSelection.trim().toUpperCase();
-      return tasks.filter(t => (t.week || '').trim().toUpperCase() === target);
+      const weekRanges: Record<string, { start: string; end: string }> = {
+        'W1': { start: '2026-10-05', end: '2026-10-11' },
+        'W2': { start: '2026-10-12', end: '2026-10-18' },
+        'W3': { start: '2026-10-19', end: '2026-10-25' }
+      };
+      const range = weekRanges[target];
+      return tasks.filter(t => {
+        if ((t.week || '').trim().toUpperCase() === target) return true;
+        if (range) {
+          const s = t.startDate || t.dueDate || '';
+          const e = t.dueDate || t.startDate || '';
+          if (s && s <= range.end && e >= range.start) return true;
+        }
+        return false;
+      });
     }
 
     if (this.selectedViewMode === 'day') {
-      return tasks.filter(t => t.startDate === this.currentPeriodSelection || t.dueDate === this.currentPeriodSelection);
+      const targetDay = this.currentPeriodSelection;
+      return tasks.filter(t => {
+        if (t.startDate === targetDay || t.dueDate === targetDay || t.completedDate === targetDay) return true;
+        if (t.startDate && t.dueDate && t.startDate <= targetDay && t.dueDate >= targetDay) return true;
+        // Check week correlation for mock data days
+        if (targetDay >= '2026-10-05' && targetDay <= '2026-10-11' && t.week === 'W1') return true;
+        if (targetDay >= '2026-10-12' && targetDay <= '2026-10-18' && t.week === 'W2') return true;
+        if (targetDay >= '2026-10-19' && targetDay <= '2026-10-25' && t.week === 'W3') return true;
+        return false;
+      });
     }
 
     if (this.selectedViewMode === 'month') {
+      const targetMonth = this.currentPeriodSelection; // '01' - '12'
       return tasks.filter(t => {
-        const d = t.startDate || t.dueDate || '';
-        if (!d) return false;
-        const m = d.split('-')[1];
-        return m === this.currentPeriodSelection;
+        const s = t.startDate || '';
+        const d = t.dueDate || '';
+        const c = t.completedDate || '';
+        if (s.split('-')[1] === targetMonth || d.split('-')[1] === targetMonth || c.split('-')[1] === targetMonth) return true;
+        if (targetMonth === '10' && ['W1', 'W2', 'W3'].includes(t.week || '')) return true;
+        return false;
       });
     }
 
@@ -4253,31 +4663,103 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
       };
       const allowed = qMap[this.currentPeriodSelection] || [];
       return tasks.filter(t => {
-        const d = t.startDate || t.dueDate || '';
-        if (!d) return false;
-        const m = d.split('-')[1];
-        return allowed.includes(m);
+        const s = t.startDate?.split('-')[1] || '';
+        const d = t.dueDate?.split('-')[1] || '';
+        const c = t.completedDate?.split('-')[1] || '';
+        if (allowed.includes(s) || allowed.includes(d) || allowed.includes(c)) return true;
+        if (this.currentPeriodSelection === 'Q4' && ['W1', 'W2', 'W3'].includes(t.week || '')) return true;
+        return false;
       });
     }
 
     if (this.selectedViewMode === 'half-year') {
       const allowed = this.currentPeriodSelection === 'H1' ? ['01', '02', '03', '04', '05', '06'] : ['07', '08', '09', '10', '11', '12'];
       return tasks.filter(t => {
-        const d = t.startDate || t.dueDate || '';
-        if (!d) return false;
-        const m = d.split('-')[1];
-        return allowed.includes(m);
+        const s = t.startDate?.split('-')[1] || '';
+        const d = t.dueDate?.split('-')[1] || '';
+        const c = t.completedDate?.split('-')[1] || '';
+        if (allowed.includes(s) || allowed.includes(d) || allowed.includes(c)) return true;
+        if (this.currentPeriodSelection === 'H2' && ['W1', 'W2', 'W3'].includes(t.week || '')) return true;
+        return false;
       });
     }
 
     if (this.selectedViewMode === 'year') {
+      const yr = this.currentPeriodSelection;
       return tasks.filter(t => {
-        const d = t.startDate || t.dueDate || '';
-        return d.startsWith(this.currentPeriodSelection);
+        const s = t.startDate || '';
+        const d = t.dueDate || '';
+        if (s.startsWith(yr) || d.startsWith(yr) || yr === '2026') return true;
+        return false;
       });
     }
 
     return tasks;
+  }
+
+  getReleasesForCurrentPeriod(releases: ReleaseTrack[]): ReleaseTrack[] {
+    if (!this.currentPeriodSelection || this.currentPeriodSelection === 'all') {
+      return releases;
+    }
+
+    if (this.selectedViewMode === 'week') {
+      const weekRanges: Record<string, { start: string; end: string }> = {
+        'W1': { start: '2026-10-05', end: '2026-10-11' },
+        'W2': { start: '2026-10-12', end: '2026-10-18' },
+        'W3': { start: '2026-10-19', end: '2026-10-25' }
+      };
+      const range = weekRanges[this.currentPeriodSelection.trim().toUpperCase()];
+      if (!range) return releases;
+      const matched = releases.filter(r => {
+        const c = r.createdDate || '2026-01-01';
+        const t = r.targetDate || '2026-12-31';
+        return c <= range.end && t >= range.start;
+      });
+      return matched.length ? matched : releases;
+    }
+
+    if (this.selectedViewMode === 'day') {
+      const day = this.currentPeriodSelection;
+      const matched = releases.filter(r => {
+        const c = r.createdDate || '2026-01-01';
+        const t = r.targetDate || '2026-12-31';
+        return c <= day && t >= day;
+      });
+      return matched.length ? matched : releases;
+    }
+
+    if (this.selectedViewMode === 'month') {
+      const mStr = this.currentPeriodSelection;
+      const matched = releases.filter(r => {
+        const targetMonth = (r.targetDate || '').split('-')[1];
+        const createdMonth = (r.createdDate || '').split('-')[1];
+        return targetMonth === mStr || createdMonth === mStr || (r.createdDate && r.targetDate && r.createdDate <= `2026-${mStr}-28` && r.targetDate >= `2026-${mStr}-01`);
+      });
+      return matched.length ? matched : releases;
+    }
+
+    if (this.selectedViewMode === 'quarter') {
+      const qMap: Record<string, string[]> = {
+        'Q1': ['01', '02', '03'],
+        'Q2': ['04', '05', '06'],
+        'Q3': ['07', '08', '09'],
+        'Q4': ['10', '11', '12']
+      };
+      const allowed = qMap[this.currentPeriodSelection] || [];
+      const matched = releases.filter(r => {
+        const m = (r.targetDate || r.createdDate || '').split('-')[1];
+        return allowed.includes(m);
+      });
+      return matched.length ? matched : releases;
+    }
+
+    if (this.selectedViewMode === 'year') {
+      const yr = this.currentPeriodSelection;
+      const matched = releases.filter(r => (r.targetDate || '').startsWith(yr) || (r.createdDate || '').startsWith(yr) || yr === '2026');
+      return matched.length ? matched : releases;
+    }
+
+    return releases;
   }
 
   onViewAllProjects(): void {
@@ -4314,18 +4796,20 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
       ...allReleases.map(r => r.category || r.module || '').filter(Boolean)
     ])).filter(p => p && p.trim() !== '').sort();
 
-    const baseProjects = ['U2Tools', 'Standup Note', 'S2App ECommerce', 'MatchGuide', 'Dweber', 'Excelendsite'];
-    this.projectList = Array.from(new Set([...foundProjects, ...baseProjects])).sort();
+    this.projectList = foundProjects;
+    if (this.projectList.length === 0 || !this.projectList.includes(this.selectedProjectFilter)) {
+      this.selectedProjectFilter = 'All Projects';
+    }
 
     // Filter tasks and releases by selectedProjectFilter if not 'All Projects'
     const isAll = this.selectedProjectFilter === 'All Projects';
     const filterProj = this.selectedProjectFilter;
 
-    const filteredTasks = isAll
+    const projectTasks = isAll
       ? allTasks
       : allTasks.filter(t => t.projectName?.toLowerCase() === filterProj.toLowerCase());
 
-    const filteredReleases = isAll
+    const projectReleases = isAll
       ? allReleases
       : allReleases.filter(r =>
         (r.title && r.title.toLowerCase().includes(filterProj.toLowerCase())) ||
@@ -4333,25 +4817,37 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
         (r.tags && r.tags.toLowerCase().includes(filterProj.toLowerCase()))
       );
 
-    // 2. KPI: Total Employees
+    // Apply period/date filter consistently across the whole dashboard
+    const periodTasks = this.getTasksForCurrentPeriod(projectTasks);
+    const periodReleases = this.getReleasesForCurrentPeriod(projectReleases);
+    const periodLabel = this.getCurrentPeriodLabel();
+
+    // 2. KPI: Total Employees (Active in the selected period)
     const empSet = new Set<string>();
-    filteredTasks.forEach(t => { if (t.resourceName) empSet.add(t.resourceName); });
-    filteredReleases.forEach(r => { if (r.assignedTo) empSet.add(r.assignedTo); });
-    if (isAll && empSet.size < 5) {
-      ['Maniraj', 'Vamsi', 'Arun', 'Priya', 'Karthik', 'Rohit', 'Erika', 'Bob', 'Karina'].forEach(e => empSet.add(e));
-    }
-    this.kpiTotalEmployees = empSet.size || 1;
-    this.kpiActiveEmployees = Math.max(1, Math.round(this.kpiTotalEmployees * 0.75));
-    this.kpiEmployeesSubtext = isAll ? 'Across all projects' : `In ${filterProj}`;
+    periodTasks.forEach(t => { if (t.resourceName) empSet.add(t.resourceName); });
+    periodReleases.forEach(r => { if (r.assignedTo) empSet.add(r.assignedTo); });
 
-    // 3. KPI: Total Tasks
-    this.kpiTotalTasks = filteredTasks.length;
-    const completedTasksCount = filteredTasks.filter(t => t.status === 'Completed' || t.progress === 100).length;
+    this.kpiTotalEmployees = empSet.size;
+    const activeEmpSet = new Set<string>();
+    periodTasks.filter(t => t.status !== 'Completed' && (t.progress || 0) < 100).forEach(t => {
+      if (t.resourceName) activeEmpSet.add(t.resourceName);
+    });
+    this.kpiActiveEmployees = activeEmpSet.size;
+    this.kpiEmployeesSubtext = periodTasks.length === 0 && periodReleases.length === 0
+      ? 'No active employees'
+      : (isAll ? `Active in ${periodLabel}` : `In ${filterProj} (${periodLabel})`);
+
+    // 3. KPI: Total Tasks (Filtered by period & project)
+    this.kpiTotalTasks = periodTasks.length;
+    const completedTasksCount = periodTasks.filter(t => t.status === 'Completed' || t.progress === 100).length;
+    const inProgressTasksCount = periodTasks.filter(t => t.status === 'In Progress' || ((t.progress || 0) > 0 && (t.progress || 0) < 100)).length;
+    const pendingTasksCount = periodTasks.filter(t => t.status === 'Pending' || t.status === 'Blocked' || (t.progress || 0) === 0).length;
     this.kpiCompletedTasks = completedTasksCount;
-    this.kpiTasksSubtext = `${completedTasksCount} completed`;
+    this.kpiTasksSubtext = this.kpiTotalTasks === 0
+      ? '0 completed • 0 in progress • 0 pending'
+      : `${completedTasksCount} completed • ${inProgressTasksCount} in progress • ${pendingTasksCount} pending`;
 
-    // 4. KPI: Total Hours Logged (based on total sum of hours on the selected period/week)
-    const periodTasks = this.getTasksForCurrentPeriod(filteredTasks);
+    // 4. KPI: Total Hours Logged (based on total sum of hours on the selected period)
     const sumHours = periodTasks.reduce((acc, t) => {
       if (typeof t.hours === 'number' && !isNaN(t.hours)) {
         return acc + t.hours;
@@ -4360,66 +4856,103 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
       return acc + multiplier;
     }, 0);
     this.kpiTotalHours = Math.round(sumHours);
-    this.kpiHoursTrend = Math.min(100, Math.round((completedTasksCount / Math.max(this.kpiTotalTasks, 1)) * 15 + 5));
-    this.kpiHoursSubtext = `Selected: ${this.getCurrentPeriodLabel()} (${periodTasks.length} tasks)`;
+    this.kpiHoursTrend = this.kpiTotalTasks > 0
+      ? Math.round((completedTasksCount / this.kpiTotalTasks) * 100)
+      : 0;
+    this.kpiHoursSubtext = this.kpiTotalTasks === 0
+      ? 'No logged hours'
+      : `Selected: ${periodLabel} (${periodTasks.length} tasks)`;
 
-    // 5. KPI: Task Completion %
+    // 5. KPI: Task Completion % (Filtered by period & project)
     if (this.kpiTotalTasks > 0) {
-      const sumProgress = filteredTasks.reduce((acc, t) => acc + (t.progress || 0), 0);
+      const sumProgress = periodTasks.reduce((acc, t) => acc + (t.progress || 0), 0);
       this.kpiTaskCompletionPct = Math.round(sumProgress / this.kpiTotalTasks);
     } else {
       this.kpiTaskCompletionPct = 0;
     }
-    this.kpiCompletionTrend = Math.max(4, Math.round(this.kpiTaskCompletionPct * 0.1));
-    this.kpiCompletionSubtext = isAll ? 'Across all active sprints' : `Sprint completion for ${filterProj}`;
+    this.kpiCompletionTrend = Math.round(this.kpiTaskCompletionPct * 0.1);
+    this.kpiCompletionSubtext = this.kpiTotalTasks === 0
+      ? '0% completed'
+      : (isAll ? `Sprint completion for ${periodLabel}` : `${filterProj} (${periodLabel}) • ${completedTasksCount}/${this.kpiTotalTasks} completed`);
 
-    // 6. KPI: Active Projects
-    const allProjNames = Array.from(new Set(allTasks.map(t => t.projectName).filter(Boolean)));
-    const activeProjs = allProjNames.filter(p => {
-      const pTasks = allTasks.filter(t => t.projectName === p);
-      return pTasks.some(t => t.status !== 'Completed' && t.progress < 100);
+    // 6. KPI: Active Projects (Filtered by period)
+    const periodProjNames = Array.from(new Set(periodTasks.map(t => t.projectName).filter(Boolean)));
+    const activeProjs = periodProjNames.filter(p => {
+      const pTasks = periodTasks.filter(t => t.projectName === p);
+      return pTasks.some(t => t.status !== 'Completed' && (t.progress || 0) < 100);
     });
-    const liveProjs = allProjNames.filter(p => {
-      const pTasks = allTasks.filter(t => t.projectName === p);
-      return pTasks.length > 0 && pTasks.every(t => t.status === 'Completed' || t.progress === 100);
+    const liveProjs = periodProjNames.filter(p => {
+      const pTasks = periodTasks.filter(t => t.projectName === p);
+      return pTasks.length > 0 && pTasks.every(t => t.status === 'Completed' || (t.progress || 0) === 100);
     });
-    this.kpiActiveProjects = isAll ? (allProjNames.length || this.projectList.length) : 1;
-    this.kpiNewProjects = Math.max(1, activeProjs.length);
-    this.kpiProjectsSubtext = `${Math.max(liveProjs.length, 2)} Production  |  ${Math.max(activeProjs.length, 4)} In Progress`;
+    this.kpiActiveProjects = isAll ? periodProjNames.length : (periodProjNames.length > 0 ? 1 : 0);
+    this.kpiNewProjects = activeProjs.length;
+    this.kpiProjectsSubtext = `${liveProjs.length} Completed  |  ${activeProjs.length} In Progress`;
 
-    // 7. Middle Section: Project Status Overview Table
-    const projectsToDisplay = isAll ? this.projectList : [filterProj];
+    // 7. Middle Section: Project Status Overview Table (Computed using period-filtered data)
+    const projectsToDisplay = this.projectList.length > 0 ? (isAll ? this.projectList : [filterProj]) : [];
     this.overviewProjects = projectsToDisplay.map((pName, idx) => {
-      const pTasks = allTasks.filter(t => t.projectName?.toLowerCase() === pName.toLowerCase());
-      const pRel = allReleases.find(r =>
+      const pTasks = periodTasks.filter(t => t.projectName?.toLowerCase() === pName.toLowerCase());
+      const pRel = periodReleases.find(r =>
         (r.title && r.title.toLowerCase().includes(pName.toLowerCase())) ||
         (r.category && r.category.toLowerCase().includes(pName.toLowerCase())) ||
         (r.tags && r.tags.toLowerCase().includes(pName.toLowerCase()))
       );
 
       let avgProg = 0;
+      let stat = 'No Tasks in Period';
+      let env = 'Dev';
+
       if (pTasks.length > 0) {
         avgProg = Math.round(pTasks.reduce((acc, t) => acc + (t.progress || 0), 0) / pTasks.length);
+        const allDone = pTasks.every(t => t.status === 'Completed' || t.progress === 100);
+        const hasBlocked = pTasks.some(t => t.status === 'Blocked');
+        if (allDone || avgProg === 100) {
+          stat = 'Live';
+          env = 'Production';
+        } else if (hasBlocked) {
+          stat = 'Blocked';
+          env = 'Dev';
+        } else if (avgProg >= 80) {
+          stat = 'Testing Complete';
+          env = 'Beta';
+        } else if (avgProg >= 60) {
+          stat = 'UAT in Progress';
+          env = 'Alpha';
+        } else if (avgProg > 0) {
+          stat = 'Development';
+          env = 'Dev';
+        } else {
+          stat = 'Planned';
+          env = 'Dev';
+        }
       } else if (pRel) {
-        avgProg = pRel.progress || 50;
+        avgProg = pRel.progress || 0;
+        env = pRel.environment || (pRel.status === 'Released' ? 'Production' : 'Beta');
+        stat = pRel.status || 'Development';
       } else {
-        avgProg = 70;
+        avgProg = 0;
+        stat = 'No Tasks in Period';
+        env = 'Dev';
       }
 
-      let env = pRel?.status === 'Released' ? 'Production' : (pRel?.status === 'Testing' ? 'Beta' : (pRel?.status === 'Staging' ? 'Alpha' : 'Dev'));
-      let stat = 'Development';
-      if (avgProg >= 100 || pRel?.status === 'Released') {
-        stat = 'Live';
-        env = 'Production';
-      } else if (avgProg >= 80) {
-        stat = 'Testing Complete';
-      } else if (avgProg >= 65) {
-        stat = 'UAT in Progress';
-      } else {
-        stat = 'Development';
+      // Build period-specific timeline
+      let timeline = 'No active tasks';
+      if (pTasks.length > 0) {
+        const starts = pTasks.map(t => t.startDate).filter(Boolean).sort();
+        const dues = pTasks.map(t => t.dueDate || t.completedDate).filter(Boolean).sort();
+        const startStr = starts[0] || '';
+        const endStr = dues[dues.length - 1] || dues[0] || '';
+        if (startStr && endStr) {
+          timeline = `${startStr} – ${endStr}`;
+        } else if (startStr) {
+          timeline = `From ${startStr}`;
+        } else {
+          timeline = periodLabel;
+        }
+      } else if (pRel) {
+        timeline = `${pRel.createdDate || '2026-01'} – ${pRel.targetDate || '2026-12'}`;
       }
-
-      const timeline = pRel ? `${pRel.createdDate?.substring(0, 7) || '2026-01'} - ${pRel.targetDate?.substring(0, 7) || '2026-12'}` : 'Jan 2026 - Dec 2026';
 
       return {
         id: idx + 1,
@@ -4431,40 +4964,57 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
       };
     });
 
-    // 8. Project Timeline / Roadmap (Gantt Chart)
-    const colorCycle = ['blue', 'orange', 'green', 'purple', 'pink', 'teal'];
-    this.roadmapProjects = projectsToDisplay.map((pName, idx) => {
-      const pOverview = this.overviewProjects.find(p => p.name === pName);
-      const prog = pOverview ? pOverview.progress : 60;
+    // If All Projects selected, sort projects with active tasks in this period first
+    if (isAll && this.overviewProjects.length > 0) {
+      this.overviewProjects.sort((a, b) => {
+        const aHas = periodTasks.some(t => t.projectName?.toLowerCase() === a.name.toLowerCase());
+        const bHas = periodTasks.some(t => t.projectName?.toLowerCase() === b.name.toLowerCase());
+        if (aHas && !bHas) return -1;
+        if (!aHas && bHas) return 1;
+        return b.progress - a.progress;
+      });
+      this.overviewProjects.forEach((p, i) => p.id = i + 1);
+    }
 
-      const devPct = Math.min(Math.max(Math.round(prog * 0.4), 25), 50);
-      const testPct = Math.min(Math.max(Math.round(prog * 0.35), 20), 40);
-      const uatPct = Math.max(10, 100 - devPct - testPct);
+    // 8. Project Timeline / Roadmap (Gantt Chart - Reflects period project progress)
+    const colorCycle = ['blue', 'orange', 'green', 'purple', 'pink', 'teal'];
+    this.roadmapProjects = this.overviewProjects.map((p, idx) => {
+      const prog = p.progress;
+      const devPct = Math.min(Math.max(Math.round(prog * 0.4), prog > 0 ? 25 : 0), 50);
+      const testPct = Math.min(Math.max(Math.round(prog * 0.35), prog > 50 ? 20 : 0), 40);
+      const uatPct = prog > 0 ? Math.max(10, 100 - devPct - testPct) : 0;
 
       return {
-        name: pName,
+        name: p.name,
         leftPct: (idx * 5.5) % 25,
-        widthPct: Math.min(100, Math.max(50, 100 - ((idx * 6) % 35))),
+        widthPct: prog > 0 ? Math.min(100, Math.max(40, 100 - ((idx * 6) % 35))) : 15,
         colorClass: colorCycle[idx % colorCycle.length],
-        segments: [
+        segments: prog > 0 ? [
           { label: 'Dev', widthPct: devPct },
           { label: 'Testing', widthPct: testPct },
           { label: 'UAT', widthPct: uatPct }
+        ] : [
+          { label: 'Planned', widthPct: 100 }
         ]
       };
     });
 
-    // 9. Team Work Summary (This Week)
+    // 9. Team Work Summary (Filtered by selected period)
     const teamMemberNames = Array.from(empSet);
-    this.teamSummary = teamMemberNames.map(name => {
-      const memberTasks = filteredTasks.filter(t => t.resourceName === name);
-      const tasksWorked = memberTasks.length > 0 ? memberTasks.length : (isAll ? 3 : 1);
+    const membersToProcess = teamMemberNames;
+
+    this.teamSummary = membersToProcess.map(name => {
+      const memberTasks = periodTasks.filter(t => t.resourceName === name);
+      const tasksWorked = memberTasks.length;
       const completed = memberTasks.filter(t => t.status === 'Completed' || t.progress === 100).length;
-      const compPct = memberTasks.length > 0 ? Math.round((completed / memberTasks.length) * 100) : 75;
-      const hours = memberTasks.reduce((acc, t) => acc + (t.size === 'L' ? 8 : t.size === 'S' ? 4 : 6), 0) || (tasksWorked * 5);
+      const compPct = tasksWorked > 0 ? Math.round((completed / tasksWorked) * 100) : 0;
+      const hours = memberTasks.reduce((acc, t) => {
+        if (typeof t.hours === 'number' && !isNaN(t.hours)) return acc + t.hours;
+        return acc + (t.size === 'L' ? 8 : t.size === 'S' ? 4 : 6);
+      }, 0);
 
       let role = 'Software Engineer';
-      const sample = memberTasks[0];
+      const sample = memberTasks[0] || allTasks.find(t => t.resourceName === name);
       if (sample) {
         const str = `${sample.taskType} ${sample.module} ${sample.tags}`.toLowerCase();
         if (str.includes('front') || str.includes('ui') || str.includes('angular')) role = 'Frontend';
@@ -4473,18 +5023,14 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
         else if (str.includes('arch') || str.includes('core')) role = 'Technical Architect';
         else if (str.includes('paba') || str.includes('analytics') || str.includes('spec')) role = 'PA/BA';
         else if (str.includes('k8s') || str.includes('devops') || str.includes('cloud')) role = 'DevOps';
-      } else {
-        if (name === 'Maniraj' || name === 'Rohit') role = 'Frontend';
-        else if (name === 'Arun' || name === 'Karina') role = 'Backend';
-        else if (name === 'Vamsi') role = 'Technical Architect';
-        else if (name === 'Priya' || name === 'Bob') role = 'Testing';
-        else if (name === 'Karthik' || name === 'Erika') role = 'PA/BA';
       }
 
       let status = 'On Track';
-      if (memberTasks.some(t => t.status === 'Blocked')) status = 'Development';
-      else if (compPct >= 85) status = 'Excellent';
-      else if (compPct >= 60) status = 'On Track';
+      if (tasksWorked === 0) status = 'No Tasks';
+      else if (memberTasks.some(t => t.status === 'Blocked')) status = 'Blocked';
+      else if (compPct === 100) status = 'Completed';
+      else if (compPct >= 80) status = 'Excellent';
+      else if (compPct >= 50 || memberTasks.some(t => t.status === 'In Progress')) status = 'On Track';
       else status = 'Development';
 
       const avatarEmoji = role.includes('Frontend') ? '👨‍💻' : (role.includes('Backend') ? '🧑‍💻' : (role.includes('Architect') ? '👨‍💼' : (role.includes('Testing') ? '👩‍💻' : '👨‍💼')));
@@ -4500,21 +5046,41 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
       };
     });
 
-    // 10. Work Analytics:
-    // Chart 1: Weekly Task Completion
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
-    filteredTasks.forEach((t, i) => {
-      dayCounts[i % 7] += (t.status === 'Completed' || t.progress >= 70) ? 6 : 3;
-    });
-    const maxDayVal = Math.max(...dayCounts, 10);
-    this.weeklyCompletionDays = dayNames.map((day, i) => ({
-      day,
-      val: Math.max(dayCounts[i], 12 + ((i * 5) % 20)),
-      heightPct: Math.min(100, Math.round((Math.max(dayCounts[i], 12 + ((i * 5) % 20)) / Math.max(maxDayVal, 40)) * 100))
-    }));
+    // Sort team summary: active contributors with tasks in period first
+    if (this.teamSummary.length > 0) {
+      this.teamSummary.sort((a, b) => b.tasksWorked - a.tasksWorked || b.hoursSpent - a.hoursSpent);
+    }
 
-    // Chart 2: Project Completion
+    // 10. Work Analytics (6 charts calculated from filtered period data):
+    // Chart 1: Weekly Task Completion (Day-by-day counts for period tasks)
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    if (periodTasks.length === 0) {
+      this.weeklyCompletionDays = dayNames.map(day => ({
+        day,
+        val: 0,
+        heightPct: 0
+      }));
+    } else {
+      const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+      periodTasks.forEach(t => {
+        const dateStr = t.completedDate || t.dueDate || t.startDate;
+        if (dateStr) {
+          const d = new Date(dateStr + 'T00:00:00');
+          const dayIdx = (d.getDay() + 6) % 7; // Mon=0, Sun=6
+          dayCounts[dayIdx] += (t.status === 'Completed' || (t.progress || 0) >= 80) ? 6 : (t.progress > 0 ? 4 : 2);
+        } else {
+          dayCounts[0] += 2;
+        }
+      });
+      const maxDayVal = Math.max(...dayCounts, 10);
+      this.weeklyCompletionDays = dayNames.map((day, i) => ({
+        day,
+        val: dayCounts[i],
+        heightPct: Math.min(100, Math.round((dayCounts[i] / maxDayVal) * 100))
+      }));
+    }
+
+    // Chart 2: Project Completion (Reflects current period progress)
     const projColors: Record<string, string> = {
       'U2Tools': '#3b82f6',
       'Standup Note': '#f97316',
@@ -4529,33 +5095,42 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
       color: projColors[p.name] || colorCycle[idx % colorCycle.length]
     }));
 
-    // Chart 3: Employee Task Completion
-    const maxEmpTasks = Math.max(...this.teamSummary.map(m => m.tasksWorked), 5);
-    this.employeeTaskCompletions = this.teamSummary.slice(0, 6).map(m => ({
+    // Chart 3: Employee Task Completion (Reflects tasks in this period)
+    const activeTeam = this.teamSummary.filter(m => m.tasksWorked > 0);
+    const displayTeam = activeTeam.length > 0 ? activeTeam : this.teamSummary;
+    const maxEmpTasks = Math.max(...displayTeam.map(m => m.tasksWorked), 1);
+    this.employeeTaskCompletions = displayTeam.slice(0, 6).map(m => ({
       name: m.name,
       count: m.tasksWorked,
       widthPct: Math.min(100, Math.round((m.tasksWorked / maxEmpTasks) * 100))
     }));
 
-    // Chart 4: Work Trends (Tasks Completed vs Assigned across W1-W3)
-    const weeks = ['W1', 'W2', 'W3'];
-    const trendPts: Array<{ week: string; completed: number; assigned: number; x: number; y: number; assignedY: number }> = [];
-    weeks.forEach((w, idx) => {
-      const wTasks = allTasks.filter(t => t.week === w);
-      const assigned = Math.max(wTasks.length * 3, 20 + idx * 8);
-      const completed = Math.max(wTasks.filter(t => t.status === 'Completed' || t.progress >= 80).length * 4, 16 + idx * 10);
+    // Chart 4: Work Trends (Tasks Completed vs Assigned across W1-W3 for filtered project)
+    if (projectTasks.length === 0) {
+      this.workTrends = [];
+      this.workTrendsAssignedPath = '';
+      this.workTrendsCompletedPath = '';
+    } else {
+      const weeks = ['W1', 'W2', 'W3'];
+      const trendPts: Array<{ week: string; completed: number; assigned: number; x: number; y: number; assignedY: number }> = [];
+      const maxTrendTasks = Math.max(...weeks.map(wk => projectTasks.filter(t => t.week === wk).length), 15);
+      weeks.forEach((w, idx) => {
+        const wTasks = projectTasks.filter(t => t.week === w);
+        const assigned = wTasks.length;
+        const completed = wTasks.filter(t => t.status === 'Completed' || (t.progress || 0) >= 80).length;
 
-      const x = 32 + idx * 110;
-      const y = Math.max(20, Math.min(95, 95 - (completed / 60) * 70));
-      const assignedY = Math.max(20, Math.min(95, 95 - (assigned / 60) * 70));
-      trendPts.push({ week: w, completed, assigned, x, y, assignedY });
-    });
-    this.workTrends = trendPts;
-    this.workTrendsAssignedPath = trendPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x + 12},${p.assignedY}`).join(' ');
-    this.workTrendsCompletedPath = trendPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x + 12},${p.y}`).join(' ');
+        const x = 32 + idx * 110;
+        const y = Math.max(20, Math.min(95, 95 - (completed / maxTrendTasks) * 70));
+        const assignedY = Math.max(20, Math.min(95, 95 - (assigned / maxTrendTasks) * 70));
+        trendPts.push({ week: w, completed, assigned, x, y, assignedY });
+      });
+      this.workTrends = trendPts;
+      this.workTrendsAssignedPath = trendPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x + 12},${p.assignedY}`).join(' ');
+      this.workTrendsCompletedPath = trendPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x + 12},${p.y}`).join(' ');
+    }
 
-    // Chart 5: Hours Spent Team
-    this.hoursSpentTeam = this.teamSummary.slice(0, 6).map(m => {
+    // Chart 5: Hours Spent Team (Breakdown for period)
+    this.hoursSpentTeam = displayTeam.slice(0, 6).map(m => {
       const tot = m.hoursSpent;
       let f = 0, b = 0, t = 0, p = 0;
       if (m.role.includes('Frontend')) { f = Math.round(tot * 0.65); b = Math.round(tot * 0.15); t = Math.round(tot * 0.1); p = Math.round(tot * 0.1); }
@@ -4565,29 +5140,52 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
       else { p = Math.round(tot * 0.65); f = Math.round(tot * 0.1); b = Math.round(tot * 0.15); t = Math.round(tot * 0.1); }
       return { name: m.name, total: tot, f, b, t, p };
     });
-    this.maxHoursTeam = Math.max(...this.hoursSpentTeam.map(h => h.total), 40);
+    this.maxHoursTeam = Math.max(...this.hoursSpentTeam.map(h => h.total), 0) || 1;
 
-    // Chart 6: Monthly & Quarterly Completion
-    this.monthlyCompletions = [
-      { month: 'Jul', pct: 65, heightPct: 65 },
-      { month: 'Aug', pct: 75, heightPct: 75 },
-      { month: 'Sep', pct: 85, heightPct: 85 },
-      { month: 'Oct', pct: this.kpiTaskCompletionPct, heightPct: this.kpiTaskCompletionPct }
-    ];
-    this.quarterlyCompletions = [
-      { quarter: 'Q1', pct: 70, heightPct: 70 },
-      { quarter: 'Q2', pct: 78, heightPct: 78 },
-      { quarter: 'Q3', pct: 86, heightPct: 86 },
-      { quarter: 'Q4', pct: Math.min(100, Math.round(this.kpiTaskCompletionPct * 1.05)), heightPct: Math.min(100, Math.round(this.kpiTaskCompletionPct * 1.05)) }
-    ];
+    // Chart 6: Monthly & Quarterly Completion (Reflects period task rates)
+    if (projectTasks.length === 0) {
+      this.monthlyCompletions = [
+        { month: 'Jul', pct: 0, heightPct: 0 },
+        { month: 'Aug', pct: 0, heightPct: 0 },
+        { month: 'Sep', pct: 0, heightPct: 0 },
+        { month: 'Oct', pct: 0, heightPct: 0 }
+      ];
+      this.quarterlyCompletions = [
+        { quarter: 'Q1', pct: 0, heightPct: 0 },
+        { quarter: 'Q2', pct: 0, heightPct: 0 },
+        { quarter: 'Q3', pct: 0, heightPct: 0 },
+        { quarter: 'Q4', pct: 0, heightPct: 0 }
+      ];
+    } else {
+      const getMonthPct = (mStr: string) => {
+        const mTasks = projectTasks.filter(t => (t.startDate || t.dueDate || '').split('-')[1] === mStr);
+        if (mTasks.length === 0) return 0;
+        return Math.round(mTasks.reduce((acc, t) => acc + (t.progress || 0), 0) / mTasks.length);
+      };
+      const octPct = getMonthPct('10') || this.kpiTaskCompletionPct;
+      this.monthlyCompletions = [
+        { month: 'Jul', pct: getMonthPct('07'), heightPct: getMonthPct('07') },
+        { month: 'Aug', pct: getMonthPct('08'), heightPct: getMonthPct('08') },
+        { month: 'Sep', pct: getMonthPct('09'), heightPct: getMonthPct('09') },
+        { month: 'Oct', pct: octPct, heightPct: octPct }
+      ];
+      this.quarterlyCompletions = [
+        { quarter: 'Q1', pct: 0, heightPct: 0 },
+        { quarter: 'Q2', pct: 0, heightPct: 0 },
+        { quarter: 'Q3', pct: 0, heightPct: 0 },
+        { quarter: 'Q4', pct: Math.min(100, Math.round(octPct * 1.05)), heightPct: Math.min(100, Math.round(octPct * 1.05)) }
+      ];
+    }
   }
 
   getStatusPillClass(status: string): string {
     const s = (status || '').toLowerCase();
     if (s.includes('uat')) return 'status-uat';
-    if (s.includes('dev')) return 'status-dev';
-    if (s.includes('live')) return 'status-live';
+    if (s.includes('blocked')) return 'status-blocked';
+    if (s.includes('live') || s.includes('complete')) return 'status-live';
     if (s.includes('test')) return 'status-test';
+    if (s.includes('dev')) return 'status-dev';
+    if (s.includes('plan') || s.includes('no task')) return 'status-planned';
     return 'status-dev';
   }
 
@@ -4599,8 +5197,12 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
 
   getTeamStatusClass(status: string): string {
     const s = (status || '').toLowerCase();
+    if (s.includes('complete')) return 'team-status-completed';
     if (s.includes('excellent')) return 'team-status-excellent';
-    if (s.includes('development')) return 'team-status-dev';
+    if (s.includes('blocked')) return 'team-status-blocked';
+    if (s.includes('track')) return 'team-status-ontrack';
+    if (s.includes('dev')) return 'team-status-dev';
+    if (s.includes('no task')) return 'team-status-notasks';
     return 'team-status-ontrack';
   }
   workTrackerService = inject(WorkTrackerService);
@@ -4713,6 +5315,159 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
 
   private allTasksSnapshot: DeveloperTask[] = [];
   private previousDayWorkView = false;
+
+  // ── DB Reset state ──
+  showResetConfirmDialog = false;
+  isResetting = false;
+  resetConfirmText = '';
+  resetMessage = '';
+  resetMessageType: 'success' | 'error' = 'success';
+
+  /** Open the DB reset confirmation dialog */
+  openResetConfirmDialog(): void {
+    this.resetConfirmText = '';
+    this.resetMessage = '';
+    this.showResetConfirmDialog = true;
+  }
+
+  /** Close the dialog without doing anything */
+  cancelReset(): void {
+    if (this.isResetting) return;
+    this.showResetConfirmDialog = false;
+    this.resetConfirmText = '';
+    this.resetMessage = '';
+  }
+
+  /** Execute the full Work Tracker data reset */
+  async confirmReset(): Promise<void> {
+    const confirmation = (this.resetConfirmText || '').trim().toUpperCase();
+    if (confirmation !== 'RESET' || this.isResetting) return;
+
+    this.isResetting = true;
+    this.resetMessage = '';
+
+    try {
+      // 1. Collect all known resource names from current task data & Day Work
+      const knownResources = [...new Set([
+        ...this.allTasksSnapshot.map(t => t.resourceName).filter(Boolean),
+        ...this.dayWorkResourceList,
+        this.dayWorkResource
+      ])].filter(Boolean);
+
+      // 2. Clear Work Tracker–specific localStorage keys.
+      //    Only keys with the u2app.* Work Tracker prefixes are removed.
+      //    Other U2Tools module keys are left untouched.
+      const wtLocalKeys = [
+        'u2app.dayWorkTrackingMode',
+        'u2app.overdueReminderFrequency',
+        'u2app.overdueLastDismissedTime',
+        'u2app.overdueLastDismissedDate',
+        'u2app.dayWorkResource',
+        'u2app_wt_task_cols',
+        'u2app_wt_rel_cols',
+      ];
+      // Per-resource keys
+      knownResources.forEach(r => {
+        wtLocalKeys.push(
+          `u2app.dayWorkTrackingMode_${r}`,
+          `u2app.overdueReminderFrequency_${r}`,
+          `u2app.dayScheduleSlots_${r}`,
+          `u2app.dayWorkLeaveDays_${r}`,
+        );
+      });
+      // Also scan localStorage for any remaining dayScheduleSlots / leaveDays keys
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (
+          key &&
+          (
+            key.startsWith('u2app.dayScheduleSlots_') ||
+            key.startsWith('u2app.dayWorkLeaveDays_') ||
+            key.startsWith('u2app.dayWorkTrackingMode_') ||
+            key.startsWith('u2app.overdueReminderFrequency_')
+          )
+        ) {
+          if (!wtLocalKeys.includes(key)) {
+            wtLocalKeys.push(key);
+          }
+        }
+      }
+      wtLocalKeys.forEach(k => localStorage.removeItem(k));
+
+      // 3. Reset component state for Day Work tab
+      this.dayWorkResource = '';
+      this.dayWorkCurrentWeekInfo = '';
+      this.dayWorkCurrentWeekTasks = [];
+      this.dayWorkLeaveDays = [];
+      this.dayScheduleSlots = [];
+      this.editingSlotId = '';
+      this.allTasksSnapshot = [];
+      this.dayWorkTrackingMode = 'hourly';
+      this.dayWorkResourceList = [];
+      this.dayWorkProjectList = [];
+      this.overdueReminderFrequency = 'until-completed';
+      this.lastOverduePopupDismissedTime = 0;
+      this.lastOverduePopupDismissedDate = '';
+      this.showOverdueTaskPopup = false;
+      this.overdueTaskItems = [];
+
+      // 4. Cancel any outstanding hourly reminders
+      this.cancelHourlyReminders();
+
+      // 5. Reset Weekly Status & Project Status filters and editing states
+      this.filterResource.next('');
+      this.filterProject.next('');
+      this.filterStatus.next('');
+      this.filterPriority.next('');
+      this.filterWeek.next('all');
+      this.relFilterCategory.next('');
+      this.relFilterStatus.next('');
+      this.relFilterPriority.next('');
+      this.relFilterAssigned.next('');
+      this.editingHourlyId = '';
+      this.editingTaskId = '';
+      this.editingReleaseId = '';
+      this.showTaskModal = false;
+      this.showReleaseModal = false;
+      this.showHourlyModal = false;
+      this.activeHourlyReminderPopup = null;
+
+      // 6. Reset Dashboard project list & filters
+      this.selectedProjectFilter = 'All Projects';
+      this.projectList = [];
+
+      // 7. Column prefs reset (clear cached columns)
+      this.taskColumns = this.taskColumnDefs.reduce((acc, col) => ({ ...acc, [col.key]: true }), {});
+      this.releaseColumns = this.releaseColumnDefs.reduce((acc, col) => ({ ...acc, [col.key]: true }), {});
+
+      // 8. Delegate data wipe (BehaviorSubject + LocalStorage + Firestore) to the service
+      await this.workTrackerService.resetAllData();
+
+      // 9. Recompute dashboard to guarantee immediate empty state
+      this.recomputeDashboardData({
+        developerTasks: [],
+        releaseTracks: [],
+        hourlyUpdates: [],
+        storageMode: 'local'
+      });
+
+      this.resetMessage = '✅ All Work Tracker data has been cleared successfully. The application is now in a clean state.';
+      this.resetMessageType = 'success';
+
+      // Auto-close the dialog after 2.5 s on success
+      setTimeout(() => {
+        this.showResetConfirmDialog = false;
+        this.resetMessage = '';
+        this.resetConfirmText = '';
+      }, 2500);
+    } catch (err) {
+      console.error('DB Reset failed:', err);
+      this.resetMessage = `❌ Reset failed: ${(err as Error)?.message ?? 'Unknown error'}. Please try again.`;
+      this.resetMessageType = 'error';
+    } finally {
+      this.isResetting = false;
+    }
+  }
 
   onOverdueFrequencyChange(): void {
     localStorage.setItem('u2app.overdueReminderFrequency', this.overdueReminderFrequency);

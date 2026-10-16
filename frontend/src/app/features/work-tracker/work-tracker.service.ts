@@ -5,6 +5,8 @@ import { FirebaseAuthService } from '../../core/services/firebase-auth.service';
 import { FirebaseSyncService } from '../../core/services/firebase-sync.service';
 
 const APP_NAME = 'work-tracker';
+const STORAGE_KEY = 'u2app.work_tracker_data';
+const INITIALIZED_KEY = 'u2app.wt_initialized';
 
 export interface DeveloperTask {
   taskId: string;
@@ -982,26 +984,92 @@ export class WorkTrackerService {
     storageMode: 'local',
   };
 
-  private dataSubject = new BehaviorSubject<WorkTrackerData>(this.initialState);
-  public data$: Observable<WorkTrackerData> = this.dataSubject.asObservable();
+  private getInitialData(): WorkTrackerData {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          developerTasks: Array.isArray(parsed.developerTasks) ? parsed.developerTasks : [],
+          releaseTracks: Array.isArray(parsed.releaseTracks) ? parsed.releaseTracks : [],
+          hourlyUpdates: Array.isArray(parsed.hourlyUpdates) ? parsed.hourlyUpdates : [],
+          storageMode: parsed.storageMode || 'local',
+        };
+      }
+      if (localStorage.getItem(INITIALIZED_KEY) === 'true') {
+        return {
+          developerTasks: [],
+          releaseTracks: [],
+          hourlyUpdates: [],
+          storageMode: 'local',
+        };
+      }
+    } catch (e) {
+      console.warn('Failed to load WorkTracker data from localStorage:', e);
+    }
+    return this.initialState;
+  }
+
+  private saveToLocalStorage(data: WorkTrackerData): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(INITIALIZED_KEY, 'true');
+    } catch (e) {
+      console.warn('Failed to save WorkTracker data to localStorage:', e);
+    }
+  }
+
+  private dataSubject: BehaviorSubject<WorkTrackerData>;
+  public data$: Observable<WorkTrackerData>;
 
   constructor() {
+    const initialData = this.getInitialData();
+    this.dataSubject = new BehaviorSubject<WorkTrackerData>(initialData);
+    this.data$ = this.dataSubject.asObservable();
+
     // Auto-load from Firestore when signed in
     this.syncService.onAuthChange((uid) => {
       if (uid) {
         this.loadFromFirestore();
       } else {
-        this.resetState();
+        const localData = this.getInitialData();
+        this.dataSubject.next(localData);
       }
     });
   }
 
-  private resetState() {
-    this.dataSubject.next(this.initialState);
+  /** Reset all Work Tracker data to a clean empty state.
+   *  Clears developerTasks, releaseTracks, and hourlyUpdates both locally
+   *  and in Firestore. Does NOT touch settings or other U2Tools modules. */
+  async resetAllData(): Promise<void> {
+    const emptyState: WorkTrackerData = {
+      developerTasks: [],
+      releaseTracks: [],
+      hourlyUpdates: [],
+      storageMode: this.dataSubject.value.storageMode,
+    };
+
+    // 1. Save empty state locally so page reload never restores sample data
+    this.saveToLocalStorage(emptyState);
+
+    // 2. Emit empty state immediately so the UI refreshes
+    this.dataSubject.next(emptyState);
+
+    // 3. Persist empty collections to Firestore (if authenticated)
+    if (this.authService.isAuthenticated()) {
+      await Promise.all([
+        this.syncService.pushToFirestore(APP_NAME, 'developerTasks', []),
+        this.syncService.pushToFirestore(APP_NAME, 'releaseTracks', []),
+        this.syncService.pushToFirestore(APP_NAME, 'hourlyUpdates', []),
+        this.syncService.pushToFirestore(APP_NAME, 'meta', [{ cleared: true, resetAt: new Date().toISOString() }]),
+      ]);
+    }
   }
 
   updateData(newData: Partial<WorkTrackerData>) {
-    this.dataSubject.next({ ...this.dataSubject.value, ...newData });
+    const updated = { ...this.dataSubject.value, ...newData };
+    this.dataSubject.next(updated);
+    this.saveToLocalStorage(updated);
     this.syncToFirestore();
   }
 
@@ -1331,6 +1399,9 @@ export class WorkTrackerService {
   async loadFromFirestore(): Promise<void> {
     if (!this.authService.isAuthenticated()) return;
     try {
+      const metaDocs = await this.syncService.pullFromFirestore<any>(APP_NAME, 'meta');
+      const isCleared = metaDocs?.[0]?.cleared === true;
+
       const developerTasks = await this.syncService.pullFromFirestore<DeveloperTask>(
         APP_NAME,
         'developerTasks',
@@ -1345,15 +1416,23 @@ export class WorkTrackerService {
       );
 
       if (developerTasks.length > 0 || releaseTracks.length > 0 || hourlyUpdates.length > 0) {
-        this.dataSubject.next({
+        const cloudData: WorkTrackerData = {
           ...this.dataSubject.value,
-          developerTasks:
-            developerTasks.length > 0 ? developerTasks : this.dataSubject.value.developerTasks,
-          releaseTracks:
-            releaseTracks.length > 0 ? releaseTracks : this.dataSubject.value.releaseTracks,
-          hourlyUpdates:
-            hourlyUpdates.length > 0 ? hourlyUpdates : this.dataSubject.value.hourlyUpdates,
-        });
+          developerTasks,
+          releaseTracks,
+          hourlyUpdates,
+        };
+        this.dataSubject.next(cloudData);
+        this.saveToLocalStorage(cloudData);
+      } else if (isCleared || localStorage.getItem(INITIALIZED_KEY) === 'true') {
+        const emptyData: WorkTrackerData = {
+          ...this.dataSubject.value,
+          developerTasks: [],
+          releaseTracks: [],
+          hourlyUpdates: [],
+        };
+        this.dataSubject.next(emptyData);
+        this.saveToLocalStorage(emptyData);
       }
     } catch (e) {
       console.error('WorkTrackerService: failed to load from Firestore', e);

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ViewChild, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { ThemeService } from '../../core/services/theme.service';
@@ -144,6 +144,9 @@ interface NavItem {
             <button class="btn btn-secondary" (click)="exportExcel()" title="Export Excel">
               📤 <span class="btn-text">Export</span>
             </button>
+            <button class="btn btn-danger-reset" (click)="openDbReset()" title="Reset all Work Tracker data">
+              🗑️ <span class="btn-text">DB Reset</span>
+            </button>
             <button
               class="btn btn-icon"
               (click)="themeSvc.toggle()"
@@ -156,7 +159,7 @@ interface NavItem {
 
         <!-- Tab Content -->
         <main class="page-content">
-          <app-dashboard *ngIf="activeTab !== 'ai'" [activeView]="getDashboardActiveView()" (viewChange)="activeTab = $event" (toggleSidebar)="toggleSidebar()"></app-dashboard>
+          <app-dashboard #dashboardComp *ngIf="activeTab !== 'ai'" [activeView]="getDashboardActiveView()" (viewChange)="activeTab = $event" (toggleSidebar)="toggleSidebar()"></app-dashboard>
           <app-ai-assistant *ngIf="activeTab === 'ai'"></app-ai-assistant>
 
           <!-- J.A.R.V.I.S. Bottom Operations & Holographic Globe Footer -->
@@ -845,11 +848,33 @@ interface NavItem {
         }
       }
 
+      .btn-danger-reset {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.5rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: rgba(220, 38, 38, 0.12);
+        color: #ef4444;
+        border: 1px solid rgba(220, 38, 38, 0.35);
+        transition: all 0.2s ease;
+      }
+      .btn-danger-reset:hover {
+        background: #dc2626;
+        color: #ffffff;
+        border-color: #dc2626;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+      }
+
       @media (max-width: 576px) {
         .btn-text {
           display: none;
         }
-        .btn-secondary {
+        .btn-secondary,
+        .btn-danger-reset {
           padding: 0.5rem 0.6rem;
         }
       }
@@ -920,6 +945,17 @@ export class WorkTrackerComponent implements OnInit, OnDestroy {
 
   exportExcel(): void {
     this.workTrackerService.exportExcel();
+  }
+
+  @ViewChild('dashboardComp') dashboardComp?: DashboardComponent;
+
+  openDbReset(): void {
+    if (this.dashboardComp) {
+      this.dashboardComp.openResetConfirmDialog();
+    } else {
+      this.activeTab = 'dashboard';
+      setTimeout(() => this.dashboardComp?.openResetConfirmDialog(), 50);
+    }
   }
 
   onImport(event: Event): void {
