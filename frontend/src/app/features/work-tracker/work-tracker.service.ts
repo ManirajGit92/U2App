@@ -1022,6 +1022,10 @@ export class WorkTrackerService {
   private dataSubject: BehaviorSubject<WorkTrackerData>;
   public data$: Observable<WorkTrackerData>;
 
+  get currentData(): WorkTrackerData {
+    return this.dataSubject.value;
+  }
+
   constructor() {
     const initialData = this.getInitialData();
     this.dataSubject = new BehaviorSubject<WorkTrackerData>(initialData);

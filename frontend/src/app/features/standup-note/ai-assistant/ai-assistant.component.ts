@@ -10,11 +10,13 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import * as XLSX from 'xlsx';
 import {
   AiAssistantService,
   ChatSession,
   ExtractedItem,
   ExtractedData,
+  ExtractedCategory,
   AiModel,
   DEFAULT_SYSTEM_INSTRUCTIONS,
 } from './ai-assistant.service';
@@ -27,6 +29,14 @@ import {
   LeaveRecord,
   StandupNote,
 } from '../standup-note.service';
+import {
+  WorkTrackerService,
+  DeveloperTask,
+  ReleaseTrack,
+  HourlyWorkUpdate,
+  HourlyUpdateStatus,
+} from '../../work-tracker/work-tracker.service';
+
 
 type MainTab = 'chat' | 'extracted' | 'extracted-json';
 type HistoryGroup = { label: string; sessions: ChatSession[] };
@@ -262,10 +272,13 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                 </svg>
               </div>
               <h3>Start a Conversation</h3>
-              <p>Paste your standup meeting summary or transcript below and the AI will extract key information to update your projects, tasks, employees, and more.</p>
+              <p>Paste chat summaries, meeting transcripts, tabular/Excel data, or attach an Excel file (.xlsx, .csv) and the AI will extract key information to update your Work Tracker, projects, tasks, employees, and more.</p>
               <div class="example-prompts">
                 <button class="example-prompt" (click)="useExamplePrompt('daily')" id="ai-example-daily">
                   📋 Daily Standup Summary
+                </button>
+                <button class="example-prompt" (click)="useExamplePrompt('excel')" id="ai-example-excel">
+                  📊 Excel / Tabular Data
                 </button>
                 <button class="example-prompt" (click)="useExamplePrompt('transcript')" id="ai-example-transcript">
                   🎤 Meeting Transcript
@@ -376,18 +389,18 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
               <textarea
                 #msgInput
                 [(ngModel)]="messageText"
-                placeholder="Type your message or paste meeting transcript here..."
+                placeholder="Type your message, paste chat summaries/Excel data, or attach an Excel file..."
                 (keydown)="onKeydown($event)"
                 rows="3"
                 class="message-input"
                 id="ai-message-input"
               ></textarea>
               <div class="input-actions">
-                <label class="attach-btn" title="Attach file">
+                <label class="attach-btn" title="Attach Excel file (.xlsx, .xls, .csv) or text document">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                   </svg>
-                  <input type="file" (change)="onFileAttach($event)" hidden accept=".txt,.md,.pdf,.doc,.docx" />
+                  <input type="file" (change)="onFileAttach($event)" hidden accept=".xlsx,.xls,.csv,.txt,.md,.json" id="ai-file-attach-input" />
                 </label>
                 <button
                   class="send-btn"
@@ -410,14 +423,17 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
             <div class="extracted-header-left">
               <span class="items-count">{{ pendingCount }} items pending</span>
               <select [(ngModel)]="categoryFilter" class="category-filter" id="ai-category-filter">
-                <option value="">Group by Category</option>
-                <option value="standup">Standup Notes</option>
-                <option value="employee">Employees</option>
-                <option value="project">Projects</option>
-                <option value="task">Tasks</option>
-                <option value="leave">Leave</option>
-                <option value="reminder">Reminders</option>
-                <option value="meeting">Meetings</option>
+                <option value="">All Categories ({{ extractedItems.length }})</option>
+                <option value="weekly-status">Weekly Status ({{ getItemsByCategory('weekly-status').length }})</option>
+                <option value="project-status">Project Status ({{ getItemsByCategory('project-status').length }})</option>
+                <option value="work-log">Work Logs ({{ getItemsByCategory('work-log').length }})</option>
+                <option value="standup">Standup Notes ({{ getItemsByCategory('standup').length }})</option>
+                <option value="employee">Employees ({{ getItemsByCategory('employee').length }})</option>
+                <option value="project">Projects ({{ getItemsByCategory('project').length }})</option>
+                <option value="task">Tasks ({{ getItemsByCategory('task').length }})</option>
+                <option value="leave">Leave ({{ getItemsByCategory('leave').length }})</option>
+                <option value="reminder">Reminders ({{ getItemsByCategory('reminder').length }})</option>
+                <option value="meeting">Meetings ({{ getItemsByCategory('meeting').length }})</option>
               </select>
             </div>
             <div class="extracted-header-actions">
@@ -432,7 +448,7 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
                 </svg>
-                {{ isApplying ? 'Applying...' : 'Apply All to U2Tools' }}
+                {{ isApplying ? 'Applying...' : 'Apply All to Work Tracker' }}
               </button>
             </div>
           </div>
@@ -459,6 +475,352 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
 
           <!-- Category Cards -->
           <div class="category-cards" *ngIf="extractedItems.length > 0">
+
+            <!-- Weekly Status Card -->
+            <ng-container *ngIf="!categoryFilter || categoryFilter === 'weekly-status'">
+              <div class="category-card weekly-card" *ngIf="getItemsByCategory('weekly-status').length > 0">
+                <div class="category-header">
+                  <div class="category-title">
+                    <span class="category-icon">📊</span>
+                    <span>Weekly Status ({{ getItemsByCategory('weekly-status').length }})</span>
+                  </div>
+                  <button class="review-all-btn" (click)="approveCategory('weekly-status')">Review All</button>
+                </div>
+                <div class="extracted-items">
+                  <div class="extracted-item" *ngFor="let item of getItemsByCategory('weekly-status')"
+                    [class.approved]="item.status === 'approved'"
+                    [class.rejected]="item.status === 'rejected'"
+                    [class.applied]="item.status === 'applied'">
+                    <div class="item-row">
+                      <input type="checkbox"
+                        [checked]="item.status === 'approved' || item.status === 'applied'"
+                        (change)="toggleItem(item)"
+                        [disabled]="item.status === 'applied'"
+                        class="item-check" />
+                      <div class="item-content">
+                        <div class="item-main">
+                          <strong>{{ item.data['taskId'] || 'Task' }}</strong> - {{ item.data['taskTitle'] || item.data['title'] }}
+                        </div>
+                        <div class="item-sub">
+                          👤 {{ item.data['resourceName'] || 'Unassigned' }} | 📁 {{ item.data['projectName'] || 'General' }} | 📅 {{ item.data['week'] || 'W1' }} | ⚡ {{ item.data['status'] || 'In Progress' }}
+                        </div>
+                      </div>
+                      <div class="item-meta">
+                        <span class="duplicate-badge" *ngIf="item.isExisting">Exists</span>
+                        <span class="new-badge" *ngIf="!item.isExisting">New</span>
+                        <span class="item-status-badge" [class]="'badge-' + item.status">{{ getStatusLabel(item.status) }}</span>
+                      </div>
+                      <button class="item-expand-btn" (click)="toggleExpandItem(item.id)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline [attr.points]="expandedItems.has(item.id) ? '18 15 12 9 6 15' : '6 9 12 15 18 9'"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <div class="item-expanded" *ngIf="expandedItems.has(item.id)">
+                      <div class="duplicate-warning" *ngIf="item.isExisting">
+                        ⚠️ A weekly task with ID {{ item.data['taskId'] }} or same resource/title/week already exists. Applying will update the existing task.
+                      </div>
+                      <div class="editable-fields">
+                        <div class="edit-field">
+                          <label>Task ID</label>
+                          <input [(ngModel)]="item.data['taskId']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Week</label>
+                          <input [(ngModel)]="item.data['week']" (ngModelChange)="markEdited(item)" class="edit-input" placeholder="e.g. W1, W2" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Resource / Developer</label>
+                          <input [(ngModel)]="item.data['resourceName']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Project</label>
+                          <input [(ngModel)]="item.data['projectName']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Module</label>
+                          <input [(ngModel)]="item.data['module']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Task Type</label>
+                          <select [(ngModel)]="item.data['taskType']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option>Feature</option><option>Bug</option><option>Enhancement</option><option>Architecture</option><option>Documentation</option>
+                          </select>
+                        </div>
+                        <div class="edit-field">
+                          <label>Status</label>
+                          <select [(ngModel)]="item.data['status']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option>Completed</option><option>In Progress</option><option>Pending</option><option>Blocked</option>
+                          </select>
+                        </div>
+                        <div class="edit-field">
+                          <label>Priority</label>
+                          <select [(ngModel)]="item.data['priority']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+                          </select>
+                        </div>
+                        <div class="edit-field">
+                          <label>Size / SP</label>
+                          <select [(ngModel)]="item.data['size']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option>
+                          </select>
+                        </div>
+                        <div class="edit-field">
+                          <label>Hours</label>
+                          <input type="number" [(ngModel)]="item.data['hours']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Progress (%)</label>
+                          <input type="number" min="0" max="100" [(ngModel)]="item.data['progress']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Due Date</label>
+                          <input type="date" [(ngModel)]="item.data['dueDate']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field full-width">
+                          <label>Task Title</label>
+                          <input [(ngModel)]="item.data['taskTitle']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field full-width">
+                          <label>Description</label>
+                          <textarea [(ngModel)]="item.data['taskDescription']" (ngModelChange)="markEdited(item)" class="edit-input" rows="2"></textarea>
+                        </div>
+                        <div class="edit-field full-width">
+                          <label>Comments / Remarks</label>
+                          <input [(ngModel)]="item.data['comments']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                      </div>
+                      <div class="source-context" *ngIf="item.sourceContext">💬 {{ item.sourceContext }}</div>
+                      <div class="confidence-bar">
+                        <span>Confidence:</span>
+                        <div class="bar"><div class="fill" [style.width.%]="item.confidence"></div></div>
+                        <span>{{ item.confidence }}%</span>
+                      </div>
+                      <div class="item-actions">
+                        <button class="action-approve" (click)="aiSvc.updateItemStatus(currentSession!.id, item.id, 'approved')" *ngIf="item.status !== 'applied'">✓ Approve</button>
+                        <button class="action-reject" (click)="aiSvc.updateItemStatus(currentSession!.id, item.id, 'rejected')" *ngIf="item.status !== 'applied'">✗ Reject</button>
+                        <button class="action-apply" (click)="applyItem(item)" *ngIf="item.status !== 'applied'" [disabled]="isApplying">Apply</button>
+                        <span class="applied-badge" *ngIf="item.status === 'applied'">✅ Applied</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Project Status Card -->
+            <ng-container *ngIf="!categoryFilter || categoryFilter === 'project-status'">
+              <div class="category-card project-status-card" *ngIf="getItemsByCategory('project-status').length > 0">
+                <div class="category-header">
+                  <div class="category-title">
+                    <span class="category-icon">🎯</span>
+                    <span>Project Status / Release Tracks ({{ getItemsByCategory('project-status').length }})</span>
+                  </div>
+                  <button class="review-all-btn" (click)="approveCategory('project-status')">Review All</button>
+                </div>
+                <div class="extracted-items">
+                  <div class="extracted-item" *ngFor="let item of getItemsByCategory('project-status')"
+                    [class.approved]="item.status === 'approved'"
+                    [class.rejected]="item.status === 'rejected'"
+                    [class.applied]="item.status === 'applied'">
+                    <div class="item-row">
+                      <input type="checkbox"
+                        [checked]="item.status === 'approved' || item.status === 'applied'"
+                        (change)="toggleItem(item)"
+                        [disabled]="item.status === 'applied'"
+                        class="item-check" />
+                      <div class="item-content">
+                        <div class="item-main">
+                          <strong>{{ item.data['id'] || 'Track' }}</strong> - {{ item.data['title'] }}
+                        </div>
+                        <div class="item-sub">
+                          📦 {{ item.data['module'] || 'Core' }} | 👤 {{ item.data['assignedTo'] || 'Lead' }} | 🚀 {{ item.data['status'] || 'Development' }} ({{ item.data['progress'] || 0 }}%)
+                        </div>
+                      </div>
+                      <div class="item-meta">
+                        <span class="duplicate-badge" *ngIf="item.isExisting">Exists</span>
+                        <span class="new-badge" *ngIf="!item.isExisting">New</span>
+                        <span class="item-status-badge" [class]="'badge-' + item.status">{{ getStatusLabel(item.status) }}</span>
+                      </div>
+                      <button class="item-expand-btn" (click)="toggleExpandItem(item.id)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline [attr.points]="expandedItems.has(item.id) ? '18 15 12 9 6 15' : '6 9 12 15 18 9'"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <div class="item-expanded" *ngIf="expandedItems.has(item.id)">
+                      <div class="duplicate-warning" *ngIf="item.isExisting">
+                        ⚠️ A release track with ID {{ item.data['id'] }} or matching title/module already exists. Applying will update it.
+                      </div>
+                      <div class="editable-fields">
+                        <div class="edit-field">
+                          <label>Track ID</label>
+                          <input [(ngModel)]="item.data['id']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Category / Stream</label>
+                          <input [(ngModel)]="item.data['category']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Module</label>
+                          <input [(ngModel)]="item.data['module']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Type</label>
+                          <select [(ngModel)]="item.data['type']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option>Feature</option><option>Enhancement</option><option>Refactor</option><option>Bugfix</option>
+                          </select>
+                        </div>
+                        <div class="edit-field">
+                          <label>Priority</label>
+                          <select [(ngModel)]="item.data['priority']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+                          </select>
+                        </div>
+                        <div class="edit-field">
+                          <label>Status</label>
+                          <select [(ngModel)]="item.data['status']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option>Released</option><option>Testing</option><option>Development</option><option>Staging</option><option>Backlog</option>
+                          </select>
+                        </div>
+                        <div class="edit-field">
+                          <label>PRD Status</label>
+                          <select [(ngModel)]="item.data['prdStatus']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option>Approved</option><option>In Review</option><option>Draft</option><option>Pending</option>
+                          </select>
+                        </div>
+                        <div class="edit-field">
+                          <label>Environment</label>
+                          <select [(ngModel)]="item.data['environment']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option>Production</option><option>Beta</option><option>Staging</option><option>Dev</option><option>Alpha</option>
+                          </select>
+                        </div>
+                        <div class="edit-field">
+                          <label>Assigned To</label>
+                          <input [(ngModel)]="item.data['assignedTo']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Target Date</label>
+                          <input type="date" [(ngModel)]="item.data['targetDate']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Progress (%)</label>
+                          <input type="number" min="0" max="100" [(ngModel)]="item.data['progress']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field full-width">
+                          <label>Title</label>
+                          <input [(ngModel)]="item.data['title']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field full-width">
+                          <label>Remarks / Notes</label>
+                          <textarea [(ngModel)]="item.data['remarks']" (ngModelChange)="markEdited(item)" class="edit-input" rows="2"></textarea>
+                        </div>
+                      </div>
+                      <div class="source-context" *ngIf="item.sourceContext">💬 {{ item.sourceContext }}</div>
+                      <div class="confidence-bar">
+                        <span>Confidence:</span>
+                        <div class="bar"><div class="fill" [style.width.%]="item.confidence"></div></div>
+                        <span>{{ item.confidence }}%</span>
+                      </div>
+                      <div class="item-actions">
+                        <button class="action-approve" (click)="aiSvc.updateItemStatus(currentSession!.id, item.id, 'approved')" *ngIf="item.status !== 'applied'">✓ Approve</button>
+                        <button class="action-reject" (click)="aiSvc.updateItemStatus(currentSession!.id, item.id, 'rejected')" *ngIf="item.status !== 'applied'">✗ Reject</button>
+                        <button class="action-apply" (click)="applyItem(item)" *ngIf="item.status !== 'applied'" [disabled]="isApplying">Apply</button>
+                        <span class="applied-badge" *ngIf="item.status === 'applied'">✅ Applied</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Work Logs Card -->
+            <ng-container *ngIf="!categoryFilter || categoryFilter === 'work-log'">
+              <div class="category-card work-log-card" *ngIf="getItemsByCategory('work-log').length > 0">
+                <div class="category-header">
+                  <div class="category-title">
+                    <span class="category-icon">⏱️</span>
+                    <span>Work Logs / Hourly Updates ({{ getItemsByCategory('work-log').length }})</span>
+                  </div>
+                  <button class="review-all-btn" (click)="approveCategory('work-log')">Review All</button>
+                </div>
+                <div class="extracted-items">
+                  <div class="extracted-item" *ngFor="let item of getItemsByCategory('work-log')"
+                    [class.approved]="item.status === 'approved'"
+                    [class.rejected]="item.status === 'rejected'"
+                    [class.applied]="item.status === 'applied'">
+                    <div class="item-row">
+                      <input type="checkbox"
+                        [checked]="item.status === 'approved' || item.status === 'applied'"
+                        (change)="toggleItem(item)"
+                        [disabled]="item.status === 'applied'"
+                        class="item-check" />
+                      <div class="item-content">
+                        <div class="item-main">
+                          <strong>{{ item.data['hour'] || 'Hour' }}</strong> - {{ item.data['taskDescription'] }}
+                        </div>
+                        <div class="item-sub">
+                          📅 {{ item.data['date'] }} | 📁 {{ item.data['projectName'] || 'Work Tracker' }} | ⚡ {{ item.data['status'] || 'Completed' }}
+                        </div>
+                      </div>
+                      <div class="item-meta">
+                        <span class="duplicate-badge" *ngIf="item.isExisting">Exists</span>
+                        <span class="new-badge" *ngIf="!item.isExisting">New</span>
+                        <span class="item-status-badge" [class]="'badge-' + item.status">{{ getStatusLabel(item.status) }}</span>
+                      </div>
+                      <button class="item-expand-btn" (click)="toggleExpandItem(item.id)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline [attr.points]="expandedItems.has(item.id) ? '18 15 12 9 6 15' : '6 9 12 15 18 9'"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <div class="item-expanded" *ngIf="expandedItems.has(item.id)">
+                      <div class="duplicate-warning" *ngIf="item.isExisting">
+                        ⚠️ An hourly work update for this time slot/description already exists. Applying will update it.
+                      </div>
+                      <div class="editable-fields">
+                        <div class="edit-field">
+                          <label>Date</label>
+                          <input type="date" [(ngModel)]="item.data['date']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Hour Slot</label>
+                          <input [(ngModel)]="item.data['hour']" (ngModelChange)="markEdited(item)" class="edit-input" placeholder="e.g. 09:00 AM - 10:00 AM" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Project</label>
+                          <input [(ngModel)]="item.data['projectName']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Status</label>
+                          <select [(ngModel)]="item.data['status']" (ngModelChange)="markEdited(item)" class="edit-input">
+                            <option value="Completed">Completed</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Pending">Pending</option>
+                          </select>
+                        </div>
+                        <div class="edit-field full-width">
+                          <label>Activity / Task Description</label>
+                          <textarea [(ngModel)]="item.data['taskDescription']" (ngModelChange)="markEdited(item)" class="edit-input" rows="2"></textarea>
+                        </div>
+                      </div>
+                      <div class="source-context" *ngIf="item.sourceContext">💬 {{ item.sourceContext }}</div>
+                      <div class="confidence-bar">
+                        <span>Confidence:</span>
+                        <div class="bar"><div class="fill" [style.width.%]="item.confidence"></div></div>
+                        <span>{{ item.confidence }}%</span>
+                      </div>
+                      <div class="item-actions">
+                        <button class="action-approve" (click)="aiSvc.updateItemStatus(currentSession!.id, item.id, 'approved')" *ngIf="item.status !== 'applied'">✓ Approve</button>
+                        <button class="action-reject" (click)="aiSvc.updateItemStatus(currentSession!.id, item.id, 'rejected')" *ngIf="item.status !== 'applied'">✗ Reject</button>
+                        <button class="action-apply" (click)="applyItem(item)" *ngIf="item.status !== 'applied'" [disabled]="isApplying">Apply</button>
+                        <span class="applied-badge" *ngIf="item.status === 'applied'">✅ Applied</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
 
             <!-- Standup Notes Card -->
             <ng-container *ngIf="!categoryFilter || categoryFilter === 'standup'">
@@ -498,10 +860,32 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                       </button>
                     </div>
                     <div class="item-expanded" *ngIf="expandedItems.has(item.id)">
-                      <div class="expanded-field" *ngIf="item.data['previousWork']"><label>Yesterday:</label> <span>{{ item.data['previousWork'] }}</span></div>
-                      <div class="expanded-field" *ngIf="item.data['todayPlan']"><label>Today:</label> <span>{{ item.data['todayPlan'] }}</span></div>
-                      <div class="expanded-field" *ngIf="item.data['blockers']"><label>Blockers:</label> <span>{{ item.data['blockers'] }}</span></div>
-                      <div class="expanded-field" *ngIf="item.data['projectName']"><label>Project:</label> <span>{{ item.data['projectName'] }}</span></div>
+                      <div class="editable-fields">
+                        <div class="edit-field">
+                          <label>Employee</label>
+                          <input [(ngModel)]="item.data['employeeName']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Date</label>
+                          <input [(ngModel)]="item.data['date']" (ngModelChange)="markEdited(item)" class="edit-input" type="date" />
+                        </div>
+                        <div class="edit-field full-width">
+                          <label>Yesterday's Work</label>
+                          <textarea [(ngModel)]="item.data['previousWork']" (ngModelChange)="markEdited(item)" class="edit-input" rows="2"></textarea>
+                        </div>
+                        <div class="edit-field full-width">
+                          <label>Today's Plan</label>
+                          <textarea [(ngModel)]="item.data['todayPlan']" (ngModelChange)="markEdited(item)" class="edit-input" rows="2"></textarea>
+                        </div>
+                        <div class="edit-field">
+                          <label>Blockers</label>
+                          <input [(ngModel)]="item.data['blockers']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                        <div class="edit-field">
+                          <label>Project</label>
+                          <input [(ngModel)]="item.data['projectName']" (ngModelChange)="markEdited(item)" class="edit-input" />
+                        </div>
+                      </div>
                       <div class="source-context">💬 {{ item.sourceContext }}</div>
                       <div class="confidence-bar">
                         <span>Confidence:</span>
@@ -1065,6 +1449,9 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
             </button>
             <div class="guide-content" *ngIf="showSchemaGuide">
               <div class="category-pills">
+                <div class="cat-pill"><strong>weekly-status:</strong> taskId, week, resourceName, projectName, module, taskTitle, taskType, status, priority, size, hours, progress, startDate, dueDate</div>
+                <div class="cat-pill"><strong>project-status:</strong> id, title, category, module, type, priority, status, prdStatus, environment, assignedTo, targetDate, progress, remarks</div>
+                <div class="cat-pill"><strong>work-log:</strong> id, date, hour, taskDescription, status, projectName</div>
                 <div class="cat-pill"><strong>standup:</strong> employeeName, date, previousWork, todayPlan, blockers, notes, projectName</div>
                 <div class="cat-pill"><strong>employee:</strong> name, position, team, email</div>
                 <div class="cat-pill"><strong>project:</strong> name, status, notes, lead</div>
@@ -1981,6 +2368,12 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
     .review-all-btn:hover { background: var(--accent-surface); }
 
     /* Color-coded borders */
+    .weekly-card { border-color: rgba(59,130,246,0.35); }
+    .weekly-card .category-header { background: rgba(59,130,246,0.06); }
+    .project-status-card { border-color: rgba(168,85,247,0.35); }
+    .project-status-card .category-header { background: rgba(168,85,247,0.06); }
+    .work-log-card { border-color: rgba(20,184,166,0.35); }
+    .work-log-card .category-header { background: rgba(20,184,166,0.06); }
     .standup-card { border-color: rgba(99,102,241,0.3); }
     .standup-card .category-header { background: rgba(99,102,241,0.05); }
     .employee-card { border-color: rgba(16,185,129,0.3); }
@@ -2750,6 +3143,7 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
 
   aiSvc = inject(AiAssistantService);
   standupSvc = inject(StandupNoteService);
+  workTrackerSvc = inject(WorkTrackerService);
 
   activeTab: MainTab = 'chat';
   chatSidebarOpen = true;
@@ -2965,19 +3359,48 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
   private attachedFileName = '';
 
   onFileAttach(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
 
     this.attachedFileName = file.name;
+    const lowerName = file.name.toLowerCase();
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      if (content) {
-        this.messageText = `[File: ${file.name}]\n\n${content}`;
-      }
-    };
-    reader.readAsText(file);
+    if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetContents: string[] = [];
+
+          workbook.SheetNames.forEach((sheetName) => {
+            const worksheet = workbook.Sheets[sheetName];
+            const tsv = XLSX.utils.sheet_to_csv(worksheet, { FS: '\t' });
+            if (tsv && tsv.trim()) {
+              sheetContents.push(`=== Sheet: ${sheetName} ===\n${tsv.trim()}`);
+            }
+          });
+
+          const fullContent = sheetContents.join('\n\n');
+          this.messageText = `[File: ${file.name}]\n\n${fullContent}`;
+        } catch (err: any) {
+          alert(`Error reading Excel file: ${err.message || 'Unknown error'}`);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        if (content) {
+          this.messageText = `[File: ${file.name}]\n\n${content}`;
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    input.value = '';
   }
 
   onKeydown(event: KeyboardEvent) {
@@ -2987,8 +3410,19 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
     }
   }
 
-  useExamplePrompt(type: 'daily' | 'transcript' | 'update') {
+  useExamplePrompt(type: 'daily' | 'transcript' | 'update' | 'excel') {
+    const today = new Date().toISOString().split('T')[0];
     const prompts: Record<string, string> = {
+      excel: `=== Sheet: Weekly Tasks ===
+TaskId\tWeek\tResource\tProject\tModule\tTask Title\tStatus\tPriority\tSize\tHours\tProgress\tDue Date
+T-101\tW1\tAlex Morgan\tU2App\tDashboard\tImplement AI Excel Analysis Engine\tIn Progress\tCritical\tL\t8\t75\t${today}
+T-102\tW1\tTaylor Reed\tPortal\tAuth\tOAuth2 Refresh Token Fix\tCompleted\tHigh\tM\t6\t100\t${today}
+
+=== Sheet: Hourly Updates ===
+Date\tHour\tProject\tStatus\tTask Description
+${today}\t09:00 AM - 10:00 AM\tWork Tracker\tCompleted\tSprint standup review and Excel parsing architecture
+${today}\t10:00 AM - 11:00 AM\tWork Tracker\tIn Progress\tAI assistant component integration and duplicate checking`,
+
       daily: `Daily Standup - ${new Date().toLocaleDateString()}
 
 Alice: Yesterday I completed the login API integration for Customer Portal v2. Today I'll work on dashboard filters. No blockers.
@@ -3087,10 +3521,16 @@ Quick update from this week:
   runDuplicateCheck() {
     if (!this.currentSession) return;
     const state = this.standupSvc.state;
+    const wtData = this.workTrackerSvc.currentData;
     this.aiSvc.markDuplicates(this.currentSession.id, {
       employees: state.employees,
       projects: state.projects,
       reminders: state.reminders,
+      developerTasks: wtData?.developerTasks || [],
+      releaseTracks: wtData?.releaseTracks || [],
+      hourlyUpdates: wtData?.hourlyUpdates || [],
+      tasks: state.tasks || [],
+      leaveRecords: state.leaveRecords || [],
     });
   }
 
@@ -3162,7 +3602,7 @@ Quick update from this week:
     if (errors.length > 0) {
       alert(`Applied ${applied} items.\n\nFailed:\n${errors.join('\n')}`);
     } else {
-      this.showSuccess(`Successfully applied ${applied} items to U2Tools!`);
+      this.showSuccess(`Successfully applied ${applied} items to Work Tracker & Standup!`);
     }
   }
 
@@ -3172,6 +3612,127 @@ Quick update from this week:
     const d = item.data;
 
     switch (item.category) {
+      case 'weekly-status': {
+        const wtData = this.workTrackerSvc.currentData;
+        const tasks = wtData?.developerTasks || [];
+        const taskId = d['taskId'] ? String(d['taskId']).trim() : '';
+
+        const existing = tasks.find((t) => {
+          if (taskId && t.taskId?.toLowerCase() === taskId.toLowerCase()) return true;
+          const sameRes = t.resourceName?.toLowerCase() === d['resourceName']?.toLowerCase();
+          const sameTitle = t.taskTitle?.toLowerCase() === (d['taskTitle'] || d['title'])?.toLowerCase();
+          const sameWeek = !d['week'] || t.week?.toLowerCase() === d['week']?.toLowerCase();
+          return sameRes && sameTitle && sameWeek;
+        });
+
+        const rawHours = typeof d['hours'] === 'number' ? d['hours'] : parseFloat(d['hours']);
+        const rawProgress = typeof d['progress'] === 'number' ? d['progress'] : parseFloat(d['progress']);
+
+        const taskPayload: Omit<DeveloperTask, 'taskId'> & { taskId?: string } = {
+          taskId: existing ? existing.taskId : (taskId || `T-${Date.now().toString().slice(-4)}`),
+          week: d['week'] || 'W1',
+          resourceName: d['resourceName'] || 'Team Member',
+          projectName: d['projectName'] || 'Work Tracker',
+          module: d['module'] || 'General',
+          taskTitle: d['taskTitle'] || d['title'] || 'Weekly Task',
+          taskDescription: d['taskDescription'] || d['description'] || d['taskTitle'] || '',
+          taskType: d['taskType'] || 'Feature',
+          status: d['status'] || 'In Progress',
+          priority: d['priority'] || 'Medium',
+          size: d['size'] || 'M',
+          hours: isNaN(rawHours) ? 8 : rawHours,
+          progress: isNaN(rawProgress) ? 0 : Math.min(100, Math.max(0, rawProgress)),
+          startDate: d['startDate'] || new Date().toISOString().split('T')[0],
+          dueDate: d['dueDate'] || d['targetDate'] || new Date().toISOString().split('T')[0],
+          completedDate: d['completedDate'] || (d['status'] === 'Completed' ? new Date().toISOString().split('T')[0] : ''),
+          tags: d['tags'] || '',
+          comments: d['comments'] || d['remarks'] || '',
+          isVisible: true,
+        };
+
+        if (existing) {
+          this.workTrackerSvc.updateDeveloperTask(existing.taskId, taskPayload);
+        } else {
+          this.workTrackerSvc.addDeveloperTask(taskPayload);
+        }
+        break;
+      }
+
+      case 'project-status': {
+        const wtData = this.workTrackerSvc.currentData;
+        const tracks = wtData?.releaseTracks || [];
+        const trackId = d['id'] ? String(d['id']).trim() : '';
+
+        const existing = tracks.find((r) => {
+          if (trackId && r.id?.toLowerCase() === trackId.toLowerCase()) return true;
+          const sameTitle = r.title?.toLowerCase() === d['title']?.toLowerCase();
+          const sameModule = !d['module'] || r.module?.toLowerCase() === d['module']?.toLowerCase();
+          return sameTitle && sameModule;
+        });
+
+        const rawProgress = typeof d['progress'] === 'number' ? d['progress'] : parseFloat(d['progress']);
+
+        const trackPayload: Omit<ReleaseTrack, 'id'> & { id?: string } = {
+          id: existing ? existing.id : (trackId || `R-${Date.now().toString().slice(-4)}`),
+          title: d['title'] || 'Release Track',
+          category: d['category'] || 'Platform',
+          module: d['module'] || 'Core',
+          type: d['type'] || 'Feature',
+          priority: d['priority'] || 'High',
+          status: d['status'] || 'Development',
+          prdStatus: d['prdStatus'] || 'Approved',
+          environment: d['environment'] || 'Staging',
+          assignedTo: d['assignedTo'] || d['lead'] || 'Lead',
+          createdDate: d['createdDate'] || new Date().toISOString().split('T')[0],
+          targetDate: d['targetDate'] || d['dueDate'] || new Date().toISOString().split('T')[0],
+          completedDate: d['completedDate'] || (d['status'] === 'Released' ? new Date().toISOString().split('T')[0] : ''),
+          progress: isNaN(rawProgress) ? 0 : Math.min(100, Math.max(0, rawProgress)),
+          remarks: d['remarks'] || d['notes'] || '',
+          sourceSheet: d['sourceSheet'] || 'AI Import',
+          dependency: d['dependency'] || '',
+          tags: d['tags'] || '',
+          isVisible: true,
+        };
+
+        if (existing) {
+          this.workTrackerSvc.updateReleaseTrack(existing.id, trackPayload);
+        } else {
+          this.workTrackerSvc.addReleaseTrack(trackPayload);
+        }
+        break;
+      }
+
+      case 'work-log': {
+        const wtData = this.workTrackerSvc.currentData;
+        const updates = wtData?.hourlyUpdates || [];
+        const updateId = d['id'] ? String(d['id']).trim() : '';
+
+        const existing = updates.find((h) => {
+          if (updateId && h.id?.toLowerCase() === updateId.toLowerCase()) return true;
+          return (
+            h.date === d['date'] &&
+            h.hour === d['hour'] &&
+            h.taskDescription?.toLowerCase() === (d['taskDescription'] || d['description'])?.toLowerCase()
+          );
+        });
+
+        const updatePayload: Omit<HourlyWorkUpdate, 'id'> & { id?: string } = {
+          id: existing ? existing.id : (updateId || `HU-${Date.now().toString().slice(-4)}-${updates.length + 1}`),
+          date: d['date'] || new Date().toISOString().split('T')[0],
+          hour: d['hour'] || '09:00 AM - 10:00 AM',
+          taskDescription: d['taskDescription'] || d['description'] || 'Work activity',
+          status: (d['status'] as HourlyUpdateStatus) || 'Completed',
+          isVisible: true,
+        };
+
+        if (existing) {
+          this.workTrackerSvc.updateHourlyUpdate(existing.id, updatePayload);
+        } else {
+          this.workTrackerSvc.addHourlyUpdate(updatePayload);
+        }
+        break;
+      }
+
       case 'standup': {
         // Find employee by name
         const emp = state.employees.find(
@@ -3244,20 +3805,36 @@ Quick update from this week:
       }
 
       case 'task': {
-        const task: Task = {
-          id: svc.generateId('TSK', state.tasks || []),
-          title: d['title'] || '',
-          tag: 'AI',
-          description: d['description'] || '',
-          startDate: new Date().toISOString().split('T')[0],
-          endDate: d['endDate'] || '',
-          progress: 'Not Started',
-          priority: (d['priority'] as any) || 'important-not-urgent',
-          column: 'not-taken',
-          employeeName: d['employeeName'] || '',
-          projectName: d['projectName'] || '',
-        };
-        svc.addTask(task);
+        const existingTask = (state.tasks || []).find(
+          (t) => t.title?.toLowerCase() === d['title']?.toLowerCase() &&
+                 (!d['employeeName'] || t.employeeName?.toLowerCase() === d['employeeName']?.toLowerCase())
+        );
+        if (existingTask) {
+          svc.updateTask({
+            ...existingTask,
+            title: d['title'] || existingTask.title,
+            description: d['description'] || existingTask.description,
+            endDate: d['endDate'] || existingTask.endDate,
+            priority: (d['priority'] as any) || existingTask.priority,
+            employeeName: d['employeeName'] || existingTask.employeeName,
+            projectName: d['projectName'] || existingTask.projectName,
+          });
+        } else {
+          const task: Task = {
+            id: svc.generateId('TSK', state.tasks || []),
+            title: d['title'] || '',
+            tag: 'AI',
+            description: d['description'] || '',
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: d['endDate'] || '',
+            progress: 'Not Started',
+            priority: (d['priority'] as any) || 'important-not-urgent',
+            column: 'not-taken',
+            employeeName: d['employeeName'] || '',
+            projectName: d['projectName'] || '',
+          };
+          svc.addTask(task);
+        }
         break;
       }
 
@@ -3267,18 +3844,32 @@ Quick update from this week:
         );
         if (!emp) throw new Error(`Employee "${d['employeeName']}" not found. Add them first.`);
 
-        const leave: LeaveRecord = {
-          id: svc.generateId('LV', state.leaveRecords || []),
-          employeeId: emp.id,
-          fromDate: d['fromDate'] || new Date().toISOString().split('T')[0],
-          toDate: d['toDate'] || d['fromDate'] || new Date().toISOString().split('T')[0],
-          duration: (d['duration'] as any) || 'full-day',
-          leaveType: (d['leaveType'] as any) || 'planned',
-          reason: d['reason'] || '',
-          notes: d['notes'] || '',
-          status: 'Pending',
-        };
-        svc.addLeave(leave);
+        const existingLeave = (state.leaveRecords || []).find(
+          (l) => l.employeeId === emp.id && l.fromDate === d['fromDate']
+        );
+        if (existingLeave) {
+          svc.updateLeave({
+            ...existingLeave,
+            toDate: d['toDate'] || existingLeave.toDate,
+            leaveType: (d['leaveType'] as any) || existingLeave.leaveType,
+            duration: (d['duration'] as any) || existingLeave.duration,
+            reason: d['reason'] || existingLeave.reason,
+            notes: d['notes'] || existingLeave.notes,
+          });
+        } else {
+          const leave: LeaveRecord = {
+            id: svc.generateId('LV', state.leaveRecords || []),
+            employeeId: emp.id,
+            fromDate: d['fromDate'] || new Date().toISOString().split('T')[0],
+            toDate: d['toDate'] || d['fromDate'] || new Date().toISOString().split('T')[0],
+            duration: (d['duration'] as any) || 'full-day',
+            leaveType: (d['leaveType'] as any) || 'planned',
+            reason: d['reason'] || '',
+            notes: d['notes'] || '',
+            status: 'Pending',
+          };
+          svc.addLeave(leave);
+        }
         break;
       }
 
@@ -3332,6 +3923,9 @@ Quick update from this week:
   private getItemLabel(item: ExtractedItem): string {
     const d = item.data;
     switch (item.category) {
+      case 'weekly-status': return `Weekly Task: ${d['taskTitle'] || d['taskId'] || 'Task'}`;
+      case 'project-status': return `Project Status: ${d['title'] || d['id'] || 'Track'}`;
+      case 'work-log': return `Work Log: ${d['hour'] || d['date']} - ${d['taskDescription'] || 'Activity'}`;
       case 'standup': return `Standup: ${d['employeeName']}`;
       case 'employee': return `Employee: ${d['name']}`;
       case 'project': return `Project: ${d['name']}`;
@@ -3520,8 +4114,65 @@ Quick update from this week:
   loadSampleJson() {
     const today = new Date().toISOString().split('T')[0];
     const sample = {
-      summary: 'Daily standup notes & updates',
+      summary: 'Work Tracker & Standup notes extracted records',
       items: [
+        {
+          category: 'weekly-status',
+          data: {
+            taskId: 'T-101',
+            week: 'W1',
+            resourceName: 'Alice Smith',
+            projectName: 'Customer Portal',
+            module: 'Dashboard',
+            taskTitle: 'Implement AI Excel Analysis Engine',
+            taskDescription: 'Parse and extract structured records from uploaded Excel files',
+            taskType: 'Feature',
+            status: 'In Progress',
+            priority: 'Critical',
+            size: 'L',
+            hours: 8,
+            progress: 75,
+            startDate: today,
+            dueDate: today,
+            tags: 'ai,excel,analytics',
+            comments: 'Analysis and review in progress',
+          },
+          sourceContext: 'Weekly sprint planning - Alice on AI Excel Analysis',
+          confidence: 96,
+        },
+        {
+          category: 'project-status',
+          data: {
+            id: 'R-101',
+            title: 'AI Analysis & Excel Import Engine',
+            category: 'Platform',
+            module: 'Work Tracker',
+            type: 'Feature',
+            priority: 'High',
+            status: 'Development',
+            prdStatus: 'Approved',
+            environment: 'Staging',
+            assignedTo: 'Alice Smith',
+            targetDate: today,
+            progress: 80,
+            remarks: 'Integration with work-tracker and standup-note services',
+          },
+          sourceContext: 'Release tracking for Work Tracker AI engine',
+          confidence: 95,
+        },
+        {
+          category: 'work-log',
+          data: {
+            id: 'HU-101',
+            date: today,
+            hour: '09:00 AM - 10:00 AM',
+            taskDescription: 'Daily standup analysis and Excel sheet parser verification',
+            status: 'Completed',
+            projectName: 'Work Tracker',
+          },
+          sourceContext: 'Hourly update: 09:00 AM - 10:00 AM work activity',
+          confidence: 98,
+        },
         {
           category: 'standup',
           data: {
@@ -3718,24 +4369,32 @@ Quick update from this week:
     this.activeTab = 'extracted';
   }
 
-  private normalizeCategory(
-    cat: string | undefined
-  ): 'standup' | 'employee' | 'project' | 'task' | 'leave' | 'reminder' | 'meeting' {
-    if (!cat) return 'standup';
-    const c = cat.toLowerCase();
+  private normalizeCategory(cat: string | undefined): ExtractedCategory {
+    if (!cat) return 'weekly-status';
+    const c = cat.toLowerCase().replace(/[\s_\-]+/g, '');
+    if (c.includes('weekly') || c.includes('developertask') || c.includes('sprinttask')) return 'weekly-status';
+    if (c.includes('projectstatus') || c.includes('releasetrack') || c.includes('release')) return 'project-status';
+    if (c.includes('worklog') || c.includes('hourly') || c.includes('workupdate')) return 'work-log';
     if (c.includes('standup') || c.includes('note')) return 'standup';
-    if (c.includes('emp')) return 'employee';
+    if (c.includes('emp') || c.includes('staff') || c.includes('member')) return 'employee';
     if (c.includes('proj')) return 'project';
-    if (c.includes('task')) return 'task';
-    if (c.includes('leave')) return 'leave';
+    if (c.includes('task') || c.includes('todo')) return 'task';
+    if (c.includes('leave') || c.includes('vacation') || c.includes('absence')) return 'leave';
     if (c.includes('remind')) return 'reminder';
     if (c.includes('meet') || c.includes('event') || c.includes('calendar')) return 'meeting';
-    return 'standup';
+    return 'weekly-status';
   }
 
-  private inferCategory(
-    data: Record<string, any>
-  ): 'standup' | 'employee' | 'project' | 'task' | 'leave' | 'reminder' | 'meeting' {
+  private inferCategory(data: Record<string, any>): ExtractedCategory {
+    if (data['week'] || data['taskTitle'] || (data['taskId'] && !data['date'])) {
+      return 'weekly-status';
+    }
+    if (data['prdStatus'] || data['releaseTrack'] || data['environment'] || (data['targetDate'] && data['module'])) {
+      return 'project-status';
+    }
+    if (data['hour'] || data['timeslot'] || (data['taskDescription'] && data['date'] && !data['week'])) {
+      return 'work-log';
+    }
     if (
       data['employeeName'] &&
       (data['previousWork'] !== undefined ||
@@ -3751,7 +4410,6 @@ Quick update from this week:
       return 'employee';
     }
     if (
-      data['progress'] ||
       data['column'] ||
       (data['title'] && data['employeeName'] && data['projectName'])
     ) {
@@ -3766,6 +4424,9 @@ Quick update from this week:
     if (data['deadline'] || data['assignedTo']) {
       return 'reminder';
     }
-    return 'standup';
+    if (data['title']) {
+      return 'task';
+    }
+    return 'weekly-status';
   }
 }

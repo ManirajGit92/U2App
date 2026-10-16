@@ -47,15 +47,30 @@ export interface ExtractionSummary {
   standupNotes: number;
   employees: number;
   projects: number;
+  weeklyStatus: number;
+  projectStatus: number;
+  workLogs: number;
   tasks: number;
   leaves: number;
   reminders: number;
   meetings: number;
 }
 
+export type ExtractedCategory =
+  | 'standup'
+  | 'employee'
+  | 'project'
+  | 'weekly-status'
+  | 'project-status'
+  | 'work-log'
+  | 'task'
+  | 'leave'
+  | 'reminder'
+  | 'meeting';
+
 export interface ExtractedItem {
   id: string;
-  category: 'standup' | 'employee' | 'project' | 'task' | 'leave' | 'reminder' | 'meeting';
+  category: ExtractedCategory;
   data: Record<string, any>;
   sourceContext: string;
   confidence: number;
@@ -74,39 +89,44 @@ export interface ExtractedData {
 
 const AI_STORAGE_KEY_PREFIX = 'u2app.aiAssistant';
 
-export const DEFAULT_SYSTEM_INSTRUCTIONS = `You are an AI assistant integrated with U2Tools Standup Note application.
-Your job is to analyze meeting transcripts or standup summaries and extract structured data.
+export const DEFAULT_SYSTEM_INSTRUCTIONS = `You are an AI assistant integrated with U2Tools Work Tracker & Standup Note application.
+Your job is to analyze weekly status updates, project status updates, work logs, transcripts, or tabular/Excel data and extract structured records.
 
-When analyzing a transcript or summary, extract:
-1. Standup Notes: For each person mentioned, extract employee name, date, previous work done, today plan, and blockers.
-2. Employees: Any new employees mentioned with name, position/role, team.
-3. Projects: Any project names with status and description.
-4. Tasks: Specific tasks or action items with assignee and deadline.
-5. Leave: Any mentions of leave, time off, or absence with employee name, dates, reason.
-6. Reminders: Any follow-ups or pending items that need to be tracked.
-7. Meetings: Any upcoming meetings with title, date/time, attendees.
+When analyzing input, extract items belonging to these categories:
+1. Weekly Status (category: "weekly-status"): Weekly developer tasks or sprint tracking items.
+   Fields: taskId, week (e.g. W1, W2, W3), resourceName, projectName, module, taskTitle, taskDescription, taskType (Feature/Bug/Enhancement/Architecture/Documentation), status (Completed/In Progress/Pending/Blocked), priority (Critical/High/Medium/Low), size (XS/S/M/L/XL), hours (number), progress (0-100), startDate (YYYY-MM-DD), dueDate (YYYY-MM-DD), completedDate (YYYY-MM-DD), tags, comments
+2. Project Status (category: "project-status"): Project/release tracks, milestones, or epic tracking.
+   Fields: id, title, category, module, type (Feature/Enhancement/Refactor/Bugfix), priority (Critical/High/Medium/Low), status (Released/Testing/Development/Staging/Backlog), prdStatus (Approved/In Review/Draft/Pending), environment (Production/Beta/Staging/Dev/Alpha), assignedTo, createdDate (YYYY-MM-DD), targetDate (YYYY-MM-DD), completedDate (YYYY-MM-DD), progress (0-100), remarks, dependency, tags
+3. Work Logs (category: "work-log"): Hourly work track updates or activity logs.
+   Fields: id, date (YYYY-MM-DD), hour (e.g. 09:00 AM - 10:00 AM), taskDescription, status (Completed/In Progress/Pending), projectName
+4. Standup Notes (category: "standup"): Daily standup updates.
+   Fields: employeeName, date (YYYY-MM-DD), previousWork, todayPlan, blockers, notes, projectName
+5. Employees (category: "employee"): Team members.
+   Fields: name, position, team, email
+6. Projects (category: "project"): Project portfolio.
+   Fields: name, status (Active/On Hold/Completed), notes, lead
+7. Tasks (category: "task"): Individual task assignments.
+   Fields: title, employeeName, projectName, description, endDate (YYYY-MM-DD), priority
+8. Leave (category: "leave"): Time off and absence records.
+   Fields: employeeName, fromDate (YYYY-MM-DD), toDate (YYYY-MM-DD), reason, leaveType (planned/unplanned/sick/vacation/wfh), duration (full-day/half-day-first/half-day-second)
+9. Reminders (category: "reminder"): Follow-up action items.
+   Fields: title, description, deadline (YYYY-MM-DD), priority (High/Medium/Low), assignedTo
+10. Meetings (category: "meeting"): Upcoming meetings and calendar events.
+   Fields: title, description, date (YYYY-MM-DD), time (HH:MM), attendees
 
 Respond ONLY with valid JSON in this structure:
 {
-  "summary": "Brief natural language summary",
+  "summary": "Brief natural language summary of the extracted records",
   "items": [
     {
-      "category": "standup",
-      "data": { "employeeName": "...", "date": "YYYY-MM-DD", "previousWork": "...", "todayPlan": "...", "blockers": "...", "notes": "...", "projectName": "..." },
-      "sourceContext": "quote from transcript",
-      "confidence": 85
+      "category": "weekly-status",
+      "data": { "taskId": "T-101", "week": "W1", "resourceName": "...", "projectName": "...", "taskTitle": "...", "status": "In Progress" },
+      "sourceContext": "quote or row from input",
+      "confidence": 95
     }
   ]
-}
+};`;
 
-Category data fields:
-- standup: employeeName, date, previousWork, todayPlan, blockers, notes, projectName
-- employee: name, position, team, email
-- project: name, status (Active/On Hold/Completed), notes, lead
-- task: title, employeeName, projectName, description, endDate, priority (important-urgent/important-not-urgent/urgent-not-important/not-important-not-urgent)
-- leave: employeeName, fromDate (YYYY-MM-DD), toDate (YYYY-MM-DD), reason, leaveType (planned/unplanned/sick/vacation/wfh), duration (full-day/half-day-first/half-day-second)
-- reminder: title, description, deadline (YYYY-MM-DD), priority (High/Medium/Low), assignedTo
-- meeting: title, description, date (YYYY-MM-DD), time (HH:MM), attendees`;
 
 @Injectable({ providedIn: 'root' })
 export class AiAssistantService {
@@ -251,12 +271,35 @@ export class AiAssistantService {
     this.isProcessing.set(true);
     this.error.set(null);
 
+    // Pre-parse tabular or Excel data if present
+    const tabularResult = this.parseExcelOrTabularContent(content);
+
     try {
       const historyExcludingLatest = this.sessions
         .find((s) => s.id === session!.id)
         ?.messages.slice(0, -1) ?? [];
-      const responseText = await this.callAI(content, historyExcludingLatest, cfg);
-      const parsed = this.parseAIResponse(responseText);
+
+      let responseText = '';
+      let parsed: { summary: string; items: any[] } = { summary: '', items: [] };
+
+      try {
+        responseText = await this.callAI(content, historyExcludingLatest, cfg);
+        parsed = this.parseAIResponse(responseText);
+      } catch (aiErr: any) {
+        if (!tabularResult || tabularResult.items.length === 0) {
+          throw aiErr;
+        }
+        responseText = tabularResult.summary;
+        parsed = tabularResult;
+      }
+
+      // If AI returned no items or empty items, but tabular parser extracted items, use tabularResult!
+      if ((!parsed.items || parsed.items.length === 0) && tabularResult && tabularResult.items.length > 0) {
+        parsed = {
+          summary: parsed.summary && parsed.summary !== responseText ? parsed.summary : tabularResult.summary,
+          items: tabularResult.items,
+        };
+      }
 
       const assistantMsg: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
@@ -278,7 +321,7 @@ export class AiAssistantService {
             category: item.category,
             data: item.data || {},
             sourceContext: item.sourceContext || '',
-            confidence: item.confidence || 75,
+            confidence: item.confidence || 90,
             status: 'pending' as const,
             isExisting: false,
           })),
@@ -295,18 +338,45 @@ export class AiAssistantService {
         this.renameSession(session.id, title);
       }
     } catch (err: any) {
-      this.error.set(err.message || 'Failed to get AI response.');
-      const errMsg: ChatMessage = {
-        id: `msg-err-${Date.now()}`,
-        role: 'assistant',
-        content: `Error: ${err.message || 'Failed to get AI response. Please check your API key and try again.'}`,
-        timestamp: new Date().toISOString(),
-      };
-      this.addMessage(session.id, errMsg);
+      if (tabularResult && tabularResult.items.length > 0) {
+        const assistantMsg: ChatMessage = {
+          id: `msg-${Date.now() + 1}`,
+          role: 'assistant',
+          content: tabularResult.summary,
+          timestamp: new Date().toISOString(),
+          extractionSummary: this.buildExtractionSummary(tabularResult.items),
+        };
+        this.addMessage(session.id, assistantMsg);
+        const extractedData: ExtractedData = {
+          items: tabularResult.items.map((item: any, idx: number) => ({
+            id: `ei-${Date.now()}-${idx}`,
+            category: item.category,
+            data: item.data || {},
+            sourceContext: item.sourceContext || '',
+            confidence: item.confidence || 95,
+            status: 'pending' as const,
+            isExisting: false,
+          })),
+          extractedAt: new Date().toISOString(),
+          sourceText: content,
+          rawJson: JSON.stringify({ summary: tabularResult.summary, items: tabularResult.items }, null, 2),
+        };
+        this.updateSessionExtractedData(session.id, extractedData);
+      } else {
+        this.error.set(err.message || 'Failed to get AI response.');
+        const errMsg: ChatMessage = {
+          id: `msg-err-${Date.now()}`,
+          role: 'assistant',
+          content: `Error: ${err.message || 'Failed to get AI response. Please check your API key and try again.'}`,
+          timestamp: new Date().toISOString(),
+        };
+        this.addMessage(session.id, errMsg);
+      }
     } finally {
       this.isProcessing.set(false);
     }
   }
+
 
   private async callAI(
     userMessage: string,
@@ -527,11 +597,310 @@ export class AiAssistantService {
       standupNotes: items.filter((i) => i.category === 'standup').length,
       employees: items.filter((i) => i.category === 'employee').length,
       projects: items.filter((i) => i.category === 'project').length,
+      weeklyStatus: items.filter((i) => i.category === 'weekly-status').length,
+      projectStatus: items.filter((i) => i.category === 'project-status').length,
+      workLogs: items.filter((i) => i.category === 'work-log').length,
       tasks: items.filter((i) => i.category === 'task').length,
       leaves: items.filter((i) => i.category === 'leave').length,
       reminders: items.filter((i) => i.category === 'reminder').length,
       meetings: items.filter((i) => i.category === 'meeting').length,
     };
+  }
+
+  /**
+   * Automatically parses Excel-pasted text (TSV), CSV, or Markdown tables
+   * into structured records and valid JSON.
+   */
+  parseExcelOrTabularContent(text: string): { summary: string; items: any[] } | null {
+    if (!text || !text.trim()) return null;
+
+    // Check if there are sheet markers: "=== Sheet: ..."
+    const sheetRegex = /=== Sheet:\s*([^\n=]+)\s*===/gi;
+    let match: RegExpExecArray | null;
+    const sheetMatches: { name: string; index: number; fullLen: number }[] = [];
+    while ((match = sheetRegex.exec(text)) !== null) {
+      sheetMatches.push({ name: match[1].trim(), index: match.index, fullLen: match[0].length });
+    }
+
+    const allItems: any[] = [];
+
+    if (sheetMatches.length > 0) {
+      for (let i = 0; i < sheetMatches.length; i++) {
+        const cur = sheetMatches[i];
+        const start = cur.index + cur.fullLen;
+        const end = i + 1 < sheetMatches.length ? sheetMatches[i + 1].index : text.length;
+        const sheetBody = text.substring(start, end).trim();
+        const sheetItems = this.parseSingleTabularText(sheetBody, cur.name);
+        allItems.push(...sheetItems);
+      }
+    } else {
+      const parsed = this.parseSingleTabularText(text, '');
+      allItems.push(...parsed);
+    }
+
+    if (allItems.length === 0) return null;
+
+    const catCounts = new Map<string, number>();
+    for (const item of allItems) {
+      catCounts.set(item.category, (catCounts.get(item.category) || 0) + 1);
+    }
+    const catBreakdown = Array.from(catCounts.entries())
+      .map(([cat, count]) => `${count} ${cat}`)
+      .join(', ');
+
+    return {
+      summary: `Successfully parsed ${allItems.length} record${allItems.length === 1 ? '' : 's'} from Excel/tabular data (${catBreakdown}).`,
+      items: allItems,
+    };
+  }
+
+  private parseSingleTabularText(body: string, sheetContext: string): any[] {
+    const rawLines = body
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !l.startsWith('[File:') && !l.startsWith('#'));
+
+    if (rawLines.length < 2) return [];
+
+    let headerLineIndex = -1;
+    let delimiter = '';
+
+    for (let i = 0; i < Math.min(rawLines.length, 5); i++) {
+      const line = rawLines[i];
+      if (line.includes('\t')) {
+        delimiter = '\t';
+        headerLineIndex = i;
+        break;
+      } else if (line.includes('|')) {
+        delimiter = '|';
+        headerLineIndex = i;
+        break;
+      } else if (line.includes(',')) {
+        delimiter = ',';
+        headerLineIndex = i;
+        break;
+      } else if (line.includes(';')) {
+        delimiter = ';';
+        headerLineIndex = i;
+        break;
+      }
+    }
+
+    if (headerLineIndex === -1 || !delimiter) return [];
+
+    const splitRow = (rowStr: string): string[] => {
+      if (delimiter === '|') {
+        return rowStr
+          .split('|')
+          .map((c) => c.trim())
+          .filter((_, idx, arr) => (idx > 0 && idx < arr.length - 1) || arr.length <= 2);
+      }
+      if (delimiter === ',') {
+        const regex = /(?:^|,)(?:"([^"]*)"|([^,]*))/g;
+        const matches: string[] = [];
+        let m: RegExpExecArray | null;
+        while ((m = regex.exec(rowStr)) !== null) {
+          matches.push((m[1] !== undefined ? m[1] : m[2] || '').trim());
+        }
+        return matches;
+      }
+      return rowStr.split(delimiter).map((c) => c.trim().replace(/^["']|["']$/g, ''));
+    };
+
+    const headerCells = splitRow(rawLines[headerLineIndex]).map((h) =>
+      h.toLowerCase().replace(/[\s_\-#]+/g, '')
+    );
+    if (headerCells.length < 2) return [];
+
+    // Identify category
+    const sContext = sheetContext.toLowerCase();
+    let category: ExtractedCategory = 'weekly-status';
+
+    const hasHeader = (...keys: string[]) => keys.some((k) => headerCells.some((h) => h.includes(k)));
+
+    if (
+      sContext.includes('weekly') ||
+      sContext.includes('developer') ||
+      hasHeader('taskid', 'week', 'resourcename', 'tasktitle', 'tasktype')
+    ) {
+      category = 'weekly-status';
+    } else if (
+      sContext.includes('release') ||
+      sContext.includes('projectstatus') ||
+      sContext.includes('prd') ||
+      hasHeader('prdstatus', 'releasetrack', 'targetdate', 'environment')
+    ) {
+      category = 'project-status';
+    } else if (
+      sContext.includes('hourly') ||
+      sContext.includes('hour') ||
+      sContext.includes('worklog') ||
+      hasHeader('hour', 'timeslot', 'hourly')
+    ) {
+      category = 'work-log';
+    } else if (
+      sContext.includes('standup') ||
+      hasHeader('previouswork', 'todayplan', 'yesterday', 'today', 'blocker', 'blockers')
+    ) {
+      category = 'standup';
+    } else if (
+      sContext.includes('employee') ||
+      hasHeader('position', 'team') ||
+      (hasHeader('name', 'email') && !hasHeader('task'))
+    ) {
+      category = 'employee';
+    } else if (
+      sContext.includes('leave') ||
+      hasHeader('leave', 'fromdate', 'todate', 'leavetype')
+    ) {
+      category = 'leave';
+    } else if (
+      sContext.includes('project') ||
+      hasHeader('lead') ||
+      (hasHeader('projectname', 'status') && !hasHeader('week', 'resource'))
+    ) {
+      category = 'project';
+    } else if (hasHeader('assignedto', 'duedate', 'deadline')) {
+      category = 'task';
+    }
+
+    const items: any[] = [];
+    const today = new Date().toISOString().split('T')[0];
+
+    for (let r = headerLineIndex + 1; r < rawLines.length; r++) {
+      const line = rawLines[r];
+      if (/^[|\-\s:]+$/.test(line)) continue;
+
+      const cells = splitRow(line);
+      if (cells.length === 0 || cells.every((c) => !c)) continue;
+
+      const rowMap: Record<string, string> = {};
+      headerCells.forEach((h, idx) => {
+        if (cells[idx] !== undefined) {
+          rowMap[h] = cells[idx];
+        }
+      });
+
+      const getVal = (...keys: string[]): string => {
+        for (const k of keys) {
+          const cleanK = k.toLowerCase().replace(/[\s_\-#]+/g, '');
+          for (const h of headerCells) {
+            if (h === cleanK || h.includes(cleanK)) {
+              if (rowMap[h]) return rowMap[h];
+            }
+          }
+        }
+        return '';
+      };
+
+      let itemData: Record<string, any> = {};
+
+      if (category === 'weekly-status') {
+        const rawProgress = parseFloat(getVal('progress', '%', 'pct')) || 0;
+        const rawHours = parseFloat(getVal('hours', 'hrs', 'hour')) || 8;
+        itemData = {
+          taskId: getVal('taskid', 'id', 'task') || `T-${Date.now().toString().slice(-4)}-${items.length + 1}`,
+          week: getVal('week', 'sprint') || 'W1',
+          resourceName: getVal('resourcename', 'resource', 'employee', 'name', 'developer', 'assignee') || 'Team Member',
+          projectName: getVal('projectname', 'project') || 'Main Project',
+          module: getVal('module', 'feature', 'component') || 'General',
+          taskTitle: getVal('tasktitle', 'title', 'task', 'description', 'summary') || 'Weekly Task',
+          taskDescription: getVal('taskdescription', 'description', 'details') || getVal('tasktitle', 'title') || '',
+          taskType: getVal('tasktype', 'type') || 'Feature',
+          status: getVal('status', 'state') || 'In Progress',
+          priority: getVal('priority') || 'Medium',
+          size: getVal('size', 'sp') || 'M',
+          hours: isNaN(rawHours) ? 8 : rawHours,
+          progress: isNaN(rawProgress) ? 0 : Math.min(100, Math.max(0, rawProgress)),
+          startDate: getVal('startdate', 'start') || today,
+          dueDate: getVal('duedate', 'due', 'targetdate', 'target') || today,
+          completedDate: getVal('completeddate', 'completed') || '',
+          tags: getVal('tags', 'tag') || '',
+          comments: getVal('comments', 'comment', 'notes', 'remarks') || '',
+        };
+      } else if (category === 'project-status') {
+        const rawProgress = parseFloat(getVal('progress', '%', 'pct')) || 0;
+        itemData = {
+          id: getVal('id', 'releaseid', 'trackid') || `R-${Date.now().toString().slice(-3)}-${items.length + 1}`,
+          title: getVal('title', 'name', 'release', 'project') || 'Release Track',
+          category: getVal('category', 'stream') || 'Platform',
+          module: getVal('module', 'component') || 'Core',
+          type: getVal('type', 'tracktype') || 'Feature',
+          priority: getVal('priority') || 'High',
+          status: getVal('status', 'state') || 'Development',
+          prdStatus: getVal('prdstatus', 'prd') || 'Approved',
+          environment: getVal('environment', 'env') || 'Staging',
+          assignedTo: getVal('assignedto', 'lead', 'owner', 'resource') || 'Lead',
+          createdDate: getVal('createddate', 'created') || today,
+          targetDate: getVal('targetdate', 'target', 'duedate', 'due') || today,
+          completedDate: getVal('completeddate', 'completed') || '',
+          progress: isNaN(rawProgress) ? 0 : Math.min(100, Math.max(0, rawProgress)),
+          remarks: getVal('remarks', 'notes', 'comment') || '',
+          dependency: getVal('dependency', 'dependencies') || '',
+          tags: getVal('tags', 'tag') || '',
+        };
+      } else if (category === 'work-log') {
+        itemData = {
+          id: getVal('id') || `HU-${Date.now().toString().slice(-4)}-${items.length + 1}`,
+          date: getVal('date', 'day') || today,
+          hour: getVal('hour', 'time', 'timeslot', 'slot') || '09:00 AM - 10:00 AM',
+          taskDescription: getVal('taskdescription', 'description', 'task', 'activity', 'notes') || 'Development activity',
+          status: (getVal('status') as any) || 'Completed',
+          projectName: getVal('projectname', 'project') || 'Work Tracker',
+        };
+      } else if (category === 'employee') {
+        itemData = {
+          name: getVal('name', 'employeename', 'employee') || 'New Employee',
+          position: getVal('position', 'role', 'title') || 'Engineer',
+          team: getVal('team', 'department') || 'Engineering',
+          email: getVal('email') || '',
+        };
+      } else if (category === 'project') {
+        itemData = {
+          name: getVal('name', 'projectname', 'title') || 'New Project',
+          status: getVal('status') || 'Active',
+          lead: getVal('lead', 'owner', 'manager') || '',
+          notes: getVal('notes', 'description') || '',
+        };
+      } else if (category === 'leave') {
+        itemData = {
+          employeeName: getVal('employeename', 'employee', 'name') || 'Employee',
+          fromDate: getVal('fromdate', 'from', 'startdate') || today,
+          toDate: getVal('todate', 'to', 'enddate') || today,
+          leaveType: getVal('leavetype', 'type') || 'planned',
+          duration: getVal('duration') || 'full-day',
+          reason: getVal('reason', 'notes') || 'Personal',
+        };
+      } else if (category === 'task') {
+        itemData = {
+          title: getVal('title', 'task', 'summary') || 'Task Item',
+          employeeName: getVal('employeename', 'employee', 'assignee', 'name') || '',
+          projectName: getVal('projectname', 'project') || '',
+          description: getVal('description', 'details') || '',
+          endDate: getVal('enddate', 'duedate', 'deadline') || today,
+          priority: getVal('priority') || 'important-not-urgent',
+        };
+      } else {
+        itemData = {
+          employeeName: getVal('employeename', 'employee', 'name') || 'Team Member',
+          date: getVal('date') || today,
+          previousWork: getVal('previouswork', 'yesterday') || '',
+          todayPlan: getVal('todayplan', 'today') || line,
+          blockers: getVal('blockers', 'blocker') || 'None',
+          notes: getVal('notes') || '',
+          projectName: getVal('projectname', 'project') || '',
+        };
+      }
+
+      items.push({
+        category,
+        data: itemData,
+        sourceContext: line.length > 80 ? line.substring(0, 80) + '...' : line,
+        confidence: 98,
+      });
+    }
+
+    return items;
   }
 
   updateItemStatus(sessionId: string, itemId: string, status: ExtractedItem['status']) {
@@ -572,7 +941,16 @@ export class AiAssistantService {
 
   markDuplicates(
     sessionId: string,
-    existingData: { employees: any[]; projects: any[]; reminders: any[] }
+    existingData: {
+      employees: any[];
+      projects: any[];
+      reminders: any[];
+      developerTasks?: any[];
+      releaseTracks?: any[];
+      hourlyUpdates?: any[];
+      tasks?: any[];
+      leaveRecords?: any[];
+    }
   ) {
     const session = this.sessions.find((s) => s.id === sessionId);
     if (!session?.extractedData) return;
@@ -589,19 +967,72 @@ export class AiAssistantService {
                 const existing = existingData.employees.find(
                   (e) => e.name?.toLowerCase() === item.data['name']?.toLowerCase()
                 );
-                return existing ? { ...item, isExisting: true, existingId: existing.id } : item;
+                return existing ? { ...item, isExisting: true, existingId: existing.id } : { ...item, isExisting: false };
               }
               if (item.category === 'project') {
                 const existing = existingData.projects.find(
                   (p) => p.name?.toLowerCase() === item.data['name']?.toLowerCase()
                 );
-                return existing ? { ...item, isExisting: true, existingId: existing.id } : item;
+                return existing ? { ...item, isExisting: true, existingId: existing.id } : { ...item, isExisting: false };
+              }
+              if (item.category === 'weekly-status') {
+                const existing = (existingData.developerTasks || []).find((t) => {
+                  if (item.data['taskId'] && t.taskId?.toLowerCase() === item.data['taskId']?.toLowerCase()) {
+                    return true;
+                  }
+                  const sameResource = t.resourceName?.toLowerCase() === item.data['resourceName']?.toLowerCase();
+                  const sameTitle = t.taskTitle?.toLowerCase() === item.data['taskTitle']?.toLowerCase();
+                  const sameWeek = !item.data['week'] || t.week?.toLowerCase() === item.data['week']?.toLowerCase();
+                  return sameResource && sameTitle && sameWeek;
+                });
+                return existing ? { ...item, isExisting: true, existingId: existing.taskId } : { ...item, isExisting: false };
+              }
+              if (item.category === 'project-status') {
+                const existing = (existingData.releaseTracks || []).find((r) => {
+                  if (item.data['id'] && r.id?.toLowerCase() === item.data['id']?.toLowerCase()) {
+                    return true;
+                  }
+                  const sameTitle = r.title?.toLowerCase() === item.data['title']?.toLowerCase();
+                  const sameModule = !item.data['module'] || r.module?.toLowerCase() === item.data['module']?.toLowerCase();
+                  return sameTitle && sameModule;
+                });
+                return existing ? { ...item, isExisting: true, existingId: existing.id } : { ...item, isExisting: false };
+              }
+              if (item.category === 'work-log') {
+                const existing = (existingData.hourlyUpdates || []).find((h) => {
+                  if (item.data['id'] && h.id?.toLowerCase() === item.data['id']?.toLowerCase()) {
+                    return true;
+                  }
+                  return (
+                    h.date === item.data['date'] &&
+                    h.hour === item.data['hour'] &&
+                    h.taskDescription?.toLowerCase() === item.data['taskDescription']?.toLowerCase()
+                  );
+                });
+                return existing ? { ...item, isExisting: true, existingId: existing.id } : { ...item, isExisting: false };
+              }
+              if (item.category === 'task') {
+                const existing = (existingData.tasks || []).find((t) => {
+                  const sameTitle = t.title?.toLowerCase() === item.data['title']?.toLowerCase();
+                  const sameEmp = !item.data['employeeName'] || t.employeeName?.toLowerCase() === item.data['employeeName']?.toLowerCase();
+                  return sameTitle && sameEmp;
+                });
+                return existing ? { ...item, isExisting: true, existingId: existing.id } : { ...item, isExisting: false };
+              }
+              if (item.category === 'leave') {
+                const existing = (existingData.leaveRecords || []).find((l) => {
+                  const emp = (existingData.employees || []).find((e) => e.id === l.employeeId);
+                  const sameEmp = emp && emp.name?.toLowerCase() === item.data['employeeName']?.toLowerCase();
+                  const sameDate = l.fromDate === item.data['fromDate'];
+                  return sameEmp && sameDate;
+                });
+                return existing ? { ...item, isExisting: true, existingId: existing.id } : { ...item, isExisting: false };
               }
               if (item.category === 'reminder') {
                 const existing = existingData.reminders.find(
                   (r) => r.title?.toLowerCase() === item.data['title']?.toLowerCase()
                 );
-                return existing ? { ...item, isExisting: true, existingId: existing.id } : item;
+                return existing ? { ...item, isExisting: true, existingId: existing.id } : { ...item, isExisting: false };
               }
               return item;
             }),
@@ -611,6 +1042,7 @@ export class AiAssistantService {
     );
     this.persistSessions();
   }
+
 
   updateConfig(config: Partial<AiConfig>) {
     const newConfig = { ...this._config(), ...config };
