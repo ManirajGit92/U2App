@@ -7,6 +7,8 @@ import { BehaviorSubject, Subscription, combineLatest, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { NotificationReminder, NotificationReminderService } from '../../../core/services/notification-reminder.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { ColumnFilterComponent, ColumnFilterOption } from '../components/column-filter.component';
+import { ComboboxComponent } from '../components/combobox.component';
 
 interface HourlyReminderPopup {
   hour: string;
@@ -54,7 +56,7 @@ interface OverdueTaskItem {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ColumnFilterComponent, ComboboxComponent],
   template: `
     <div class="dashboard-container">
       <!-- NEW DASHBOARD VIEW (Matching UI Screenshot) -->
@@ -630,127 +632,6 @@ interface OverdueTaskItem {
         </div>
       }
 
-      <!-- Filters Section for Weekly Status & Project Status Views -->
-      @if (activeView === 'weekly-status' || activeView === 'project-status') {
-      <div class="glass-card filters-section">
-        @if (activeView === 'weekly-status') {
-        <div class="table-header compact-header">
-          <div class="hud-header-title">
-            <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#00c8ff" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="#00c8ff"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="#00c8ff" stroke-width="2"/></svg>
-            <h3>Task Data Filters</h3>
-          </div>
-          <button class="btn-table secondary" type="button" (click)="toggleSection('filters')">{{ sections.filters ? 'Collapse' : 'Expand' }}</button>
-        </div>
-        @if (sections.filters) {
-        <div class="filters-grid">
-          <div class="filter-group">
-            <label>
-              <i *ngIf="themeService.isJarvis()" class="pi pi-calendar filter-icon"></i>
-              Week Period
-            </label>
-            <select [ngModel]="currentPeriodSelection" (ngModelChange)="onWeekNavSelect($event)">
-              <option *ngFor="let opt of weekPeriodOptions" [value]="opt.value">{{ opt.label }}</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>
-              <i *ngIf="themeService.isJarvis()" class="pi pi-user filter-icon"></i>
-              Resource Name
-            </label>
-            <select (change)="onFilterChange('resource', $event)">
-              <option value="">All Resources</option>
-              <option *ngFor="let res of uniqueResources$ | async" [value]="res">{{ res }}</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>
-              <i *ngIf="themeService.isJarvis()" class="pi pi-folder filter-icon"></i>
-              Project Name
-            </label>
-            <select (change)="onFilterChange('project', $event)">
-              <option value="">All Projects</option>
-              <option *ngFor="let proj of uniqueProjects$ | async" [value]="proj">{{ proj }}</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>
-              <i *ngIf="themeService.isJarvis()" class="pi pi-cog filter-icon"></i>
-              Task Status
-            </label>
-            <select (change)="onFilterChange('status', $event)">
-              <option value="">All Statuses</option>
-              <option *ngFor="let stat of uniqueStatuses$ | async" [value]="stat">{{ stat }}</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>
-              <i *ngIf="themeService.isJarvis()" class="pi pi-flag filter-icon"></i>
-              Task Priority
-            </label>
-            <select (change)="onFilterChange('priority', $event)">
-              <option value="">All Priorities</option>
-              <option *ngFor="let prio of uniquePriorities$ | async" [value]="prio">{{ prio }}</option>
-            </select>
-          </div>
-        </div>
-        }
-        }
-
-        @if (activeView === 'project-status') {
-        <div class="table-header compact-header">
-          <div class="hud-header-title">
-            <svg *ngIf="themeService.isJarvis()" class="hud-sec-icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="#00c8ff" stroke-width="2"/><polyline points="3.27 6.96 12 12.01 20.73 6.96" fill="none" stroke="#00c8ff" stroke-width="2"/><line x1="12" y1="22.08" x2="12" y2="12" stroke="#00c8ff" stroke-width="2"/></svg>
-            <h3>Release Data Filters</h3>
-          </div>
-          <button class="btn-table secondary" type="button" (click)="toggleSection('filters')">{{ sections.filters ? 'Collapse' : 'Expand' }}</button>
-        </div>
-        @if (sections.filters) {
-        <div class="filters-grid">
-          <div class="filter-group">
-            <label>
-              <i *ngIf="themeService.isJarvis()" class="pi pi-th-large filter-icon"></i>
-              Category
-            </label>
-            <select (change)="onRelFilterChange('category', $event)">
-              <option value="">All Categories</option>
-              <option *ngFor="let cat of uniqueRelCategories$ | async" [value]="cat">{{ cat }}</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>
-              <i *ngIf="themeService.isJarvis()" class="pi pi-database filter-icon"></i>
-              Release Status
-            </label>
-            <select (change)="onRelFilterChange('status', $event)">
-              <option value="">All Statuses</option>
-              <option *ngFor="let stat of uniqueRelStatuses$ | async" [value]="stat">{{ stat }}</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>
-              <i *ngIf="themeService.isJarvis()" class="pi pi-flag filter-icon"></i>
-              Priority
-            </label>
-            <select (change)="onRelFilterChange('priority', $event)">
-              <option value="">All Priorities</option>
-              <option *ngFor="let prio of uniqueRelPriorities$ | async" [value]="prio">{{ prio }}</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>
-              <i *ngIf="themeService.isJarvis()" class="pi pi-user filter-icon"></i>
-              Assigned To
-            </label>
-            <select (change)="onRelFilterChange('assigned', $event)">
-              <option value="">All Assignees</option>
-              <option *ngFor="let assign of uniqueRelAssigned$ | async" [value]="assign">{{ assign }}</option>
-            </select>
-          </div>
-        </div>
-        }
-        }
-      </div>
-      }
 
       <!-- YOUR DAY WORK TRACK (Comprehensive) -->
       @if (activeView === 'day-work') {
@@ -1223,6 +1104,9 @@ interface OverdueTaskItem {
             <button class="btn-table secondary" type="button" (click)="toggleHiddenTaskRows()">
               {{ showHiddenTaskRows ? 'Hide Hidden Rows' : 'Show Hidden Rows' }}
             </button>
+            <button class="btn-table secondary" *ngIf="hasAnyTaskFilter" type="button" (click)="clearAllTaskFilters()" title="Clear all column filters">
+              ✕ Clear Filters
+            </button>
             <button class="btn-table secondary" type="button" (click)="toggleSection('tasks')">{{ sections.tasks ? 'Collapse' : 'Expand' }}</button>
           </div>
         </div>
@@ -1233,13 +1117,61 @@ interface OverdueTaskItem {
               <tr>
                 <th *ngIf="isTaskColVisible('taskId')">Task ID</th>
                 <th *ngIf="isTaskColVisible('week')">Week</th>
-                <th *ngIf="isTaskColVisible('resourceName')">Resource</th>
-                <th *ngIf="isTaskColVisible('projectName')">Project</th>
-                <th *ngIf="isTaskColVisible('module')">Module</th>
+                <th *ngIf="isTaskColVisible('resourceName')" class="th-filterable">
+                  Resource
+                  <app-column-filter
+                    columnLabel="Resource"
+                    [options]="getTaskColOptions((rawTasks$ | async) || [], 'resourceName')"
+                    [selectedValues]="activeTaskFilterResource"
+                    (filterChange)="onTaskColFilterChange('resource', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isTaskColVisible('projectName')" class="th-filterable">
+                  Project
+                  <app-column-filter
+                    columnLabel="Project"
+                    [options]="getTaskColOptions((rawTasks$ | async) || [], 'projectName')"
+                    [selectedValues]="activeTaskFilterProject"
+                    (filterChange)="onTaskColFilterChange('project', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isTaskColVisible('module')" class="th-filterable">
+                  Module
+                  <app-column-filter
+                    columnLabel="Module"
+                    [options]="getTaskColOptions((rawTasks$ | async) || [], 'module')"
+                    [selectedValues]="activeTaskFilterModule"
+                    (filterChange)="onTaskColFilterChange('module', $event)"
+                  ></app-column-filter>
+                </th>
                 <th *ngIf="isTaskColVisible('taskTitle')">Title</th>
-                <th *ngIf="isTaskColVisible('taskType')">Type</th>
-                <th *ngIf="isTaskColVisible('status')">Status</th>
-                <th *ngIf="isTaskColVisible('priority')">Priority</th>
+                <th *ngIf="isTaskColVisible('taskType')" class="th-filterable">
+                  Type
+                  <app-column-filter
+                    columnLabel="Task Type"
+                    [options]="getTaskColOptions((rawTasks$ | async) || [], 'taskType')"
+                    [selectedValues]="activeTaskFilterType"
+                    (filterChange)="onTaskColFilterChange('taskType', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isTaskColVisible('status')" class="th-filterable">
+                  Status
+                  <app-column-filter
+                    columnLabel="Status"
+                    [options]="getTaskColOptions((rawTasks$ | async) || [], 'status')"
+                    [selectedValues]="activeTaskFilterStatus"
+                    (filterChange)="onTaskColFilterChange('status', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isTaskColVisible('priority')" class="th-filterable">
+                  Priority
+                  <app-column-filter
+                    columnLabel="Priority"
+                    [options]="getTaskColOptions((rawTasks$ | async) || [], 'priority')"
+                    [selectedValues]="activeTaskFilterPriority"
+                    (filterChange)="onTaskColFilterChange('priority', $event)"
+                  ></app-column-filter>
+                </th>
                 <th *ngIf="isTaskColVisible('size')">Size</th>
                 <th *ngIf="isTaskColVisible('hours')">Hours</th>
                 <th *ngIf="isTaskColVisible('progress')">Progress</th>
@@ -1254,11 +1186,39 @@ interface OverdueTaskItem {
                 @if (editingTaskId === task.taskId) {
                 <td *ngIf="isTaskColVisible('taskId')">{{ task.taskId }}</td>
                 <td *ngIf="isTaskColVisible('week')"><input class="table-input small-input" [(ngModel)]="inlineTaskForm.week"></td>
-                <td *ngIf="isTaskColVisible('resourceName')"><input class="table-input" [(ngModel)]="inlineTaskForm.resourceName"></td>
-                <td *ngIf="isTaskColVisible('projectName')"><input class="table-input" [(ngModel)]="inlineTaskForm.projectName"></td>
-                <td *ngIf="isTaskColVisible('module')"><input class="table-input" [(ngModel)]="inlineTaskForm.module"></td>
+                <td *ngIf="isTaskColVisible('resourceName')">
+                  <app-combobox
+                    [options]="(uniqueResources$ | async) || []"
+                    [(ngModel)]="inlineTaskForm.resourceName"
+                    name="inlineResource"
+                    placeholder="Resource name"
+                  ></app-combobox>
+                </td>
+                <td *ngIf="isTaskColVisible('projectName')">
+                  <app-combobox
+                    [options]="(uniqueProjects$ | async) || []"
+                    [(ngModel)]="inlineTaskForm.projectName"
+                    name="inlineProject"
+                    placeholder="Project name"
+                  ></app-combobox>
+                </td>
+                <td *ngIf="isTaskColVisible('module')">
+                  <app-combobox
+                    [options]="getTaskFieldValues((rawTasks$ | async) || [], 'module')"
+                    [(ngModel)]="inlineTaskForm.module"
+                    name="inlineModule"
+                    placeholder="Module"
+                  ></app-combobox>
+                </td>
                 <td *ngIf="isTaskColVisible('taskTitle')"><input class="table-input" [(ngModel)]="inlineTaskForm.taskTitle"></td>
-                <td *ngIf="isTaskColVisible('taskType')"><input class="table-input" [(ngModel)]="inlineTaskForm.taskType"></td>
+                <td *ngIf="isTaskColVisible('taskType')">
+                  <app-combobox
+                    [options]="getTaskFieldValues((rawTasks$ | async) || [], 'taskType')"
+                    [(ngModel)]="inlineTaskForm.taskType"
+                    name="inlineTaskType"
+                    placeholder="Task type"
+                  ></app-combobox>
+                </td>
                 <td *ngIf="isTaskColVisible('status')">
                   <select class="table-input" [(ngModel)]="inlineTaskForm.status">
                     <option *ngFor="let status of taskStatuses" [value]="status">{{ status }}</option>
@@ -1356,6 +1316,9 @@ interface OverdueTaskItem {
             <button class="btn-table secondary" type="button" (click)="toggleHiddenReleaseRows()">
               {{ showHiddenReleaseRows ? 'Hide Hidden Rows' : 'Show Hidden Rows' }}
             </button>
+            <button class="btn-table secondary" *ngIf="hasAnyReleaseFilter" type="button" (click)="clearAllReleaseFilters()" title="Clear all column filters">
+              ✕ Clear Filters
+            </button>
             <button class="btn-table secondary" type="button" (click)="toggleSection('releases')">{{ sections.releases ? 'Collapse' : 'Expand' }}</button>
           </div>
         </div>
@@ -1366,13 +1329,69 @@ interface OverdueTaskItem {
               <tr>
                 <th *ngIf="isReleaseColVisible('id')">ID</th>
                 <th *ngIf="isReleaseColVisible('title')">Title</th>
-                <th *ngIf="isReleaseColVisible('category')">Category</th>
-                <th *ngIf="isReleaseColVisible('module')">Module</th>
-                <th *ngIf="isReleaseColVisible('environment')">Current Environment</th>
-                <th *ngIf="isReleaseColVisible('priority')">Priority</th>
-                <th *ngIf="isReleaseColVisible('status')">Status</th>
-                <th *ngIf="isReleaseColVisible('prdStatus')">PRD Status</th>
-                <th *ngIf="isReleaseColVisible('assignedTo')">Assigned To</th>
+                <th *ngIf="isReleaseColVisible('category')" class="th-filterable">
+                  Category
+                  <app-column-filter
+                    columnLabel="Category"
+                    [options]="getReleaseColOptions((rawReleases$ | async) || [], 'category')"
+                    [selectedValues]="activeRelFilterCategory"
+                    (filterChange)="onRelColFilterChange('category', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isReleaseColVisible('module')" class="th-filterable">
+                  Module
+                  <app-column-filter
+                    columnLabel="Module"
+                    [options]="getReleaseColOptions((rawReleases$ | async) || [], 'module')"
+                    [selectedValues]="activeRelFilterModule"
+                    (filterChange)="onRelColFilterChange('module', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isReleaseColVisible('environment')" class="th-filterable">
+                  Current Environment
+                  <app-column-filter
+                    columnLabel="Environment"
+                    [options]="getReleaseColOptions((rawReleases$ | async) || [], 'environment')"
+                    [selectedValues]="activeRelFilterEnvironment"
+                    (filterChange)="onRelColFilterChange('environment', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isReleaseColVisible('priority')" class="th-filterable">
+                  Priority
+                  <app-column-filter
+                    columnLabel="Priority"
+                    [options]="getReleaseColOptions((rawReleases$ | async) || [], 'priority')"
+                    [selectedValues]="activeRelFilterPriority"
+                    (filterChange)="onRelColFilterChange('priority', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isReleaseColVisible('status')" class="th-filterable">
+                  Status
+                  <app-column-filter
+                    columnLabel="Status"
+                    [options]="getReleaseColOptions((rawReleases$ | async) || [], 'status')"
+                    [selectedValues]="activeRelFilterStatus"
+                    (filterChange)="onRelColFilterChange('status', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isReleaseColVisible('prdStatus')" class="th-filterable">
+                  PRD Status
+                  <app-column-filter
+                    columnLabel="PRD Status"
+                    [options]="getReleaseColOptions((rawReleases$ | async) || [], 'prdStatus')"
+                    [selectedValues]="activeRelFilterPrdStatus"
+                    (filterChange)="onRelColFilterChange('prdStatus', $event)"
+                  ></app-column-filter>
+                </th>
+                <th *ngIf="isReleaseColVisible('assignedTo')" class="th-filterable">
+                  Assigned To
+                  <app-column-filter
+                    columnLabel="Assigned To"
+                    [options]="getReleaseColOptions((rawReleases$ | async) || [], 'assignedTo')"
+                    [selectedValues]="activeRelFilterAssigned"
+                    (filterChange)="onRelColFilterChange('assigned', $event)"
+                  ></app-column-filter>
+                </th>
                 <th *ngIf="isReleaseColVisible('progress')">Progress</th>
                 <th *ngIf="isReleaseColVisible('targetDate')">Target Date</th>
                 <th *ngIf="isReleaseColVisible('completedDate')">Completed Date</th>
@@ -1385,8 +1404,22 @@ interface OverdueTaskItem {
                 @if (editingReleaseId === release.id) {
                 <td *ngIf="isReleaseColVisible('id')">{{ release.id }}</td>
                 <td *ngIf="isReleaseColVisible('title')"><input class="table-input" [(ngModel)]="inlineReleaseForm.title"></td>
-                <td *ngIf="isReleaseColVisible('category')"><input class="table-input" [(ngModel)]="inlineReleaseForm.category"></td>
-                <td *ngIf="isReleaseColVisible('module')"><input class="table-input" [(ngModel)]="inlineReleaseForm.module"></td>
+                <td *ngIf="isReleaseColVisible('category')">
+                  <app-combobox
+                    [options]="getReleaseFieldValues((rawReleases$ | async) || [], 'category')"
+                    [(ngModel)]="inlineReleaseForm.category"
+                    name="inlineRelCategory"
+                    placeholder="Category"
+                  ></app-combobox>
+                </td>
+                <td *ngIf="isReleaseColVisible('module')">
+                  <app-combobox
+                    [options]="getReleaseFieldValues((rawReleases$ | async) || [], 'module')"
+                    [(ngModel)]="inlineReleaseForm.module"
+                    name="inlineRelModule"
+                    placeholder="Module"
+                  ></app-combobox>
+                </td>
                 <td *ngIf="isReleaseColVisible('environment')">
                   <select class="table-input" [(ngModel)]="inlineReleaseForm.environment">
                     <option *ngFor="let env of environmentOptions" [value]="env">{{ env }}</option>
@@ -1407,7 +1440,14 @@ interface OverdueTaskItem {
                     <option *ngFor="let status of prdStatuses" [value]="status">{{ status }}</option>
                   </select>
                 </td>
-                <td *ngIf="isReleaseColVisible('assignedTo')"><input class="table-input" [(ngModel)]="inlineReleaseForm.assignedTo"></td>
+                <td *ngIf="isReleaseColVisible('assignedTo')">
+                  <app-combobox
+                    [options]="getReleaseFieldValues((rawReleases$ | async) || [], 'assignedTo')"
+                    [(ngModel)]="inlineReleaseForm.assignedTo"
+                    name="inlineRelAssigned"
+                    placeholder="Assigned to"
+                  ></app-combobox>
+                </td>
                 <td *ngIf="isReleaseColVisible('progress')"><input class="table-input small-input" type="number" min="0" max="100" [(ngModel)]="inlineReleaseForm.progress"></td>
                 <td *ngIf="isReleaseColVisible('targetDate')"><input class="table-input" type="date" [(ngModel)]="inlineReleaseForm.targetDate"></td>
                 <td *ngIf="isReleaseColVisible('completedDate')"><input class="table-input" type="date" [(ngModel)]="inlineReleaseForm.completedDate"></td>
@@ -5243,18 +5283,38 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
     map(updates => updates.filter(update => update.isVisible ?? true))
   );
 
-  // Task Filters State
-  filterResource = new BehaviorSubject<string>('');
-  filterProject = new BehaviorSubject<string>('');
-  filterStatus = new BehaviorSubject<string>('');
-  filterPriority = new BehaviorSubject<string>('');
+  // Task Filters State (multi-select - arrays of selected values)
+  filterResource = new BehaviorSubject<string[]>([]);
+  filterProject = new BehaviorSubject<string[]>([]);
+  filterStatus = new BehaviorSubject<string[]>([]);
+  filterPriority = new BehaviorSubject<string[]>([]);
   filterWeek = new BehaviorSubject<string>('W2');
+  filterModule = new BehaviorSubject<string[]>([]);
+  filterTaskType = new BehaviorSubject<string[]>([]);
 
-  // Release Filters State
-  relFilterCategory = new BehaviorSubject<string>('');
-  relFilterStatus = new BehaviorSubject<string>('');
-  relFilterPriority = new BehaviorSubject<string>('');
-  relFilterAssigned = new BehaviorSubject<string>('');
+  // Release Filters State (multi-select)
+  relFilterCategory = new BehaviorSubject<string[]>([]);
+  relFilterStatus = new BehaviorSubject<string[]>([]);
+  relFilterPriority = new BehaviorSubject<string[]>([]);
+  relFilterAssigned = new BehaviorSubject<string[]>([]);
+  relFilterModule = new BehaviorSubject<string[]>([]);
+  relFilterEnvironment = new BehaviorSubject<string[]>([]);
+  relFilterPrdStatus = new BehaviorSubject<string[]>([]);
+
+  // Active filter values (bound to column-filter outputs)
+  activeTaskFilterResource: string[] = [];
+  activeTaskFilterProject: string[] = [];
+  activeTaskFilterStatus: string[] = [];
+  activeTaskFilterPriority: string[] = [];
+  activeTaskFilterModule: string[] = [];
+  activeTaskFilterType: string[] = [];
+  activeRelFilterCategory: string[] = [];
+  activeRelFilterStatus: string[] = [];
+  activeRelFilterPriority: string[] = [];
+  activeRelFilterAssigned: string[] = [];
+  activeRelFilterModule: string[] = [];
+  activeRelFilterEnvironment: string[] = [];
+  activeRelFilterPrdStatus: string[] = [];
   private showHiddenHourlyRowsSubject = new BehaviorSubject<boolean>(false);
   private showHiddenTaskRowsSubject = new BehaviorSubject<boolean>(false);
   private showHiddenReleaseRowsSubject = new BehaviorSubject<boolean>(false);
@@ -5415,15 +5475,9 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
       this.cancelHourlyReminders();
 
       // 5. Reset Weekly Status & Project Status filters and editing states
-      this.filterResource.next('');
-      this.filterProject.next('');
-      this.filterStatus.next('');
-      this.filterPriority.next('');
+      this.clearAllTaskFilters();
       this.filterWeek.next('all');
-      this.relFilterCategory.next('');
-      this.relFilterStatus.next('');
-      this.relFilterPriority.next('');
-      this.relFilterAssigned.next('');
+      this.clearAllReleaseFilters();
       this.editingHourlyId = '';
       this.editingTaskId = '';
       this.editingReleaseId = '';
@@ -5681,42 +5735,54 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
     )
   );
 
-  // Filtered tasks logic
+  // Filtered tasks logic (multi-select array-based)
   filteredTasks$: Observable<DeveloperTask[]> = combineLatest([
     this.visibleTasks$,
     this.filterResource,
     this.filterProject,
     this.filterStatus,
     this.filterPriority,
-    this.filterWeek
+    this.filterWeek,
+    this.filterModule,
+    this.filterTaskType
   ]).pipe(
-    map(([tasks, resource, project, status, priority, week]) => {
+    map(([tasks, resource, project, status, priority, week, module, taskType]) => {
+      const passArr = (vals: string[], val: string) => !vals || vals.length === 0 || vals.includes(val);
       return tasks.filter(t => {
-        const passRes = !resource || t.resourceName === resource;
-        const passProj = !project || t.projectName === project;
-        const passStat = !status || t.status === status;
-        const passPrio = !priority || t.priority === priority;
+        const passRes = passArr(resource, t.resourceName);
+        const passProj = passArr(project, t.projectName);
+        const passStat = passArr(status, t.status);
+        const passPrio = passArr(priority, t.priority);
+        const passMod = passArr(module, t.module || '');
+        const passType = passArr(taskType, t.taskType || '');
         const passWeek = !week || week === 'all' || (t.week || '').trim().toUpperCase() === week.trim().toUpperCase();
-        return passRes && passProj && passStat && passPrio && passWeek;
+        return passRes && passProj && passStat && passPrio && passMod && passType && passWeek;
       });
     })
   );
 
-  // Filtered releases logic
+  // Filtered releases logic (multi-select array-based)
   filteredReleases$: Observable<ReleaseTrack[]> = combineLatest([
     this.visibleReleases$,
     this.relFilterCategory,
     this.relFilterStatus,
     this.relFilterPriority,
-    this.relFilterAssigned
+    this.relFilterAssigned,
+    this.relFilterModule,
+    this.relFilterEnvironment,
+    this.relFilterPrdStatus
   ]).pipe(
-    map(([releases, category, status, priority, assigned]) => {
+    map(([releases, category, status, priority, assigned, module, environment, prdStatus]) => {
+      const passArr = (vals: string[], val: string) => !vals || vals.length === 0 || vals.includes(val);
       return releases.filter(r => {
-        const passCat = !category || r.category === category;
-        const passStat = !status || r.status === status;
-        const passPrio = !priority || r.priority === priority;
-        const passAssign = !assigned || r.assignedTo === assigned;
-        return passCat && passStat && passPrio && passAssign;
+        const passCat = passArr(category, r.category || '');
+        const passStat = passArr(status, r.status || '');
+        const passPrio = passArr(priority, r.priority || '');
+        const passAssign = passArr(assigned, r.assignedTo || '');
+        const passMod = passArr(module, r.module || '');
+        const passEnv = passArr(environment, r.environment || '');
+        const passPrd = passArr(prdStatus, r.prdStatus || '');
+        return passCat && passStat && passPrio && passAssign && passMod && passEnv && passPrd;
       });
     })
   );
@@ -5818,13 +5884,58 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
     })
   );
 
+  // ── Column-filter event handlers (called from app-column-filter outputs) ──
+
+  onTaskColFilterChange(col: 'resource' | 'project' | 'status' | 'priority' | 'module' | 'taskType', values: string[]): void {
+    switch (col) {
+      case 'resource':  this.activeTaskFilterResource = values;  this.filterResource.next(values);  break;
+      case 'project':   this.activeTaskFilterProject = values;   this.filterProject.next(values);   break;
+      case 'status':    this.activeTaskFilterStatus = values;    this.filterStatus.next(values);    break;
+      case 'priority':  this.activeTaskFilterPriority = values;  this.filterPriority.next(values);  break;
+      case 'module':    this.activeTaskFilterModule = values;    this.filterModule.next(values);    break;
+      case 'taskType':  this.activeTaskFilterType = values;      this.filterTaskType.next(values);  break;
+    }
+  }
+
+  onRelColFilterChange(col: 'category' | 'status' | 'priority' | 'assigned' | 'module' | 'environment' | 'prdStatus', values: string[]): void {
+    switch (col) {
+      case 'category':    this.activeRelFilterCategory = values;    this.relFilterCategory.next(values);    break;
+      case 'status':      this.activeRelFilterStatus = values;      this.relFilterStatus.next(values);      break;
+      case 'priority':    this.activeRelFilterPriority = values;    this.relFilterPriority.next(values);    break;
+      case 'assigned':    this.activeRelFilterAssigned = values;    this.relFilterAssigned.next(values);    break;
+      case 'module':      this.activeRelFilterModule = values;      this.relFilterModule.next(values);      break;
+      case 'environment': this.activeRelFilterEnvironment = values; this.relFilterEnvironment.next(values); break;
+      case 'prdStatus':   this.activeRelFilterPrdStatus = values;   this.relFilterPrdStatus.next(values);   break;
+    }
+  }
+
+  clearAllTaskFilters(): void {
+    this.activeTaskFilterResource = []; this.filterResource.next([]);
+    this.activeTaskFilterProject = [];  this.filterProject.next([]);
+    this.activeTaskFilterStatus = [];   this.filterStatus.next([]);
+    this.activeTaskFilterPriority = []; this.filterPriority.next([]);
+    this.activeTaskFilterModule = [];   this.filterModule.next([]);
+    this.activeTaskFilterType = [];     this.filterTaskType.next([]);
+  }
+
+  clearAllReleaseFilters(): void {
+    this.activeRelFilterCategory = [];    this.relFilterCategory.next([]);
+    this.activeRelFilterStatus = [];      this.relFilterStatus.next([]);
+    this.activeRelFilterPriority = [];    this.relFilterPriority.next([]);
+    this.activeRelFilterAssigned = [];    this.relFilterAssigned.next([]);
+    this.activeRelFilterModule = [];      this.relFilterModule.next([]);
+    this.activeRelFilterEnvironment = []; this.relFilterEnvironment.next([]);
+    this.activeRelFilterPrdStatus = [];   this.relFilterPrdStatus.next([]);
+  }
+
+  // Legacy handler kept for compatibility (old filter card select elements)
   onFilterChange(filterType: string, event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     switch (filterType) {
-      case 'resource': this.filterResource.next(value); break;
-      case 'project': this.filterProject.next(value); break;
-      case 'status': this.filterStatus.next(value); break;
-      case 'priority': this.filterPriority.next(value); break;
+      case 'resource': this.filterResource.next(value ? [value] : []); break;
+      case 'project': this.filterProject.next(value ? [value] : []); break;
+      case 'status': this.filterStatus.next(value ? [value] : []); break;
+      case 'priority': this.filterPriority.next(value ? [value] : []); break;
       case 'week': this.onWeekNavSelect(value); break;
     }
   }
@@ -5832,12 +5943,67 @@ export class DashboardComponent implements OnInit, OnDestroy, OnChanges {
   onRelFilterChange(filterType: string, event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     switch (filterType) {
-      case 'category': this.relFilterCategory.next(value); break;
-      case 'status': this.relFilterStatus.next(value); break;
-      case 'priority': this.relFilterPriority.next(value); break;
-      case 'assigned': this.relFilterAssigned.next(value); break;
+      case 'category': this.relFilterCategory.next(value ? [value] : []); break;
+      case 'status': this.relFilterStatus.next(value ? [value] : []); break;
+      case 'priority': this.relFilterPriority.next(value ? [value] : []); break;
+      case 'assigned': this.relFilterAssigned.next(value ? [value] : []); break;
     }
   }
+
+  // Helper: build ColumnFilterOption[] for a given set of task field values
+  getTaskColOptions(tasks: DeveloperTask[], field: keyof DeveloperTask): ColumnFilterOption[] {
+    const counts = new Map<string, number>();
+    tasks.forEach(t => {
+      const v = String((t[field] as any) ?? '').trim();
+      if (v) counts.set(v, (counts.get(v) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([value, count]) => ({ value, label: value, count }));
+  }
+
+  getReleaseColOptions(releases: ReleaseTrack[], field: keyof ReleaseTrack): ColumnFilterOption[] {
+    const counts = new Map<string, number>();
+    releases.forEach(r => {
+      const v = String((r[field] as any) ?? '').trim();
+      if (v) counts.set(v, (counts.get(v) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([value, count]) => ({ value, label: value, count }));
+  }
+
+  /** Returns unique sorted string values for a task field — used to feed combobox [options] */
+  getTaskFieldValues(tasks: DeveloperTask[], field: keyof DeveloperTask): string[] {
+    return [...new Set(tasks.map(t => String((t[field] as any) ?? '').trim()).filter(Boolean))].sort();
+  }
+
+  /** Returns unique sorted string values for a release field — used to feed combobox [options] */
+  getReleaseFieldValues(releases: ReleaseTrack[], field: keyof ReleaseTrack): string[] {
+    return [...new Set(releases.map(r => String((r[field] as any) ?? '').trim()).filter(Boolean))].sort();
+  }
+
+
+  get hasAnyTaskFilter(): boolean {
+    return this.activeTaskFilterResource.length > 0 ||
+           this.activeTaskFilterProject.length > 0 ||
+           this.activeTaskFilterStatus.length > 0 ||
+           this.activeTaskFilterPriority.length > 0 ||
+           this.activeTaskFilterModule.length > 0 ||
+           this.activeTaskFilterType.length > 0;
+  }
+
+  get hasAnyReleaseFilter(): boolean {
+    return this.activeRelFilterCategory.length > 0 ||
+           this.activeRelFilterStatus.length > 0 ||
+           this.activeRelFilterPriority.length > 0 ||
+           this.activeRelFilterAssigned.length > 0 ||
+           this.activeRelFilterModule.length > 0 ||
+           this.activeRelFilterEnvironment.length > 0 ||
+           this.activeRelFilterPrdStatus.length > 0;
+  }
+
+
 
   async enableHourlyReminders(): Promise<void> {
     const alarmPreparation = this.notificationReminderService
