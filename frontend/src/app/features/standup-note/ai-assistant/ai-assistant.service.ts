@@ -31,6 +31,8 @@ export interface ChatMessage {
   timestamp: string;
   extractionSummary?: ExtractionSummary;
   attachmentName?: string;
+  tokens?: number;
+  tokensUnavailable?: boolean;
 }
 
 export interface ChatSession {
@@ -41,6 +43,15 @@ export interface ChatSession {
   messages: ChatMessage[];
   pinned: boolean;
   extractedData?: ExtractedData;
+  totalTokens?: number;
+}
+
+export interface AiCallResult {
+  text: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  tokensUnavailable?: boolean;
 }
 
 export interface ExtractionSummary {
@@ -184,6 +195,7 @@ export class AiAssistantService {
       updatedAt: new Date().toISOString(),
       messages: [],
       pinned: false,
+      totalTokens: 0,
     };
     this.sessionsSubject.next([session, ...this.sessions]);
     this._activeSessionId.set(id);
@@ -213,6 +225,7 @@ export class AiAssistantService {
       updatedAt: new Date().toISOString(),
       messages: [],
       pinned: false,
+      totalTokens: 0,
     };
     this.sessionsSubject.next([freshSession]);
     this._activeSessionId.set(id);
@@ -279,37 +292,47 @@ export class AiAssistantService {
         .find((s) => s.id === session!.id)
         ?.messages.slice(0, -1) ?? [];
 
-      let responseText = '';
+      let aiResult: AiCallResult = { text: '', tokensUnavailable: true };
       let parsed: { summary: string; items: any[] } = { summary: '', items: [] };
 
       try {
-        responseText = await this.callAI(content, historyExcludingLatest, cfg);
-        parsed = this.parseAIResponse(responseText);
+        aiResult = await this.callAI(content, historyExcludingLatest, cfg);
+        parsed = this.parseAIResponse(aiResult.text);
       } catch (aiErr: any) {
         if (!tabularResult || tabularResult.items.length === 0) {
           throw aiErr;
         }
-        responseText = tabularResult.summary;
+        aiResult = { text: tabularResult.summary, tokensUnavailable: true };
         parsed = tabularResult;
       }
 
       // If AI returned no items or empty items, but tabular parser extracted items, use tabularResult!
       if ((!parsed.items || parsed.items.length === 0) && tabularResult && tabularResult.items.length > 0) {
         parsed = {
-          summary: parsed.summary && parsed.summary !== responseText ? parsed.summary : tabularResult.summary,
+          summary: parsed.summary && parsed.summary !== aiResult.text ? parsed.summary : tabularResult.summary,
           items: tabularResult.items,
         };
       }
 
+      // Update user message with actual input tokens metadata
+      this.updateMessageTokens(
+        session.id,
+        userMsg.id,
+        aiResult.promptTokens,
+        aiResult.promptTokens === undefined
+      );
+
       const assistantMsg: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         role: 'assistant',
-        content: parsed.summary || responseText,
+        content: parsed.summary || aiResult.text,
         timestamp: new Date().toISOString(),
         extractionSummary:
           parsed.items && parsed.items.length > 0
             ? this.buildExtractionSummary(parsed.items)
             : undefined,
+        tokens: aiResult.completionTokens,
+        tokensUnavailable: aiResult.completionTokens === undefined,
       };
 
       this.addMessage(session.id, assistantMsg);
@@ -339,12 +362,14 @@ export class AiAssistantService {
       }
     } catch (err: any) {
       if (tabularResult && tabularResult.items.length > 0) {
+        this.updateMessageTokens(session.id, userMsg.id, undefined, true);
         const assistantMsg: ChatMessage = {
           id: `msg-${Date.now() + 1}`,
           role: 'assistant',
           content: tabularResult.summary,
           timestamp: new Date().toISOString(),
           extractionSummary: this.buildExtractionSummary(tabularResult.items),
+          tokensUnavailable: true,
         };
         this.addMessage(session.id, assistantMsg);
         const extractedData: ExtractedData = {
@@ -363,12 +388,14 @@ export class AiAssistantService {
         };
         this.updateSessionExtractedData(session.id, extractedData);
       } else {
+        this.updateMessageTokens(session.id, userMsg.id, undefined, true);
         this.error.set(err.message || 'Failed to get AI response.');
         const errMsg: ChatMessage = {
           id: `msg-err-${Date.now()}`,
           role: 'assistant',
           content: `Error: ${err.message || 'Failed to get AI response. Please check your API key and try again.'}`,
           timestamp: new Date().toISOString(),
+          tokensUnavailable: true,
         };
         this.addMessage(session.id, errMsg);
       }
@@ -377,12 +404,11 @@ export class AiAssistantService {
     }
   }
 
-
   private async callAI(
     userMessage: string,
     history: ChatMessage[],
     cfg: AiConfig
-  ): Promise<string> {
+  ): Promise<AiCallResult> {
     // If provider is foundry, or if no frontend API key is set, route to backend Python service
     if (cfg.provider === 'foundry' || !cfg.apiKey) {
       return this.callFoundryBackend(userMessage, history, cfg);
@@ -402,7 +428,7 @@ export class AiAssistantService {
     userMessage: string,
     history: ChatMessage[],
     cfg: AiConfig
-  ): Promise<string> {
+  ): Promise<AiCallResult> {
     const payload = {
       message: userMessage,
       history: history.map((m) => ({ role: m.role, content: m.content })),
@@ -439,10 +465,40 @@ export class AiAssistantService {
         if (response.ok) {
           const data = (await response.json()) as any;
           if (data && data.response) {
-            return data.response;
+            const promptTokens =
+              typeof data.prompt_tokens === 'number'
+                ? data.prompt_tokens
+                : typeof data.usage?.prompt_tokens === 'number'
+                ? data.usage.prompt_tokens
+                : undefined;
+            const completionTokens =
+              typeof data.completion_tokens === 'number'
+                ? data.completion_tokens
+                : typeof data.usage?.completion_tokens === 'number'
+                ? data.usage.completion_tokens
+                : undefined;
+            const totalTokens =
+              typeof data.total_tokens === 'number'
+                ? data.total_tokens
+                : typeof data.usage?.total_tokens === 'number'
+                ? data.usage.total_tokens
+                : typeof promptTokens === 'number' && typeof completionTokens === 'number'
+                ? promptTokens + completionTokens
+                : undefined;
+
+            return {
+              text: data.response,
+              promptTokens,
+              completionTokens,
+              totalTokens,
+              tokensUnavailable: promptTokens === undefined && completionTokens === undefined,
+            };
           }
           if (typeof data === 'string') {
-            return data;
+            return {
+              text: data,
+              tokensUnavailable: true,
+            };
           }
         } else {
           const errData = (await response.json().catch(() => ({}))) as any;
@@ -470,7 +526,7 @@ export class AiAssistantService {
     userMessage: string,
     history: ChatMessage[],
     cfg: AiConfig
-  ): Promise<string> {
+  ): Promise<AiCallResult> {
     const messages = [
       { role: 'system', content: cfg.systemInstructions || DEFAULT_SYSTEM_INSTRUCTIONS },
       ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -491,15 +547,29 @@ export class AiAssistantService {
       throw new Error((errData as any)?.error?.message || `OpenAI API error: ${response.status}`);
     }
 
-    const data = await response.json() as any;
-    return data.choices?.[0]?.message?.content || '';
+    const data = (await response.json()) as any;
+    const text = data.choices?.[0]?.message?.content || '';
+    const promptTokens =
+      typeof data.usage?.prompt_tokens === 'number' ? data.usage.prompt_tokens : undefined;
+    const completionTokens =
+      typeof data.usage?.completion_tokens === 'number' ? data.usage.completion_tokens : undefined;
+    const totalTokens =
+      typeof data.usage?.total_tokens === 'number' ? data.usage.total_tokens : undefined;
+
+    return {
+      text,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      tokensUnavailable: promptTokens === undefined && completionTokens === undefined,
+    };
   }
 
   private async callGemini(
     userMessage: string,
     history: ChatMessage[],
     cfg: AiConfig
-  ): Promise<string> {
+  ): Promise<AiCallResult> {
     const contents = [
       ...history.map((m) => ({
         role: m.role === 'user' ? 'user' : 'model',
@@ -526,15 +596,35 @@ export class AiAssistantService {
       throw new Error((errData as any)?.error?.message || `Gemini API error: ${response.status}`);
     }
 
-    const data = await response.json() as any;
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const data = (await response.json()) as any;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const promptTokens =
+      typeof data.usageMetadata?.promptTokenCount === 'number'
+        ? data.usageMetadata.promptTokenCount
+        : undefined;
+    const completionTokens =
+      typeof data.usageMetadata?.candidatesTokenCount === 'number'
+        ? data.usageMetadata.candidatesTokenCount
+        : undefined;
+    const totalTokens =
+      typeof data.usageMetadata?.totalTokenCount === 'number'
+        ? data.usageMetadata.totalTokenCount
+        : undefined;
+
+    return {
+      text,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      tokensUnavailable: promptTokens === undefined && completionTokens === undefined,
+    };
   }
 
   private async callAnthropic(
     userMessage: string,
     history: ChatMessage[],
     cfg: AiConfig
-  ): Promise<string> {
+  ): Promise<AiCallResult> {
     const messages = [
       ...history.map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: userMessage },
@@ -563,8 +653,24 @@ export class AiAssistantService {
       );
     }
 
-    const data = await response.json() as any;
-    return data.content?.[0]?.text || '';
+    const data = (await response.json()) as any;
+    const text = data.content?.[0]?.text || '';
+    const promptTokens =
+      typeof data.usage?.input_tokens === 'number' ? data.usage.input_tokens : undefined;
+    const completionTokens =
+      typeof data.usage?.output_tokens === 'number' ? data.usage.output_tokens : undefined;
+    const totalTokens =
+      typeof promptTokens === 'number' && typeof completionTokens === 'number'
+        ? promptTokens + completionTokens
+        : undefined;
+
+    return {
+      text,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      tokensUnavailable: promptTokens === undefined && completionTokens === undefined,
+    };
   }
 
   private parseAIResponse(text: string): { summary: string; items: any[] } {
@@ -1054,13 +1160,59 @@ export class AiAssistantService {
     return DEFAULT_SYSTEM_INSTRUCTIONS;
   }
 
+  updateMessageTokens(
+    sessionId: string,
+    messageId: string,
+    tokens?: number,
+    tokensUnavailable?: boolean
+  ) {
+    this.sessionsSubject.next(
+      this.sessions.map((s) => {
+        if (s.id !== sessionId) return s;
+        const updatedMessages = s.messages.map((m) =>
+          m.id === messageId ? { ...m, tokens, tokensUnavailable } : m
+        );
+        const totalTokens = updatedMessages.reduce(
+          (sum, m) => sum + (typeof m.tokens === 'number' ? m.tokens : 0),
+          0
+        );
+        return {
+          ...s,
+          messages: updatedMessages,
+          totalTokens,
+        };
+      })
+    );
+    this.persistSessions();
+  }
+
+  getSessionTotalTokens(session: ChatSession | null): number {
+    if (!session) return 0;
+    if (typeof session.totalTokens === 'number') {
+      return session.totalTokens;
+    }
+    return (session.messages || []).reduce(
+      (sum, m) => sum + (typeof m.tokens === 'number' ? m.tokens : 0),
+      0
+    );
+  }
+
   private addMessage(sessionId: string, msg: ChatMessage) {
     this.sessionsSubject.next(
-      this.sessions.map((s) =>
-        s.id === sessionId
-          ? { ...s, messages: [...s.messages, msg], updatedAt: new Date().toISOString() }
-          : s
-      )
+      this.sessions.map((s) => {
+        if (s.id !== sessionId) return s;
+        const newMessages = [...s.messages, msg];
+        const totalTokens = newMessages.reduce(
+          (sum, m) => sum + (typeof m.tokens === 'number' ? m.tokens : 0),
+          0
+        );
+        return {
+          ...s,
+          messages: newMessages,
+          totalTokens,
+          updatedAt: new Date().toISOString(),
+        };
+      })
     );
     this.persistSessions();
   }
@@ -1090,7 +1242,19 @@ export class AiAssistantService {
       const uid = this.authService.user()?.uid;
       const key = uid ? `${AI_STORAGE_KEY_PREFIX}.${uid}` : AI_STORAGE_KEY_PREFIX;
       const data = localStorage.getItem(key);
-      if (data) return JSON.parse(data);
+      if (data) {
+        const parsed: ChatSession[] = JSON.parse(data);
+        return parsed.map((s) => ({
+          ...s,
+          totalTokens:
+            typeof s.totalTokens === 'number'
+              ? s.totalTokens
+              : (s.messages || []).reduce(
+                  (sum, m) => sum + (typeof m.tokens === 'number' ? m.tokens : 0),
+                  0
+                ),
+        }));
+      }
     } catch (e) {
       console.error('AiAssistantService: failed to load sessions', e);
     }

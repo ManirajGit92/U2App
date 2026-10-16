@@ -7,7 +7,7 @@ import {
   ElementRef,
   AfterViewChecked,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import * as XLSX from 'xlsx';
@@ -44,7 +44,7 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
 @Component({
   selector: 'app-ai-assistant',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DecimalPipe],
   template: `
     <div class="ai-assistant-shell" [class.sidebar-expanded]="chatSidebarOpen">
       <!-- ==================== LEFT CHAT SIDEBAR ==================== -->
@@ -93,6 +93,7 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                   (blur)="finishRename($event, s.id)" (keydown.enter)="finishRename($event, s.id)"
                   autofocus />
                 <span class="session-date">{{ formatSessionDate(s.updatedAt) }}</span>
+                <span class="session-tokens" *ngIf="aiSvc.getSessionTotalTokens(s) > 0">{{ formatSessionTokens(s) }}</span>
               </div>
               <div class="session-actions" (click)="$event.stopPropagation()">
                 <button class="session-action-btn" (click)="aiSvc.togglePin(s.id)" title="Unpin">📌</button>
@@ -118,6 +119,7 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                   (blur)="finishRename($event, s.id)" (keydown.enter)="finishRename($event, s.id)"
                   autofocus />
                 <span class="session-date">{{ formatSessionDate(s.updatedAt) }}</span>
+                <span class="session-tokens" *ngIf="aiSvc.getSessionTotalTokens(s) > 0">{{ formatSessionTokens(s) }}</span>
               </div>
               <div class="session-actions" (click)="$event.stopPropagation()">
                 <button class="session-action-btn" (click)="aiSvc.togglePin(s.id)" title="Pin">📌</button>
@@ -257,6 +259,11 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
               </svg>
               <span>{{ hasApiKey ? (aiSvc.config().provider === 'foundry' && !aiSvc.config().apiKey ? 'Backend Key ✓' : 'API Key ✓') : 'API Key' }}</span>
             </div>
+            <!-- Cumulative token counter for active chat -->
+            <div class="chat-tokens-indicator" *ngIf="activeTab === 'chat' && currentSession && aiSvc.getSessionTotalTokens(currentSession) > 0" title="Cumulative tokens used in this conversation">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l2 2"/></svg>
+              {{ currentChatTokensText }}
+            </div>
           </div>
         </div>
 
@@ -347,7 +354,17 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
                     </button>
                   </div>
 
-                  <div class="msg-time">{{ formatTime(msg.timestamp) }}</div>
+                  <!-- Message footer: time + token info + copy button -->
+                  <div class="msg-footer">
+                    <span class="msg-time">{{ formatTime(msg.timestamp) }}</span>
+                    <span class="msg-tokens" *ngIf="!msg.tokensUnavailable && msg.tokens !== undefined">
+                      {{ msg.role === 'user' ? '📥' : '📤' }} {{ msg.tokens | number }} {{ msg.role === 'user' ? 'input' : 'output' }} tokens
+                    </span>
+                    <span class="msg-tokens unavailable" *ngIf="msg.tokensUnavailable">Token usage unavailable</span>
+                    <button class="msg-copy-btn" (click)="copyMessageContent(msg.id, msg.content)" [id]="'copy-msg-' + msg.id" title="Copy message">
+                      {{ copiedMessageIds.has(msg.id) ? '✓ Copied' : '⎘ Copy' }}
+                    </button>
+                  </div>
                 </div>
 
                 <div class="msg-avatar user-avatar" *ngIf="msg.role === 'user'">
@@ -2064,13 +2081,7 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
     }
     .user-message .msg-content { color: white; }
 
-    .msg-time {
-      font-size: 0.7rem;
-      color: var(--text-tertiary);
-      margin-top: 6px;
-      text-align: right;
-    }
-    .user-message .msg-time { color: rgba(255,255,255,0.6); }
+
 
     /* Extraction Summary Card */
     .extraction-summary-card {
@@ -3135,6 +3146,81 @@ type HistoryGroup = { label: string; sessions: ChatSession[] };
       color: var(--danger) !important;
       opacity: 0.85;
     }
+
+    /* ── Message Footer (time + tokens + copy) ── */
+    .msg-footer {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .msg-time {
+      font-size: 0.7rem;
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+    .user-message .msg-time { color: rgba(255,255,255,0.55); }
+
+    .msg-tokens {
+      font-size: 0.68rem;
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+      letter-spacing: 0.1px;
+    }
+    .msg-tokens.unavailable {
+      opacity: 0.55;
+      font-style: italic;
+    }
+    .user-message .msg-tokens { color: rgba(255,255,255,0.5); }
+
+    .msg-copy-btn {
+      margin-left: auto;
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      padding: 2px 7px;
+      font-size: 0.68rem;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .msg-copy-btn:hover {
+      border-color: var(--border-color);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+    .user-message .msg-copy-btn { color: rgba(255,255,255,0.55); }
+    .user-message .msg-copy-btn:hover {
+      border-color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    /* ── Session Sidebar Token Badge ── */
+    .session-tokens {
+      display: block;
+      font-size: 0.65rem;
+      color: var(--accent-primary);
+      opacity: 0.75;
+      margin-top: 1px;
+    }
+
+    /* ── Cumulative Token Counter (tab-bar) ── */
+    .chat-tokens-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 9px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      white-space: nowrap;
+    }
   `],
 })
 export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked {
@@ -3169,6 +3255,8 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
   expandedItems = new Set<string>();
 
   selectedModel: AiModel = 'gpt-4o';
+  copiedMessageIds = new Set<string>();
+  private copyTimeouts = new Map<string, any>();
   private renamingId: string | null = null;
   private subscription = new Subscription();
   private shouldScrollToBottom = false;
@@ -3212,6 +3300,8 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
   ngOnDestroy() {
     this.subscription.unsubscribe();
     if (this.successTimeout) clearTimeout(this.successTimeout);
+    this.copyTimeouts.forEach((t) => clearTimeout(t));
+    this.copyTimeouts.clear();
   }
 
   // ── Computed ──────────────────────────────────────────────────────────────
@@ -3230,6 +3320,56 @@ export class AiAssistantComponent implements OnInit, OnDestroy, AfterViewChecked
 
   get pendingCount(): number {
     return this.extractedItems.filter((i) => i.status === 'pending' || i.status === 'approved').length;
+  }
+
+  /** Total cumulative tokens in the active chat, formatted for display */
+  get currentChatTokensText(): string {
+    const total = this.aiSvc.getSessionTotalTokens(this.currentSession);
+    if (total === 0) return '';
+    if (total >= 1000) {
+      return `${(total / 1000).toFixed(1)}k tokens`;
+    }
+    return `${total} tokens`;
+  }
+
+  formatSessionTokens(session: ChatSession): string {
+    const total = this.aiSvc.getSessionTotalTokens(session);
+    if (total <= 0) return '';
+    if (total >= 1000) {
+      return `${(total / 1000).toFixed(1)}k tok`;
+    }
+    return `${total} tok`;
+  }
+
+  copyMessageContent(msgId: string, content: string): void {
+    navigator.clipboard.writeText(content).then(() => {
+      this.copiedMessageIds.add(msgId);
+      const existing = this.copyTimeouts.get(msgId);
+      if (existing) clearTimeout(existing);
+      const t = setTimeout(() => {
+        this.copiedMessageIds.delete(msgId);
+        this.copyTimeouts.delete(msgId);
+      }, 2000);
+      this.copyTimeouts.set(msgId, t);
+    }).catch(() => {
+      // Fallback for browsers without clipboard API
+      const el = document.createElement('textarea');
+      el.value = content;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(el);
+      this.copiedMessageIds.add(msgId);
+      const existing = this.copyTimeouts.get(msgId);
+      if (existing) clearTimeout(existing);
+      const t = setTimeout(() => {
+        this.copiedMessageIds.delete(msgId);
+        this.copyTimeouts.delete(msgId);
+      }, 2000);
+      this.copyTimeouts.set(msgId, t);
+    });
   }
 
   getItemsByCategory(cat: string): ExtractedItem[] {

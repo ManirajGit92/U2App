@@ -64,6 +64,9 @@ class ChatResponse(BaseModel):
     status: str
     response: str
     model: str
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
 
 
 def call_foundry_model(
@@ -73,7 +76,7 @@ def call_foundry_model(
     model: Optional[str] = None,
     api_key: Optional[str] = None,
     endpoint: Optional[str] = None,
-) -> str:
+):
     """
     Calls the Azure AI Foundry model using client.responses.create
     similar to CH-1_Models/1_LLM.py.
@@ -114,7 +117,19 @@ def call_foundry_model(
     if not output_text:
         output_text = str(response)
 
-    return output_text
+    prompt_tokens = None
+    completion_tokens = None
+    total_tokens = None
+
+    usage = getattr(response, "usage", None)
+    if usage:
+        prompt_tokens = getattr(usage, "prompt_tokens", None) or getattr(usage, "input_tokens", None)
+        completion_tokens = getattr(usage, "completion_tokens", None) or getattr(usage, "output_tokens", None)
+        total_tokens = getattr(usage, "total_tokens", None)
+        if total_tokens is None and prompt_tokens is not None and completion_tokens is not None:
+            total_tokens = prompt_tokens + completion_tokens
+
+    return output_text, prompt_tokens, completion_tokens, total_tokens
 
 
 @app.get("/")
@@ -142,7 +157,7 @@ def hello():
 @app.post("/chat", response_model=ChatResponse)
 def handle_chat(req: ChatRequest):
     try:
-        response_text = call_foundry_model(
+        response_text, prompt_tokens, completion_tokens, total_tokens = call_foundry_model(
             message=req.message,
             history=req.history,
             system_instructions=req.system_instructions,
@@ -154,6 +169,9 @@ def handle_chat(req: ChatRequest):
             status="success",
             response=response_text,
             model=req.model or BACKEND_DEPLOYMENT,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
