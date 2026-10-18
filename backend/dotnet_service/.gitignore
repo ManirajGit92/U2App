@@ -1,0 +1,25 @@
+
+# .NET build output
+**/bin/
+**/obj/
+
+# Visual Studio local files
+.vs/
+*.user
+*.suo
+
+# Test results
+TestResults/
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Local database files
+*.mdf
+*.ldf
+
+# Temporary files
+*.tmp
+*.log
