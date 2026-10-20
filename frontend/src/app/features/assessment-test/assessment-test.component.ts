@@ -1,4 +1,4 @@
-﻿import { Component, ElementRef, ViewChild, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -9,11 +9,12 @@ import {
   QuestionSet,
 } from './assessment-test.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { AssessmentAiAssistantComponent } from './ai-assistant/assessment-ai-assistant.component';
 
 @Component({
   selector: 'app-assessment-test',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AssessmentAiAssistantComponent],
   template: `
     <div
       class="assessment-page"
@@ -75,6 +76,9 @@ import { ThemeService } from '../../core/services/theme.service';
               </button>
               <button class="btn btn-secondary btn-sm btn-interactive" (click)="createQuestionSet()">
                 <span>➕</span> Sheet
+              </button>
+              <button class="btn btn-primary btn-sm btn-interactive btn-ai-sidebar" (click)="switchViewMode('ai')" title="AI Question Generator">
+                <span>🤖</span> AI Assistant
               </button>
             </div>
             <div class="sidebar-buttons">
@@ -248,6 +252,14 @@ import { ThemeService } from '../../core/services/theme.service';
                   (click)="switchViewMode('results')"
                 >
                   📊 Results
+                </button>
+                <button
+                  class="tab-btn btn-interactive"
+                  [class.active]="viewMode() === 'ai'"
+                  (click)="switchViewMode('ai')"
+                  id="tab-ai-assistant"
+                >
+                  🤖 AI Assistant
                 </button>
               </div>
             </div>
@@ -1058,6 +1070,14 @@ import { ThemeService } from '../../core/services/theme.service';
                 </button>
               </div>
             </div>
+          </section>
+
+          <!-- AI ASSISTANT MODE -->
+          <section *ngIf="viewMode() === 'ai'" class="ai-section glass-card" style="padding: 0; overflow: hidden; height: calc(100vh - 180px); min-height: 650px;">
+            <app-assessment-ai-assistant
+              (takeTest)="onAiTakeTest($event)"
+              (openBuilder)="onAiOpenBuilder($event)"
+            ></app-assessment-ai-assistant>
           </section>
         </main>
       </div>
@@ -2697,7 +2717,7 @@ import { ThemeService } from '../../core/services/theme.service';
 export class AssessmentTestComponent {
   service = inject(AssessmentTestService);
   themeService = inject(ThemeService);
-  viewMode = signal<'builder' | 'test' | 'results'>('builder');
+  viewMode = signal<'builder' | 'test' | 'results' | 'ai'>('builder');
   libraryCollapsed = signal(false);
   selectedSheetOpen = signal(true);
   questionsEditorOpen = signal(true);
@@ -2850,9 +2870,30 @@ export class AssessmentTestComponent {
     this.service.sideNavOpenMobile.set(false);
   }
 
-  switchViewMode(mode: 'builder' | 'test' | 'results'): void {
+  switchViewMode(mode: 'builder' | 'test' | 'results' | 'ai'): void {
     this.viewMode.set(mode);
     this.service.playSound('navigate');
+  }
+
+  onAiTakeTest(setId: string): void {
+    this.service.selectedSetId.set(setId);
+    const set = this.service.questionSets().find((s) => s.id === setId);
+    if (set?.categoryId) {
+      this.service.selectedCategoryId.set(set.categoryId);
+      this.expandedCategories.add(set.categoryId);
+    }
+    this.switchViewMode('test');
+    this.startAssessment();
+  }
+
+  onAiOpenBuilder(setId: string): void {
+    this.service.selectedSetId.set(setId);
+    const set = this.service.questionSets().find((s) => s.id === setId);
+    if (set?.categoryId) {
+      this.service.selectedCategoryId.set(set.categoryId);
+      this.expandedCategories.add(set.categoryId);
+    }
+    this.switchViewMode('builder');
   }
 
   addSheetToCategory(categoryId: string): void {

@@ -28,6 +28,8 @@ export interface AssessmentQuestion {
   weight: number;
   negativeMark: number;
   controls?: AssessmentQuestion[];
+  difficulty?: string;
+  category?: string;
 }
 
 export interface QuestionSet {
@@ -433,7 +435,7 @@ export class AssessmentTestService implements OnDestroy {
     }
   }
 
-  private saveLocalState(): void {
+  saveLocalState(): void {
     try {
       const state: PersistedAssessmentState = {
         categories: this.categories(),
