@@ -2,17 +2,19 @@ import { Component, inject } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
+import { AiCharacterAssistantComponent } from './shared/components/ai-character-assistant/ai-character-assistant.component';
 import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NavbarComponent, CommonModule],
+  imports: [RouterOutlet, NavbarComponent, CommonModule, AiCharacterAssistantComponent],
   template: `
     <app-navbar *ngIf="!isFullScreen" />
     <main class="main-content" [class.full-screen]="isFullScreen">
       <router-outlet />
     </main>
+    <app-ai-character-assistant />
   `,
   styles: [`
     .main-content {

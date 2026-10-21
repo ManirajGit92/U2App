@@ -107,6 +107,142 @@ body.theme-dark {
   --accent-primary-rgb: 129, 140, 248;
 }
 
+/* ───── Blue Theme (Deep Ocean Glass) ───── */
+body.theme-blue {
+  --bg-primary: #071322;
+  --bg-secondary: #0d2138;
+  --bg-tertiary: #132e4e;
+  --bg-card: rgba(13, 33, 56, 0.78);
+  --bg-card-hover: rgba(19, 46, 78, 0.95);
+  --bg-input: #132e4e;
+  --bg-overlay: rgba(7, 19, 34, 0.65);
+  --bg-surface: #0d2138;
+
+  --text-primary: #e6f1fc;
+  --text-secondary: #8ec2f3;
+  --text-tertiary: #528fc8;
+  --text-inverse: #071322;
+
+  --border-color: rgba(59, 130, 246, 0.15);
+  --border-color-strong: rgba(59, 130, 246, 0.32);
+
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #2563eb;
+  --accent-secondary: #60a5fa;
+  --accent-gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
+  --accent-surface: rgba(59, 130, 246, 0.12);
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #38bdf8;
+
+  --diff-match: rgba(16,185,129,0.15);
+  --diff-match-text: #34d399;
+  --diff-mismatch: rgba(239,68,68,0.15);
+  --diff-mismatch-text: #f87171;
+  --diff-added: rgba(52,211,153,0.12);
+  --diff-removed: rgba(248,113,113,0.12);
+
+  --hero-gradient: linear-gradient(135deg, #071e3d 0%, #1e3a8a 50%, #0284c7 100%);
+  --card-glass: rgba(13, 33, 56, 0.60);
+  --card-glass-border: rgba(59, 130, 246, 0.20);
+  --navbar-bg: rgba(7, 19, 34, 0.75);
+  --surface-card: #0d2138;
+  --accent-primary-rgb: 59, 130, 246;
+}
+
+/* ───── Green Theme (Emerald Nature Glass) ───── */
+body.theme-green {
+  --bg-primary: #05140f;
+  --bg-secondary: #0a241b;
+  --bg-tertiary: #10382b;
+  --bg-card: rgba(10, 36, 27, 0.78);
+  --bg-card-hover: rgba(16, 56, 43, 0.95);
+  --bg-input: #10382b;
+  --bg-overlay: rgba(5, 20, 15, 0.65);
+  --bg-surface: #0a241b;
+
+  --text-primary: #e6faf2;
+  --text-secondary: #86efc6;
+  --text-tertiary: #4bb88f;
+  --text-inverse: #05140f;
+
+  --border-color: rgba(16, 185, 129, 0.16);
+  --border-color-strong: rgba(16, 185, 129, 0.35);
+
+  --accent-primary: #10b981;
+  --accent-primary-hover: #059669;
+  --accent-secondary: #34d399;
+  --accent-gradient: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+  --accent-surface: rgba(16, 185, 129, 0.12);
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #38bdf8;
+
+  --diff-match: rgba(16,185,129,0.15);
+  --diff-match-text: #34d399;
+  --diff-mismatch: rgba(239,68,68,0.15);
+  --diff-mismatch-text: #f87171;
+  --diff-added: rgba(52,211,153,0.12);
+  --diff-removed: rgba(248,113,113,0.12);
+
+  --hero-gradient: linear-gradient(135deg, #06241a 0%, #065f46 50%, #047857 100%);
+  --card-glass: rgba(10, 36, 27, 0.60);
+  --card-glass-border: rgba(16, 185, 129, 0.22);
+  --navbar-bg: rgba(5, 20, 15, 0.75);
+  --surface-card: #0a241b;
+  --accent-primary-rgb: 16, 185, 129;
+}
+
+/* ───── Pink Theme (Rose Blush Floral Glass) ───── */
+body.theme-pink {
+  --bg-primary: #170d17;
+  --bg-secondary: #271427;
+  --bg-tertiary: #3a1c3a;
+  --bg-card: rgba(39, 20, 39, 0.78);
+  --bg-card-hover: rgba(58, 28, 58, 0.95);
+  --bg-input: #3a1c3a;
+  --bg-overlay: rgba(23, 13, 23, 0.65);
+  --bg-surface: #271427;
+
+  --text-primary: #fdf2f8;
+  --text-secondary: #f472b6;
+  --text-tertiary: #c084fc;
+  --text-inverse: #170d17;
+
+  --border-color: rgba(236, 72, 153, 0.16);
+  --border-color-strong: rgba(236, 72, 153, 0.35);
+
+  --accent-primary: #ec4899;
+  --accent-primary-hover: #db2777;
+  --accent-secondary: #f472b6;
+  --accent-gradient: linear-gradient(135deg, #db2777 0%, #ec4899 50%, #f472b6 100%);
+  --accent-surface: rgba(236, 72, 153, 0.12);
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #f43f5e;
+  --info: #38bdf8;
+
+  --diff-match: rgba(16,185,129,0.15);
+  --diff-match-text: #34d399;
+  --diff-mismatch: rgba(244,63,94,0.15);
+  --diff-mismatch-text: #f43f5e;
+  --diff-added: rgba(52,211,153,0.12);
+  --diff-removed: rgba(244,63,94,0.12);
+
+  --hero-gradient: linear-gradient(135deg, #2e1029 0%, #831843 50%, #be185d 100%);
+  --card-glass: rgba(39, 20, 39, 0.60);
+  --card-glass-border: rgba(236, 72, 153, 0.22);
+  --navbar-bg: rgba(23, 13, 23, 0.75);
+  --surface-card: #271427;
+  --accent-primary-rgb: 236, 72, 153;
+}
+
+
 /* ───── J.A.R.V.I.S. Theme ───── */
 body.theme-jarvis {
   /* Backgrounds — deep navy-black HUD */

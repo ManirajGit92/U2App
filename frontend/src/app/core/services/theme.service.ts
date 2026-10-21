@@ -1,14 +1,14 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { FirestoreService } from './firestore.service';
 
-export type Theme = 'dark' | 'light';
+export type Theme = 'dark' | 'light' | 'blue' | 'green' | 'pink';
 export type AppTheme = 'default' | 'jarvis';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private firestoreService = inject(FirestoreService);
 
-  // ── Light / Dark toggle (unchanged) ──────────────────────────────
+  // ── Theme State ──────────────────────────────────────────────────
   private readonly STORAGE_KEY = 'u2app-theme';
   readonly theme = signal<Theme>(this.getInitialTheme());
 
@@ -24,23 +24,29 @@ export class ThemeService {
     this.applyAppTheme(this.appTheme());
   }
 
-  // ── Light / Dark toggle ──────────────────────────────────────────
+  // ── Theme Switcher ───────────────────────────────────────────────
 
-  toggle(): void {
-    const next: Theme = this.theme() === 'dark' ? 'light' : 'dark';
+  setTheme(next: Theme): void {
     this.theme.set(next);
     this.applyTheme(next);
     localStorage.setItem(this.STORAGE_KEY, next);
   }
 
+  toggle(): void {
+    const next: Theme = this.theme() === 'dark' ? 'light' : 'dark';
+    this.setTheme(next);
+  }
+
   private getInitialTheme(): Theme {
     const stored = localStorage.getItem(this.STORAGE_KEY) as Theme | null;
-    if (stored === 'dark' || stored === 'light') return stored;
+    if (stored === 'dark' || stored === 'light' || stored === 'blue' || stored === 'green' || stored === 'pink') {
+      return stored;
+    }
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
   private applyTheme(theme: Theme): void {
-    document.body.classList.remove('theme-dark', 'theme-light');
+    document.body.classList.remove('theme-dark', 'theme-light', 'theme-blue', 'theme-green', 'theme-pink');
     document.body.classList.add(`theme-${theme}`);
   }
 
