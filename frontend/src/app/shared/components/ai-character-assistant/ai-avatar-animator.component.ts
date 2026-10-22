@@ -38,7 +38,7 @@ import { AvatarPose } from './ai-character-assistant.service';
       <div class="character-body-container" [class.breathe]="pose === 'idle' || pose === 'listening'">
         <!-- Base Character Cutout -->
         <img
-          src="assets/images/assistant/SriIdle.png"
+          src="assets/images/assistant/GirlIdle.gif"
           alt="U2 Assistant Character"
           class="character-image base-layer"
           [class.visible]="pose === 'idle' || pose === 'speaking' || pose === 'listening'"
@@ -47,7 +47,7 @@ import { AvatarPose } from './ai-character-assistant.service';
 
         <!-- Explaining Pose Overlay -->
         <img
-          src="assets/images/assistant/SriWelcome.png"
+          src="assets/images/assistant/Welcome.gif"
           alt="Explaining Gesture"
           class="character-image pose-overlay explaining-overlay"
           [class.visible]="pose === 'explaining'"
@@ -56,7 +56,7 @@ import { AvatarPose } from './ai-character-assistant.service';
 
         <!-- Pointing / Suggest Pose Overlay -->
         <img
-          src="assets/images/assistant/SriSuccess.png"
+          src="assets/images/assistant/GirlClick.gif"
           alt="Pointing Gesture"
           class="character-image pose-overlay pointing-overlay"
           [class.visible]="pose === 'pointing'"
@@ -74,7 +74,7 @@ import { AvatarPose } from './ai-character-assistant.service';
 
         <!-- Happy / Confirmation Pose Overlay -->
         <img
-          src="assets/images/assistant/SriSuccess.png"
+          src="assets/images/assistant/GirlClick.gif"
           alt="Happy Confirmation"
           class="character-image pose-overlay happy-overlay"
           [class.visible]="pose === 'happy'"
@@ -82,26 +82,24 @@ import { AvatarPose } from './ai-character-assistant.service';
         />
 
         <!-- Realistic Procedural Eyelid Blink Overlay (Over Base Character) -->
-        <div
+        <!-- <div
           class="eyelids-container"
           *ngIf="pose === 'idle' || pose === 'speaking' || pose === 'listening'"
           [class.is-blinking]="isBlinking()"
-        >
-          <!-- Left Eye Eyelid (Viewer's left) -->
+         >
           <div class="eyelid eye-left"></div>
-          <!-- Right Eye Eyelid (Viewer's right) -->
           <div class="eyelid eye-right"></div>
-        </div>
+        </div> -->
 
         <!-- Realistic Procedural Lip-Sync Mouth Overlay (When Speaking) -->
          <!--   -->
-        <div
+        <!-- <div
           class="lipsync-container"
          *ngIf="isSpeaking && (pose === 'speaking' || pose === 'idle')"
           [style.transform]="lipSyncScale()"
         >
           <div class="mouth-shape" [ngClass]="currentViseme()"></div>
-        </div>
+        </div> -->
 
         <!-- Thinking Sparkle / Particle Indicators -->
         <div class="thinking-particles" *ngIf="isThinking">
