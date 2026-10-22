@@ -52,6 +52,7 @@ export class App {
     this.isFullScreen =
       url.includes('/free-billing') ||
       url.includes('/lodge-booking') ||
-      url.includes('/easy-documents');
+      url.includes('/easy-documents') ||
+      url.includes('/billing-templates');
   }
 }

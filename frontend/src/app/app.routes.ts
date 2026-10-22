@@ -162,6 +162,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'billing-templates',
+    data: { navLabel: 'Billing Templates', showInNav: true },
+    loadComponent: () =>
+      import(
+        './features/billing-template-designer/billing-template-designer.component'
+      ).then((m) => m.BillingTemplateDesignerComponent),
+  },
+  {
     path: 'free-billing',
     data: { navLabel: 'Free Billing System', showInNav: true },
     loadComponent: () =>

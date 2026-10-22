@@ -831,6 +831,16 @@ export class HomeComponent implements OnInit, OnDestroy {
       available: true,
       color: 'linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.2))',
     },
+    {
+      id: 'billing-templates',
+      title: 'Billing Template Designer',
+      description:
+        'Design professional invoice templates for Mahal, Catering, Lodge, Events and more. Customize layouts, colors, fonts and download print-ready invoices.',
+      icon: '🧾',
+      route: '/billing-templates',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(37,99,235,0.2))',
+    },
   ];
 
   tools: Tool[];
