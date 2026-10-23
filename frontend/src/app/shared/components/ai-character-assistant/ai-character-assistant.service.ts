@@ -127,6 +127,16 @@ export class AiCharacterAssistantService {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
     }
+    // Proactively wake the Render.com backend (free tier sleeps after inactivity).
+    // This is fire-and-forget; errors are silently ignored.
+    this.warmupBackend();
+  }
+
+  /** Sends a lightweight health-check ping so the backend is warm for the first real request. */
+  private warmupBackend(): void {
+    const pythonBase = (environment.pythonApiBaseUrl || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+    const healthUrl = `${pythonBase}/health`;
+    fetch(healthUrl, { method: 'GET', signal: AbortSignal.timeout(30_000) }).catch(() => {});
   }
 
   // ── Window Controls ──────────────────────────────────────────────
@@ -247,7 +257,116 @@ export class AiCharacterAssistantService {
     }, 3500);
   }
 
-  // ── Process Intent & Backend Integration ─────────────────────────
+  // ── Process Intent & Backend Integration (LLM-powered) ───────────
+
+  /** Builds the system prompt for the U2 Assistant intent classifier. */
+  private buildIntentSystemPrompt(): string {
+    const toolList = this.tools
+      .map(t => `  - name: "${t.name}", route: "${t.route}", keywords: [${t.keywords.map(k => `"${k}"`).join(', ')}]`)
+      .join('\n');
+
+    return `You are the intelligent U2 Assistant for the U2 Tools website.
+
+Your primary job is to understand what the user wants and respond with a structured JSON object so the application can act on it.
+
+Available themes: "light", "dark", "blue", "green", "pink"
+
+Available tools (name → route):
+${toolList}
+
+For every user message, analyse the intent and respond ONLY with a valid JSON object in exactly one of these shapes:
+
+1. Theme change (user wants to switch the app theme):
+   {"intent":"theme-change","theme":"<one of: light|dark|blue|green|pink>","reply":"<short friendly confirmation>"}
+   If the user asks for a theme change but does NOT name a specific theme, use:
+   {"intent":"theme-change","theme":null,"reply":"Sure! Which theme would you like?"}
+
+2. Navigate to a tool (user wants to open / go to / launch / use one of the listed tools):
+   {"intent":"navigate-tool","route":"<exact route from list>","toolName":"<exact name from list>","reply":"<short friendly message>"}
+
+3. General question / conversation (anything else — greetings, how-to questions, app info):
+   {"intent":"general-query","reply":"<natural, friendly, concise answer (max 3 sentences)>"}
+
+4. Ambiguous request needing clarification:
+   {"intent":"clarify","reply":"<a concise clarifying question>"}
+
+Rules:
+- Respond ONLY with the JSON. No markdown fences, no extra text.
+- Be warm, concise, and helpful.
+- If the user greets you, respond with intent "general-query" and a friendly greeting.
+- For navigation, recognise synonyms: open, launch, show, take me to, navigate, go to, use, I want to use, switch to, load.
+- For themes, recognise synonyms: dark mode, night mode, light mode, day mode, colour scheme, appearance.`;
+  }
+
+  /**
+   * Sends the user message to the Foundry backend (same endpoint as Standup Note AI)
+   * with a structured intent-classification system prompt, and returns parsed JSON.
+   */
+  private async callIntentLLM(userMessage: string): Promise<{
+    intent: 'theme-change' | 'navigate-tool' | 'general-query' | 'clarify';
+    theme?: string | null;
+    route?: string;
+    toolName?: string;
+    reply: string;
+  } | null> {
+    const pythonBase = (environment.pythonApiBaseUrl || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+    const endpoints = [
+      `${pythonBase}/api/standup-ai/chat`,
+      `${pythonBase}/api/chat`,
+      '/api/standup-ai/chat',
+      'http://127.0.0.1:8000/api/standup-ai/chat',
+      'http://localhost:8000/api/standup-ai/chat',
+    ];
+
+    const recentHistory = this.messages()
+      .slice(-6)
+      .map(m => ({ role: m.sender === 'assistant' ? 'assistant' : 'user', content: m.text }));
+
+    const body = {
+      message: userMessage,
+      history: recentHistory,
+      system_instructions: this.buildIntentSystemPrompt(),
+    };
+
+    for (const url of endpoints) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) continue;
+
+        const data = await res.json();
+        const raw: string = (data?.response ?? '').trim();
+
+        // Strip possible markdown fences the model may add
+        const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+
+        try {
+          const parsed = JSON.parse(cleaned);
+          if (parsed && typeof parsed.intent === 'string' && typeof parsed.reply === 'string') {
+            return parsed;
+          }
+        } catch {
+          // LLM returned free text instead of JSON — treat as general-query reply
+          if (raw) {
+            return { intent: 'general-query', reply: raw };
+          }
+        }
+      } catch {
+        // Connection failed — try next endpoint
+      }
+    }
+
+    return null;
+  }
 
   private async processUserIntent(input: string): Promise<{
     text: string;
@@ -255,54 +374,99 @@ export class AiCharacterAssistantService {
     themePicker?: boolean;
     toolSuggestion?: { name: string; route: string; description: string };
   }> {
+    // ── Step 1: Ask the LLM to classify and handle the intent ────────
+    let llmUnreachable = false;
+    try {
+      const result = await this.callIntentLLM(input);
+
+      if (result) {
+        switch (result.intent) {
+
+          // ── Theme Change ───────────────────────────────────────────
+          case 'theme-change': {
+            const requestedTheme = result.theme?.toLowerCase() ?? null;
+            const validThemes = ['light', 'dark', 'blue', 'green', 'pink'];
+
+            if (requestedTheme && validThemes.includes(requestedTheme)) {
+              this.applyTheme(requestedTheme as Theme);
+              return {
+                text: result.reply || `✅ Theme changed to ${requestedTheme.charAt(0).toUpperCase() + requestedTheme.slice(1)}! Hope you like it.`,
+                pose: 'happy',
+              };
+            }
+
+            // Theme not specified — show picker
+            return {
+              text: result.reply || 'Sure! Which theme would you like?',
+              pose: 'pointing',
+              themePicker: true,
+            };
+          }
+
+          // ── Navigate to Tool ───────────────────────────────────────
+          case 'navigate-tool': {
+            const route = result.route ?? '';
+            const toolName = result.toolName ?? '';
+
+            // Validate route exists in our tools list
+            const matchedTool = this.tools.find(
+              t => t.route === route || t.name.toLowerCase() === toolName.toLowerCase()
+            );
+
+            if (matchedTool) {
+              this.navigateTo(matchedTool.route, matchedTool.name);
+              return {
+                text: result.reply || `Opening ${matchedTool.name} for you right away! 🚀`,
+                pose: 'pointing',
+              };
+            }
+
+            // Route not in our list — ask for clarification
+            return {
+              text: result.reply || `I couldn't find that tool. Ask me to open Standup Note, Work Tracker, Lodge Booking, and more!`,
+              pose: 'explaining',
+            };
+          }
+
+          // ── General Query / Conversation ───────────────────────────
+          case 'general-query':
+            return {
+              text: result.reply,
+              pose: 'speaking',
+            };
+
+          // ── Clarification Needed ───────────────────────────────────
+          case 'clarify':
+            return {
+              text: result.reply,
+              pose: 'explaining',
+            };
+        }
+      } else {
+        // callIntentLLM returned null — all endpoints unreachable
+        llmUnreachable = true;
+      }
+    } catch {
+      // LLM threw an exception — treat as unreachable
+      llmUnreachable = true;
+    }
+
+    // ── Step 2: Local keyword fallback (offline / LLM unreachable) ───
     const lower = input.toLowerCase();
 
-    // 1. Theme Change Request
-    if (
-      lower.includes('theme') ||
-      lower.includes('dark mode') ||
-      lower.includes('light mode') ||
-      lower.includes('change color') ||
-      lower.includes('switch mode')
-    ) {
-      // Check if specific theme is requested directly
-      if (lower.includes('dark')) {
-        this.applyTheme('dark');
-        return {
-          text: `✅ Theme changed to Dark!\nHope you like it. Let me know if you need anything else.`,
-          pose: 'happy'
-        };
-      } else if (lower.includes('light')) {
-        this.applyTheme('light');
-        return {
-          text: `✅ Theme changed to Light!\nHope you like it. Let me know if you need anything else.`,
-          pose: 'happy'
-        };
-      } else if (lower.includes('blue')) {
-        this.applyTheme('blue');
-        return {
-          text: `✅ Theme changed to Blue!\nHope you like it. Let me know if you need anything else.`,
-          pose: 'happy'
-        };
-      } else if (lower.includes('green')) {
-        this.applyTheme('green');
-        return {
-          text: `✅ Theme changed to Green!\nHope you like it. Let me know if you need anything else.`,
-          pose: 'happy'
-        };
-      } else if (lower.includes('pink') || lower.includes('rose')) {
-        this.applyTheme('pink');
-        return {
-          text: `✅ Theme changed to Pink!\nHope you like it. Let me know if you need anything else.`,
-          pose: 'happy'
-        };
-      }
-
-      // If user asks "Can you change the theme?", ask to select from 5 options
+    // Greetings
+    if (lower.startsWith('hi') || lower.startsWith('hello') || lower.startsWith('hey')) {
       return {
-        text: 'Sure! Which theme would you like?',
-        pose: 'pointing',
-        themePicker: true
+        text: "Hello there! 👋 I'm here to help you navigate U2 Tools, change themes, or answer questions about our applications.",
+        pose: 'idle',
+      };
+    }
+
+    // Help
+    if (lower.includes('what can you do') || lower.includes('help') || lower.includes('features')) {
+      return {
+        text: "Here is what I can do for you:\n• **Change Themes**: Light, Dark, Blue, Green, or Pink\n• **Tool Navigation**: Open any U2 tool by asking\n• **Application Guidance**: Ask how any tool works\n• **Voice Interaction**: Use the microphone to talk to me!",
+        pose: 'explaining',
       };
     }
 
@@ -310,69 +474,58 @@ export class AiCharacterAssistantService {
     if (['light', 'dark', 'blue', 'green', 'pink'].includes(lower)) {
       this.applyTheme(lower as Theme);
       return {
-        text: `✅ Theme changed to ${lower.charAt(0).toUpperCase() + lower.slice(1)}!\nHope you like it. Let me know if you need anything else.`,
-        pose: 'happy'
+        text: `✅ Theme changed to ${lower.charAt(0).toUpperCase() + lower.slice(1)}! Hope you like it.`,
+        pose: 'happy',
       };
     }
 
-    // 2. Navigation / Tool Request
-    for (const tool of this.tools) {
-      if (tool.keywords.some(k => lower.includes(k)) || lower.includes(tool.name.toLowerCase())) {
-        if (lower.includes('open') || lower.includes('go to') || lower.includes('take me') || lower.includes('navigate')) {
-          this.navigateTo(tool.route, tool.name);
-          return {
-            text: `Opening ${tool.name} for you right away! 🚀`,
-            pose: 'pointing'
-          };
+    // Theme keywords
+    const themeKeywords = ['theme', 'dark mode', 'light mode', 'change color', 'switch mode', 'night mode', 'appearance'];
+    if (themeKeywords.some(k => lower.includes(k))) {
+      const themeMap: Record<string, Theme> = { dark: 'dark', light: 'light', blue: 'blue', green: 'green', pink: 'pink', rose: 'pink', night: 'dark', day: 'light' };
+      for (const [keyword, theme] of Object.entries(themeMap)) {
+        if (lower.includes(keyword)) {
+          this.applyTheme(theme);
+          return { text: `✅ Theme changed to ${theme.charAt(0).toUpperCase() + theme.slice(1)}!`, pose: 'happy' };
         }
+      }
+      return { text: 'Sure! Which theme would you like?', pose: 'pointing', themePicker: true };
+    }
 
+    // Navigation keywords
+    const navVerbs = ['open', 'go to', 'take me', 'navigate', 'show me', 'launch', 'load', 'switch to', 'i want to use', 'use'];
+    const wantsNav = navVerbs.some(v => lower.includes(v));
+    for (const tool of this.tools) {
+      const nameMatch = lower.includes(tool.name.toLowerCase());
+      const keywordMatch = tool.keywords.some(k => lower.includes(k));
+      if (nameMatch || keywordMatch) {
+        if (wantsNav || nameMatch) {
+          this.navigateTo(tool.route, tool.name);
+          return { text: `Opening ${tool.name} for you right away! 🚀`, pose: 'pointing' };
+        }
         return {
           text: `**${tool.name}**\n${tool.description}\n\nWould you like me to open it for you?`,
           pose: 'explaining',
-          toolSuggestion: tool
+          toolSuggestion: tool,
         };
       }
     }
 
-    // 3. Greetings
-    if (
-      lower.startsWith('hi') ||
-      lower.startsWith('hello') ||
-      lower.startsWith('hey') ||
-      lower === 'hi' ||
-      lower === 'hello'
-    ) {
+    // ── Step 3: Honest fallback when LLM is unreachable ─────────────
+    // At this point the query didn't match any local pattern. If the LLM
+    // was unreachable (cold start / network), tell the user rather than
+    // returning a misleading generic message.
+    if (llmUnreachable) {
       return {
-        text: "Hello there! 👋 I'm here to help you navigate U2 Tools, change themes, or answer any questions about our applications.",
-        pose: 'idle'
+        text: "⏳ My AI service is still warming up (it can take up to 30 seconds after a period of inactivity). Please try your question again in a moment!\n\nWhile you wait, I can change the theme or open any U2 tool for you.",
+        pose: 'explaining',
       };
     }
 
-    // 4. "What can you do?" / Help
-    if (lower.includes('what can you do') || lower.includes('help') || lower.includes('features')) {
-      return {
-        text: "Here is what I can do for you:\n• **Change Themes**: Select between Light, Dark, Blue, Green, or Pink\n• **Tool Navigation**: Ask me to open Standup Note, Work Tracker, HTML Viewer, Lodge Booking, etc.\n• **Application Guidance**: Ask how any tool works or how to use Excel imports\n• **Voice Interaction**: Talk to me anytime using the microphone!",
-        pose: 'explaining'
-      };
-    }
-
-    // 5. Query Python backend LLM if available
-    try {
-      const pythonResponse = await this.queryBackendLLM(input);
-      if (pythonResponse) {
-        return {
-          text: pythonResponse,
-          pose: 'speaking'
-        };
-      }
-    } catch {
-      // Fallback to intelligent local response
-    }
-
-    // Fallback response
+    // Generic fallback (LLM was reachable but returned an unrecognised shape)
     return {
-      text: `I'm happy to assist you with U2 Tools! You can ask me to change the theme (Light, Dark, Blue, Green, Pink) or open tools like Standup Note, Lodge Booking, Estimator App, and more.`,
-      pose: 'explaining'
+      text: `I'm happy to assist! You can ask me to change the theme (Light, Dark, Blue, Green, Pink) or open tools like Standup Note, Lodge Booking, Estimator App, and more.`,
+      pose: 'explaining',
     };
   }
 
@@ -460,53 +613,5 @@ export class AiCharacterAssistantService {
       this.synth.cancel();
     }
     this.isSpeaking.set(false);
-  }
-
-  // ── Backend LLM Caller ───────────────────────────────────────────
-
-  private async queryBackendLLM(prompt: string): Promise<string | null> {
-    const pythonBase = (environment.pythonApiBaseUrl || 'http://127.0.0.1:8000').replace(/\/+$/, '');
-    const endpoints = [
-      `${pythonBase}/api/standup-ai/chat`,
-      '/api/standup-ai/chat',
-      'http://127.0.0.1:8000/api/standup-ai/chat',
-      'http://localhost:8000/api/standup-ai/chat'
-    ];
-
-    const body = {
-      message: prompt,
-      history: this.messages().slice(-6).map(m => ({
-        role: m.sender === 'assistant' ? 'assistant' : 'user',
-        content: m.text
-      })),
-      system_instructions:
-        "You are the friendly, intelligent female U2 Assistant for the U2 Tools website. You help users navigate tools like Standup Note, Lodge Booking, Estimator, HTML Viewer, Work Tracker, and answer questions concisely and warmly. If users ask about themes, inform them that you can switch themes between Light, Dark, Blue, Green, and Pink."
-    };
-
-    for (const url of endpoints) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
-
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.response) {
-            return data.response;
-          }
-        }
-      } catch {
-        // Try next endpoint
-      }
-    }
-
-    return null;
   }
 }

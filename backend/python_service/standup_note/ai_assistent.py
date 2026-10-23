@@ -180,3 +180,7 @@ def handle_chat(req: ChatRequest):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+# cd d:\Projects\MainProjects\U2App\backend\python_service
+
+#.\.venv\Scripts\uvicorn standup_note.ai_assistent:app --host 0.0.0.0 --port 8000 --reload
