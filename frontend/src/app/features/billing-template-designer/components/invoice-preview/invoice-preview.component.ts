@@ -427,7 +427,7 @@ import { InvoiceTemplate, InvoiceTotals, InvoiceItem } from '../../models/billin
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 12px;
-      overflow: hidden;
+      overflow: visible;
       display: flex;
       flex-direction: column;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
@@ -438,11 +438,16 @@ import { InvoiceTemplate, InvoiceTotals, InvoiceItem } from '../../models/billin
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 16px;
+      padding: 8px 14px;
       border-bottom: 1px solid #e2e8f0;
       background: #f8fafc;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
+      position: sticky;
+      top: 16px;
+      z-index: 15;
+      border-radius: 12px 12px 0 0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
     }
 
     .title-with-icon {
@@ -453,7 +458,7 @@ import { InvoiceTemplate, InvoiceTotals, InvoiceItem } from '../../models/billin
 
     .toolbar-title {
       font-weight: 700;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: #1e293b;
     }
 
@@ -468,11 +473,11 @@ import { InvoiceTemplate, InvoiceTotals, InvoiceItem } from '../../models/billin
       display: flex;
       align-items: center;
       gap: 5px;
-      padding: 6px 10px;
+      padding: 5px 9px;
       background: #ffffff;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 600;
       color: #334155;
       cursor: pointer;
@@ -565,11 +570,12 @@ import { InvoiceTemplate, InvoiceTotals, InvoiceItem } from '../../models/billin
     /* Viewport */
     .sheet-viewport {
       background: #e2e8f0;
-      padding: 20px;
+      padding: 16px;
       overflow-x: auto;
       display: flex;
       justify-content: center;
-      min-height: 800px;
+      min-height: 600px;
+      border-radius: 0 0 12px 12px;
     }
 
     /* INVOICE SHEET (Matches A4 and Screenshot) */

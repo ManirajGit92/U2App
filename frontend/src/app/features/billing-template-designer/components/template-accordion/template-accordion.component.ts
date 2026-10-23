@@ -740,7 +740,7 @@ import { InvoiceTemplate, TemplateCategory } from '../../models/billing-template
     .accordion-panel {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .accordion-item {
@@ -762,7 +762,7 @@ import { InvoiceTemplate, TemplateCategory } from '../../models/billing-template
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 14px;
+      padding: 10px 12px;
       background: #f8fafc;
       border: none;
       cursor: pointer;
@@ -783,17 +783,17 @@ import { InvoiceTemplate, TemplateCategory } from '../../models/billing-template
     .section-num {
       font-weight: 700;
       color: #2563eb;
-      font-size: 0.88rem;
+      font-size: 0.84rem;
     }
 
     .section-title {
       font-weight: 600;
-      font-size: 0.88rem;
+      font-size: 0.84rem;
       color: #1e293b;
     }
 
     .chevron {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       color: #64748b;
       transform: rotate(90deg);
       transition: transform 0.2s;
@@ -804,32 +804,33 @@ import { InvoiceTemplate, TemplateCategory } from '../../models/billing-template
     }
 
     .accordion-body {
-      padding: 14px;
+      padding: 12px;
       background: #ffffff;
       border-top: 1px solid #f1f5f9;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
 
     /* Forms */
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
     }
 
     .form-row {
       display: flex;
-      gap: 10px;
+      gap: 8px;
     }
 
     .col-half {
       flex: 1;
+      min-width: 0;
     }
 
     .form-label {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: #475569;
     }
@@ -840,8 +841,8 @@ import { InvoiceTemplate, TemplateCategory } from '../../models/billing-template
 
     .form-input, .form-select, .form-textarea {
       width: 100%;
-      padding: 7px 10px;
-      font-size: 0.82rem;
+      padding: 6px 9px;
+      font-size: 0.8rem;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
       background: #ffffff;
@@ -864,22 +865,22 @@ import { InvoiceTemplate, TemplateCategory } from '../../models/billing-template
     .checkbox-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      padding-top: 4px;
+      gap: 6px;
+      padding-top: 2px;
     }
 
     .checkbox-label {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 0.82rem;
+      gap: 7px;
+      font-size: 0.8rem;
       color: #334155;
       cursor: pointer;
     }
 
     .checkbox-label input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
+      width: 15px;
+      height: 15px;
       accent-color: #2563eb;
       cursor: pointer;
     }
