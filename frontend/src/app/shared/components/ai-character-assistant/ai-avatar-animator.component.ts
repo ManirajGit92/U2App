@@ -38,6 +38,7 @@ import { AvatarPose } from './ai-character-assistant.service';
       <div class="character-body-container" [class.breathe]="pose === 'idle' || pose === 'listening'">
         <!-- Base Character Cutout -->
         <img
+          *ngIf="!customImage"
           src="assets/images/assistant/GirlIdle.gif"
           alt="U2 Assistant Character"
           class="character-image base-layer"
@@ -45,8 +46,18 @@ import { AvatarPose } from './ai-character-assistant.service';
           draggable="false"
         />
 
+        <!-- Custom Uploaded Character Cutout -->
+        <img
+          *ngIf="customImage"
+          [src]="customImage"
+          alt="Custom U2 Assistant"
+          class="character-image base-layer visible custom-character-img"
+          draggable="false"
+        />
+
         <!-- Explaining Pose Overlay -->
         <img
+          *ngIf="!customImage"
           src="assets/images/assistant/Welcome.gif"
           alt="Explaining Gesture"
           class="character-image pose-overlay explaining-overlay"
@@ -56,6 +67,7 @@ import { AvatarPose } from './ai-character-assistant.service';
 
         <!-- Pointing / Suggest Pose Overlay -->
         <img
+          *ngIf="!customImage"
           src="assets/images/assistant/GirlClick.gif"
           alt="Pointing Gesture"
           class="character-image pose-overlay pointing-overlay"
@@ -65,6 +77,7 @@ import { AvatarPose } from './ai-character-assistant.service';
 
         <!-- Thinking Pose Overlay -->
         <img
+          *ngIf="!customImage"
           src="assets/images/assistant/SriThinking.png"
           alt="Thinking"
           class="character-image pose-overlay thinking-overlay"
@@ -74,6 +87,7 @@ import { AvatarPose } from './ai-character-assistant.service';
 
         <!-- Happy / Confirmation Pose Overlay -->
         <img
+          *ngIf="!customImage"
           src="assets/images/assistant/GirlClick.gif"
           alt="Happy Confirmation"
           class="character-image pose-overlay happy-overlay"
@@ -482,6 +496,7 @@ export class AiAvatarAnimatorComponent implements OnInit, OnDestroy {
   @Input() isSpeaking: boolean = false;
   @Input() isListening: boolean = false;
   @Input() isThinking: boolean = false;
+  @Input() customImage: string | null = null;
 
   @Output() avatarClicked = new EventEmitter<void>();
 
