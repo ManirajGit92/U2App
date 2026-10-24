@@ -45,6 +45,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount Voice Interaction endpoints (TTS / STT / Voices)
+services_dir = python_service_dir / "CH-2_Services"
+if services_dir.exists() and str(services_dir) not in sys.path:
+    sys.path.append(str(services_dir))
+
+try:
+    import voice_service
+    app.include_router(voice_service.router)
+    print("Voice interaction endpoints mounted successfully (/api/voice/*)")
+except Exception as e:
+    print(f"Warning: Could not mount voice_service router: {e}")
+
+
 
 class MessageItem(BaseModel):
     role: str

@@ -1,32 +1,38 @@
-"""
-For more samples please visit https://github.com/Azure-Samples/cognitive-services-speech-sdk
-"""
 
+import os
+from dotenv import load_dotenv
 import azure.cognitiveservices.speech as speechsdk
 
-endpoint_url = "https://manifoundryresource3.cognitiveservices.azure.com/"
+load_dotenv(override=True)
 
-from urllib.parse import urlparse
+speech_key = os.getenv("AZURE_TEXT_TO_SPEECH_KEY")
+endpoint_url = os.getenv("AZURE_TEXT_TO_SPEECH_ENDPOINT")
 
-parsed = urlparse(endpoint_url)
-base_endpoint = f"{parsed.scheme}://{parsed.netloc}"
+if not speech_key or not endpoint_url:
+    raise ValueError("Missing Azure Text-to-Speech key or endpoint in .env")
 
-speech_key = "<your-api-key>"
-speech_config = speechsdk.SpeechConfig(subscription=speech_key, endpoint=base_endpoint)
-speech_config.speech_synthesis_voice_name = "en-US-Ava:DragonHDLatestNeural"
+speech_config = speechsdk.SpeechConfig(
+    subscription=speech_key,
+    endpoint=endpoint_url
+)
 
-# use the default speaker as audio output.
-speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
+# speech_config.speech_synthesis_voice_name = (
+#     "en-US-Ava:DragonHDLatestNeural"
+# )
+speech_config.speech_synthesis_voice_name = (
+    "en-US-JennyNeural"
+)
 
-text = "Hello, welcome to Azure AI Foundry!"
+speech_synthesizer = speechsdk.SpeechSynthesizer(
+    speech_config=speech_config
+)
 
+text = "Hi, dear , How can i help you!"
 result = speech_synthesizer.speak_text_async(text).get()
 
-# Check result
 if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-    print("Speech synthesized for text [{}]".format(text))
+    print(f"Speech synthesized successfully: {text}")
 elif result.reason == speechsdk.ResultReason.Canceled:
-    cancellation_details = result.cancellation_details
-    print("Speech synthesis canceled: {}".format(cancellation_details.reason))
-    if cancellation_details.reason == speechsdk.CancellationReason.Error:
-        print("Error details: {}".format(cancellation_details.error_details))
+    details = result.cancellation_details
+    print(f"Reason: {details.reason}")
+    print(f"Error details: {details.error_details}")

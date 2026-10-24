@@ -1,7 +1,8 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { ThemeService, Theme } from '../../../core/services/theme.service';
 import { environment } from '../../../../environments/environment';
+import { AiVoiceService } from './ai-voice.service';
 
 export type AvatarPose = 'idle' | 'listening' | 'thinking' | 'speaking' | 'explaining' | 'pointing' | 'happy';
 
@@ -28,6 +29,7 @@ export interface AvailableTool {
 export class AiCharacterAssistantService {
   private router = inject(Router);
   public themeService = inject(ThemeService);
+  public voiceService = inject(AiVoiceService);
 
   // Assistant UI State
   readonly isOpen = signal<boolean>(false);
@@ -127,10 +129,40 @@ export class AiCharacterAssistantService {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
     }
+
+    // Connect voice interaction dispatcher: when wake word & speech are captured, send to LLM
+    this.voiceService.registerMessageDispatcher(async (userPrompt: string) => {
+      // Open chat automatically so user sees interaction
+      this.openChat();
+      await this.sendMessage(userPrompt);
+    });
+
+    // Reactive synchronization between voice service and avatar animations
+    effect(() => {
+      const spk = this.voiceService.isSpeaking();
+      this.isSpeaking.set(spk);
+      if (spk) {
+        this.setPose('speaking');
+      } else if (this.currentPose() === 'speaking') {
+        this.setPose('idle');
+      }
+    });
+
+    effect(() => {
+      const lis = this.voiceService.isListening();
+      this.isListening.set(lis);
+      if (lis) {
+        this.setPose('listening');
+      } else if (this.currentPose() === 'listening') {
+        this.setPose('idle');
+      }
+    });
+
     // Proactively wake the Render.com backend (free tier sleeps after inactivity).
     // This is fire-and-forget; errors are silently ignored.
     this.warmupBackend();
   }
+
 
   /** Sends a lightweight health-check ping so the backend is warm for the first real request. */
   private warmupBackend(): void {
@@ -309,14 +341,28 @@ Rules:
     toolName?: string;
     reply: string;
   } | null> {
+    const isLocal =
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1');
+
     const pythonBase = (environment.pythonApiBaseUrl || 'http://127.0.0.1:8000').replace(/\/+$/, '');
-    const endpoints = [
-      `${pythonBase}/api/standup-ai/chat`,
-      `${pythonBase}/api/chat`,
-      '/api/standup-ai/chat',
-      'http://127.0.0.1:8000/api/standup-ai/chat',
-      'http://localhost:8000/api/standup-ai/chat',
-    ];
+    const endpoints = isLocal
+      ? [
+          'http://127.0.0.1:8000/api/standup-ai/chat',
+          'http://localhost:8000/api/standup-ai/chat',
+          'http://127.0.0.1:8000/api/chat',
+          `${pythonBase}/api/standup-ai/chat`,
+          `${pythonBase}/api/chat`,
+          '/api/standup-ai/chat',
+        ]
+      : [
+          `${pythonBase}/api/standup-ai/chat`,
+          `${pythonBase}/api/chat`,
+          '/api/standup-ai/chat',
+          'http://127.0.0.1:8000/api/standup-ai/chat',
+          'http://localhost:8000/api/standup-ai/chat',
+        ];
 
     const recentHistory = this.messages()
       .slice(-6)
@@ -331,7 +377,7 @@ Rules:
     for (const url of endpoints) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         const res = await fetch(url, {
           method: 'POST',
@@ -556,62 +602,18 @@ Rules:
     }, 6000);
   }
 
-  // ── Speech Synthesis (TTS) with Lip-Sync ──────────────────────────
+  // ── Speech Synthesis (TTS with Microsoft Foundry) ────────────────
 
   speakText(text: string): void {
-    if (this.isMuted() || !this.synth) return;
-
-    try {
-      this.synth.cancel();
-
-      // Clean markdown tags for spoken voice
-      const clean = text
-        .replace(/[*_#`~[\]]/g, '')
-        .replace(/https?:\/\/\S+/g, '')
-        .replace(/[✅🚀👋•]/g, '');
-
-      const utterance = new SpeechSynthesisUtterance(clean);
-      utterance.rate = 1.05;
-      utterance.pitch = 1.1;
-
-      // Select natural female voice if available
-      const voices = this.synth.getVoices();
-      const femaleVoice = voices.find(
-        v =>
-          (v.name.includes('Natural') || v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('Google UK English Female')) &&
-          v.lang.startsWith('en')
-      ) || voices.find(v => v.lang.startsWith('en'));
-
-      if (femaleVoice) {
-        utterance.voice = femaleVoice;
-      }
-
-      utterance.onstart = () => {
-        this.isSpeaking.set(true);
-        if (this.currentPose() === 'idle') {
-          this.setPose('speaking');
-        }
-      };
-
-      utterance.onend = () => {
-        this.isSpeaking.set(false);
-        this.setPose('idle');
-      };
-
-      utterance.onerror = () => {
-        this.isSpeaking.set(false);
-      };
-
-      this.synth.speak(utterance);
-    } catch {
-      this.isSpeaking.set(false);
-    }
+    if (this.isMuted()) return;
+    this.voiceService.speak(text).catch(() => {});
   }
 
   stopSpeaking(): void {
-    if (this.synth) {
-      this.synth.cancel();
+    this.voiceService.stopSpeaking();
+    if (this.currentPose() === 'speaking') {
+      this.setPose('idle');
     }
-    this.isSpeaking.set(false);
   }
 }
+

@@ -8,7 +8,9 @@ import {
   signal,
   computed,
   ChangeDetectionStrategy,
-  HostListener
+  HostListener,
+  NgZone,
+  ChangeDetectorRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,6 +19,7 @@ import {
   ChatMessage,
   AvatarPose
 } from './ai-character-assistant.service';
+import { AiVoiceService } from './ai-voice.service';
 import { AiAvatarAnimatorComponent } from './ai-avatar-animator.component';
 import { Theme } from '../../../core/services/theme.service';
 
@@ -250,7 +253,7 @@ import { Theme } from '../../../core/services/theme.service';
               #inputField
               type="text"
               class="chat-input"
-              placeholder="Ask me anything..."
+              [placeholder]="isVoiceRecording() ? (voiceService.liveTranscript() || 'Listening... Speak now') : 'Ask me anything...'"
               [(ngModel)]="userInput"
               (keydown.enter)="handleSend()"
             />
@@ -312,6 +315,24 @@ import { Theme } from '../../../core/services/theme.service';
           />
         </div>
 
+        <!-- Live Voice Floating Status Badge -->
+        <div
+          class="char-voice-indicator"
+          *ngIf="voiceService.isVoiceEnabled()"
+          [class.capturing]="voiceService.wakeWordStatus() === 'capturing-speech'"
+          [class.processing]="voiceService.wakeWordStatus() === 'processing'"
+          [class.speaking]="voiceService.wakeWordStatus() === 'speaking'"
+          (click)="voiceService.toggleVoiceEnabled()"
+          [title]="'Voice interaction active: ' + voiceService.wakeWordStatus() + ' (Click to pause)'"
+        >
+          <span class="voice-badge-icon">
+            {{ voiceService.wakeWordStatus() === 'capturing-speech' ? '🎙️' : voiceService.wakeWordStatus() === 'processing' ? '🧠' : voiceService.wakeWordStatus() === 'speaking' ? '🗣️' : '👂' }}
+          </span>
+          <span class="voice-badge-text">
+            {{ voiceService.wakeWordStatus() === 'capturing-speech' ? 'Listening...' : voiceService.wakeWordStatus() === 'processing' ? 'Thinking...' : voiceService.wakeWordStatus() === 'speaking' ? 'Speaking...' : ('Hi ' + voiceService.agentName()) }}
+          </span>
+        </div>
+
         <!-- Mini Movement Indicator Badge -->
         <span
           class="char-moving-indicator"
@@ -322,6 +343,7 @@ import { Theme } from '../../../core/services/theme.service';
           {{ charMovementMode() === 'horizontal' ? '↔ Moving' : charMovementMode() === 'vertical' ? '↕ Moving' : '↗ Moving' }} ✕
         </span>
       </div>
+
 
       <!-- ────────────────────────────────────────────────────────────── -->
       <!-- 3. FLOATING BADGE & BUBBLE (WHEN MINIMIZED OR CLOSED)          -->
@@ -516,7 +538,105 @@ import { Theme } from '../../../core/services/theme.service';
             <span class="item-text">Restore Default Avatar</span>
           </button>
         </div>
+
+        <div class="menu-divider"></div>
+
+        <div class="menu-section-label">VOICE INTERACTION (MICROSOFT FOUNDRY)</div>
+        <div class="menu-actions-list">
+          <!-- Wake Word Voice Toggle -->
+          <div class="menu-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-icon">🎙️</span>
+              <span class="toggle-title">Wake Word Voice</span>
+            </div>
+            <label class="switch-control" title="Toggle wake word listening">
+              <input
+                type="checkbox"
+                [checked]="voiceService.isVoiceEnabled()"
+                (change)="voiceService.toggleVoiceEnabled()"
+              />
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <!-- Agent Name Configuration -->
+          <div class="menu-field-block">
+            <div class="field-label-row">
+              <span class="field-title">🏷️ Agent Name</span>
+              <span class="field-hint">Used in Wake Word</span>
+            </div>
+            <div class="agent-name-input-row">
+              <input
+                type="text"
+                class="menu-text-input"
+                [value]="voiceService.agentName()"
+                (input)="onAgentNameChange($event)"
+                placeholder="e.g. Maya"
+                maxlength="20"
+              />
+            </div>
+            <div class="wake-command-preview">
+              <div class="wake-chip start-chip">
+                <span class="chip-tag">Start:</span>
+                <span class="chip-phrase">"Hi {{ voiceService.agentName() }}"</span>
+              </div>
+              <div class="wake-chip end-chip">
+                <span class="chip-tag">End:</span>
+                <span class="chip-phrase">"That's it, {{ voiceService.agentName() }}"</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Voice Selection (Azure Neural Voices) -->
+          <div class="menu-field-block">
+            <div class="field-label-row">
+              <span class="field-title">🗣️ Agent Voice</span>
+              <span class="field-hint">Foundry TTS</span>
+            </div>
+            <div class="voice-picker-row">
+              <select
+                class="menu-select"
+                [value]="voiceService.selectedVoice()"
+                (change)="onVoiceChange($event)"
+              >
+                <option *ngFor="let v of voiceService.availableVoices()" [value]="v.name">
+                  {{ v.displayName }}
+                </option>
+              </select>
+              <button
+                type="button"
+                class="btn-voice-test"
+                (click)="voiceService.previewSelectedVoice()"
+                title="Test speak with this voice"
+              >
+                🔊
+              </button>
+            </div>
+          </div>
+
+          <!-- Voice Status & Mic Alert Bar -->
+          <div
+            class="voice-status-pill"
+            [class.active]="voiceService.isVoiceEnabled()"
+            [class.listening]="voiceService.wakeWordStatus() === 'capturing-speech'"
+            [class.processing]="voiceService.wakeWordStatus() === 'processing'"
+            [class.speaking]="voiceService.wakeWordStatus() === 'speaking'"
+            [class.denied]="voiceService.wakeWordStatus() === 'permission-denied'"
+          >
+            <div class="pill-dot"></div>
+            <span class="pill-text">{{ voiceService.statusMessage() }}</span>
+            <button
+              *ngIf="voiceService.wakeWordStatus() === 'permission-denied'"
+              type="button"
+              class="btn-grant-permission"
+              (click)="voiceService.requestMicPermission()"
+            >
+              Grant Mic
+            </button>
+          </div>
+        </div>
       </div>
+
 
       <!-- ────────────────────────────────────────────────────────────── -->
       <!-- 5. CHANGE IMAGE PREVIEW MODAL                                  -->
@@ -739,7 +859,105 @@ import { Theme } from '../../../core/services/theme.service';
             <span class="item-text">Restore Default Character</span>
           </button>
         </div>
+
+        <div class="menu-divider"></div>
+
+        <div class="menu-section-label">VOICE INTERACTION (MICROSOFT FOUNDRY)</div>
+        <div class="menu-actions-list">
+          <!-- Wake Word Voice Toggle -->
+          <div class="menu-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-icon">🎙️</span>
+              <span class="toggle-title">Wake Word Voice</span>
+            </div>
+            <label class="switch-control" title="Toggle wake word listening">
+              <input
+                type="checkbox"
+                [checked]="voiceService.isVoiceEnabled()"
+                (change)="voiceService.toggleVoiceEnabled()"
+              />
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <!-- Agent Name Configuration -->
+          <div class="menu-field-block">
+            <div class="field-label-row">
+              <span class="field-title">🏷️ Agent Name</span>
+              <span class="field-hint">Used in Wake Word</span>
+            </div>
+            <div class="agent-name-input-row">
+              <input
+                type="text"
+                class="menu-text-input"
+                [value]="voiceService.agentName()"
+                (input)="onAgentNameChange($event)"
+                placeholder="e.g. Maya"
+                maxlength="20"
+              />
+            </div>
+            <div class="wake-command-preview">
+              <div class="wake-chip start-chip">
+                <span class="chip-tag">Start:</span>
+                <span class="chip-phrase">"Hi {{ voiceService.agentName() }}"</span>
+              </div>
+              <div class="wake-chip end-chip">
+                <span class="chip-tag">End:</span>
+                <span class="chip-phrase">"That's it, {{ voiceService.agentName() }}"</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Voice Selection (Azure Neural Voices) -->
+          <div class="menu-field-block">
+            <div class="field-label-row">
+              <span class="field-title">🗣️ Agent Voice</span>
+              <span class="field-hint">Foundry TTS</span>
+            </div>
+            <div class="voice-picker-row">
+              <select
+                class="menu-select"
+                [value]="voiceService.selectedVoice()"
+                (change)="onVoiceChange($event)"
+              >
+                <option *ngFor="let v of voiceService.availableVoices()" [value]="v.name">
+                  {{ v.displayName }}
+                </option>
+              </select>
+              <button
+                type="button"
+                class="btn-voice-test"
+                (click)="voiceService.previewSelectedVoice()"
+                title="Test speak with this voice"
+              >
+                🔊
+              </button>
+            </div>
+          </div>
+
+          <!-- Voice Status & Mic Alert Bar -->
+          <div
+            class="voice-status-pill"
+            [class.active]="voiceService.isVoiceEnabled()"
+            [class.listening]="voiceService.wakeWordStatus() === 'capturing-speech'"
+            [class.processing]="voiceService.wakeWordStatus() === 'processing'"
+            [class.speaking]="voiceService.wakeWordStatus() === 'speaking'"
+            [class.denied]="voiceService.wakeWordStatus() === 'permission-denied'"
+          >
+            <div class="pill-dot"></div>
+            <span class="pill-text">{{ voiceService.statusMessage() }}</span>
+            <button
+              *ngIf="voiceService.wakeWordStatus() === 'permission-denied'"
+              type="button"
+              class="btn-grant-permission"
+              (click)="voiceService.requestMicPermission()"
+            >
+              Grant Mic
+            </button>
+          </div>
+        </div>
       </div>
+
 
       <!-- ────────────────────────────────────────────────────────────── -->
       <!-- 7. CHANGE CHARACTER IMAGE PREVIEW MODAL                        -->
@@ -1546,28 +1764,352 @@ import { Theme } from '../../../core/services/theme.service';
     /* ══════════════════════════════════════════════════════════════════ */
     .agent-context-menu {
       position: fixed;
-      z-index: 10000;
-      width: 270px;
-      background: rgba(15, 23, 42, 0.94);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 16px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      z-index: 20000; /* Prioritize above character dock (10002) and chat (10000) */
+      width: 295px;
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 18px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
       color: #f8fafc;
-      padding: 12px;
+      padding: 14px;
       pointer-events: auto;
       font-size: 0.84rem;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 7px;
       animation: menuFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .agent-context-menu::-webkit-scrollbar {
+      width: 5px;
+    }
+    .agent-context-menu::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 10px;
+    }
+    .agent-context-menu::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
     }
 
     @keyframes menuFadeIn {
       0% { opacity: 0; transform: scale(0.95); }
       100% { opacity: 1; transform: scale(1); }
     }
+
+    /* ── Voice Interaction Controls in Menu ── */
+    .menu-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .toggle-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .switch-control {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .switch-control input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-toggle {
+      position: absolute;
+      inset: 0;
+      background-color: #475569;
+      border-radius: 20px;
+      transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .switch-control input:checked + .slider-toggle {
+      background: linear-gradient(135deg, #10b981, #059669);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    }
+
+    .switch-control input:checked + .slider-toggle:before {
+      transform: translateX(18px);
+    }
+
+    .menu-field-block {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .field-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+    }
+
+    .field-title {
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .field-hint {
+      color: #94a3b8;
+      font-size: 0.68rem;
+    }
+
+    .menu-text-input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      color: #ffffff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .menu-text-input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+    }
+
+    .wake-command-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .wake-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .start-chip .chip-tag {
+      color: #34d399;
+      font-weight: 700;
+    }
+
+    .start-chip .chip-phrase {
+      color: #a7f3d0;
+    }
+
+    .end-chip .chip-tag {
+      color: #f472b6;
+      font-weight: 700;
+    }
+
+    .end-chip .chip-phrase {
+      color: #fbcfe8;
+    }
+
+    .voice-picker-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .menu-select {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 0.76rem;
+      color: #f8fafc;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .menu-select option {
+      background: #0f172a;
+      color: #ffffff;
+    }
+
+    .btn-voice-test {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.15s;
+    }
+
+    .btn-voice-test:hover {
+      background: #38bdf8;
+      color: #0f172a;
+      transform: scale(1.05);
+    }
+
+    .voice-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(148, 163, 184, 0.1);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+
+    .voice-status-pill.active {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    .voice-status-pill.listening {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.5);
+      color: #38bdf8;
+      animation: pulseBorder 1.5s infinite;
+    }
+
+    .voice-status-pill.processing {
+      background: rgba(168, 85, 247, 0.15);
+      border-color: rgba(168, 85, 247, 0.5);
+      color: #c084fc;
+    }
+
+    .voice-status-pill.speaking {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+    }
+
+    .voice-status-pill.denied {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    .voice-status-pill.listening .pill-dot {
+      animation: pingDot 1s infinite;
+    }
+
+    @keyframes pingDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.6); opacity: 0.5; }
+    }
+
+    .btn-grant-permission {
+      margin-left: auto;
+      padding: 2px 8px;
+      background: #ef4444;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ── Live Character Floating Voice Badge ── */
+    .char-voice-indicator {
+      position: absolute;
+      top: -38px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      color: #ffffff;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      z-index: 25;
+      animation: floatBadge 2s ease-in-out infinite alternate;
+      transition: all 0.2s ease;
+    }
+
+    .char-voice-indicator.capturing {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.95), rgba(99, 102, 241, 0.95));
+      border-color: rgba(56, 189, 248, 0.8);
+      box-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
+      transform: translateX(-50%) scale(1.06);
+    }
+
+    .char-voice-indicator.processing {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.95), rgba(236, 72, 153, 0.95));
+      border-color: rgba(192, 132, 252, 0.8);
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
+    }
+
+    .char-voice-indicator.speaking {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(239, 68, 68, 0.95));
+      border-color: rgba(251, 191, 36, 0.8);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+    }
+
+    @keyframes floatBadge {
+      0% { transform: translateX(-50%) translateY(0); }
+      100% { transform: translateX(-50%) translateY(-4px); }
+    }
+
 
     .menu-header {
       display: flex;
@@ -2044,6 +2586,23 @@ import { Theme } from '../../../core/services/theme.service';
 })
 export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
   assistantService = inject(AiCharacterAssistantService);
+  voiceService = inject(AiVoiceService);
+  private ngZone = inject(NgZone);
+  private cdr = inject(ChangeDetectorRef);
+
+  onAgentNameChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input && input.value !== undefined) {
+      this.voiceService.setAgentName(input.value);
+    }
+  }
+
+  onVoiceChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    if (select && select.value) {
+      this.voiceService.setSelectedVoice(select.value);
+    }
+  }
 
   @ViewChild('chatScrollContainer') private chatScrollContainer?: ElementRef;
   @ViewChild('inputField') private inputField?: ElementRef;
@@ -2053,8 +2612,7 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
   readonly Math = Math;
 
   userInput = '';
-  readonly isVoiceRecording = signal<boolean>(false);
-  private speechRecognition?: any;
+  readonly isVoiceRecording = computed(() => this.voiceService.isMicRecording());
 
   // ── Character Cutout Drag, Movement & Customization State ──
   readonly charScale = signal<number>(1.0);
@@ -2139,7 +2697,6 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
   private readonly storageKey = 'u2_floating_agent_prefs';
 
   ngOnInit(): void {
-    this.initSpeechRecognition();
     this.loadPreferences();
     this.loadCharPreferences();
   }
@@ -2149,9 +2706,6 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
     this.cleanupDragListeners();
     this.cleanupCharMovement();
     this.cleanupCharDragListeners();
-    if (this.speechRecognition) {
-      try { this.speechRecognition.stop(); } catch {}
-    }
   }
 
   // ── Preferences Persistence ──
@@ -2329,24 +2883,33 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
 
-    const menuWidth = 270;
-    const menuHeight = 520;
-    let x = event.clientX;
-    let y = event.clientY;
+    const menuWidth = 295;
+    const menuHeight = 580;
+    const aX = this.agentX();
+    const aY = this.agentY();
+    const aSize = this.agentSize();
 
-    if (x + menuWidth > window.innerWidth - 12) {
-      x = window.innerWidth - menuWidth - 12;
+    // Position beside the launcher avatar
+    let x: number;
+    if (aX + aSize / 2 > window.innerWidth / 2) {
+      x = aX - menuWidth - 14;
+      if (x < 12) {
+        x = aX + aSize + 14;
+      }
+    } else {
+      x = aX + aSize + 14;
+      if (x + menuWidth > window.innerWidth - 12) {
+        x = Math.max(12, aX - menuWidth - 14);
+      }
     }
-    if (y + menuHeight > window.innerHeight - 12) {
-      y = window.innerHeight - menuHeight - 12;
-    }
-    x = Math.max(12, x);
-    y = Math.max(12, y);
 
-    this.contextMenuX.set(x);
-    this.contextMenuY.set(y);
+    let y = Math.max(16, Math.min(window.innerHeight - menuHeight - 16, aY - 40));
+
+    this.contextMenuX.set(Math.round(x));
+    this.contextMenuY.set(Math.round(y));
     this.showContextMenu.set(true);
   }
+
 
   closeContextMenu(): void {
     this.showContextMenu.set(false);
@@ -2625,8 +3188,11 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
     const text = this.userInput.trim();
     if (!text) return;
     this.userInput = '';
-    this.assistantService.sendMessage(text);
-    this.scrollToBottom();
+    this.ngZone.run(() => {
+      this.assistantService.sendMessage(text);
+      this.cdr.markForCheck();
+      this.scrollToBottom();
+    });
   }
 
   selectTheme(theme: Theme): void {
@@ -2643,58 +3209,17 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
     }, 100);
   }
 
-  // ── Voice Input (Speech-to-Text) ──
-  private initSpeechRecognition(): void {
-    if (typeof window === 'undefined') return;
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      this.speechRecognition = new SpeechRecognition();
-      this.speechRecognition.continuous = false;
-      this.speechRecognition.interimResults = false;
-      this.speechRecognition.lang = 'en-US';
-
-      this.speechRecognition.onstart = () => {
-        this.isVoiceRecording.set(true);
-        this.assistantService.isListening.set(true);
-        this.assistantService.setPose('listening');
-      };
-
-      this.speechRecognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          this.userInput = transcript;
-          this.handleSend();
-        }
-      };
-
-      this.speechRecognition.onerror = () => {
-        this.isVoiceRecording.set(false);
-        this.assistantService.isListening.set(false);
-        this.assistantService.setPose('idle');
-      };
-
-      this.speechRecognition.onend = () => {
-        this.isVoiceRecording.set(false);
-        this.assistantService.isListening.set(false);
-        if (this.assistantService.currentPose() === 'listening') {
-          this.assistantService.setPose('idle');
-        }
-      };
-    }
-  }
-
+  // ── Voice Input (Speech-to-Text via STT.py / AiVoiceService) ──
   toggleVoiceInput(): void {
-    if (!this.speechRecognition) {
-      alert('Speech recognition is not supported in this browser. Please use keyboard input.');
-      return;
-    }
-
-    if (this.isVoiceRecording()) {
-      this.speechRecognition.stop();
-    } else {
-      this.speechRecognition.start();
-    }
+    this.ngZone.run(async () => {
+      try {
+        await this.voiceService.toggleMicrophoneInput();
+      } catch (err) {
+        console.warn('Voice input error:', err);
+      } finally {
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -2879,24 +3404,40 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
 
-    const menuWidth = 280;
-    const menuHeight = 540;
-    let x = event.clientX;
-    let y = event.clientY;
+    const menuWidth = 295;
+    const menuHeight = 580;
 
-    if (x + menuWidth > window.innerWidth - 12) {
-      x = window.innerWidth - menuWidth - 12;
-    }
-    if (y + menuHeight > window.innerHeight - 12) {
-      y = window.innerHeight - menuHeight - 12;
-    }
-    x = Math.max(12, x);
-    y = Math.max(12, y);
+    const cX = this.charX();
+    const cY = this.charY();
+    const cW = this.charWidth();
 
-    this.charContextMenuX.set(x);
-    this.charContextMenuY.set(y);
+    // Position beside the character so it appears above or beside the agent and remains accessible
+    let x: number;
+    if (cX + cW / 2 > window.innerWidth / 2) {
+      // Place to the left of the character
+      x = cX - menuWidth - 16;
+      if (x < 12) {
+        // Fallback to right side if space on the left is tight
+        x = cX + cW + 16 <= window.innerWidth - menuWidth - 12
+          ? cX + cW + 16
+          : Math.max(12, window.innerWidth - menuWidth - 12);
+      }
+    } else {
+      // Place to the right of the character
+      x = cX + cW + 16;
+      if (x + menuWidth > window.innerWidth - 12) {
+        x = Math.max(12, cX - menuWidth - 16);
+      }
+    }
+
+    // Align vertically around character's top, clamped within viewport
+    let y = Math.max(16, Math.min(window.innerHeight - menuHeight - 16, cY + 20));
+
+    this.charContextMenuX.set(Math.round(x));
+    this.charContextMenuY.set(Math.round(y));
     this.showCharContextMenu.set(true);
   }
+
 
   closeCharContextMenu(): void {
     this.showCharContextMenu.set(false);
