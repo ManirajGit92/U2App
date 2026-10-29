@@ -27,96 +27,45 @@ import { AvatarPose } from './ai-character-assistant.service';
       [class.is-happy]="pose === 'happy'"
       [class.is-pointing]="pose === 'pointing'"
       [class.is-explaining]="pose === 'explaining'"
+      [class.has-action]="!!actionImage"
       [style.transform]="characterTransform()"
       (click)="avatarClicked.emit()"
       title="Click to chat with U2 Assistant"
     >
       <!-- Glowing Reactive Aura behind character -->
-      <div class="character-aura" [class.active]="isListening || isSpeaking || pose === 'happy'"></div>
+      <div class="character-aura" [class.active]="isListening || isSpeaking || pose === 'happy' || !!actionImage"></div>
 
       <!-- Main Full-Res Cutout Layer -->
-      <div class="character-body-container" [class.breathe]="pose === 'idle' || pose === 'listening'">
-        <!-- Base Character Cutout -->
+      <div class="character-body-container" [class.breathe]="!actionImage && (pose === 'idle' || pose === 'listening')">
+        <!-- Dynamic Action Image (when performing an action) -->
         <img
-          *ngIf="!customImage"
-          src="assets/images/assistant/GirlIdle.gif"
-          alt="U2 Assistant Character"
-          class="character-image base-layer"
-          [class.visible]="pose === 'idle' || pose === 'speaking' || pose === 'listening'"
+          *ngIf="actionImage"
+          [src]="actionImage"
+          alt="U2 Assistant Action"
+          class="character-image action-layer visible"
           draggable="false"
         />
 
-        <!-- Custom Uploaded Character Cutout -->
+        <!-- Custom Uploaded Character Cutout (when no action is active) -->
         <img
-          *ngIf="customImage"
+          *ngIf="!actionImage && customImage"
           [src]="customImage"
           alt="Custom U2 Assistant"
           class="character-image base-layer visible custom-character-img"
           draggable="false"
         />
 
-        <!-- Explaining Pose Overlay -->
+        <!-- Default Base Character (when no action and no custom image) -->
         <img
-          *ngIf="!customImage"
-          src="assets/images/assistant/Welcome.gif"
-          alt="Explaining Gesture"
-          class="character-image pose-overlay explaining-overlay"
-          [class.visible]="pose === 'explaining'"
+          *ngIf="!actionImage && !customImage"
+          src="assets/images/assistant/SmileAndStandIdle.gif"
+          alt="U2 Assistant Character"
+          class="character-image base-layer visible"
           draggable="false"
         />
-
-        <!-- Pointing / Suggest Pose Overlay -->
-        <img
-          *ngIf="!customImage"
-          src="assets/images/assistant/GirlClick.gif"
-          alt="Pointing Gesture"
-          class="character-image pose-overlay pointing-overlay"
-          [class.visible]="pose === 'pointing'"
-          draggable="false"
-        />
-
-        <!-- Thinking Pose Overlay -->
-        <img
-          *ngIf="!customImage"
-          src="assets/images/assistant/SriThinking.png"
-          alt="Thinking"
-          class="character-image pose-overlay thinking-overlay"
-          [class.visible]="pose === 'thinking'"
-          draggable="false"
-        />
-
-        <!-- Happy / Confirmation Pose Overlay -->
-        <img
-          *ngIf="!customImage"
-          src="assets/images/assistant/GirlClick.gif"
-          alt="Happy Confirmation"
-          class="character-image pose-overlay happy-overlay"
-          [class.visible]="pose === 'happy'"
-          draggable="false"
-        />
-
-        <!-- Realistic Procedural Eyelid Blink Overlay (Over Base Character) -->
-        <!-- <div
-          class="eyelids-container"
-          *ngIf="pose === 'idle' || pose === 'speaking' || pose === 'listening'"
-          [class.is-blinking]="isBlinking()"
-         >
-          <div class="eyelid eye-left"></div>
-          <div class="eyelid eye-right"></div>
-        </div> -->
-
-        <!-- Realistic Procedural Lip-Sync Mouth Overlay (When Speaking) -->
-         <!--   -->
-        <!-- <div
-          class="lipsync-container"
-         *ngIf="isSpeaking && (pose === 'speaking' || pose === 'idle')"
-          [style.transform]="lipSyncScale()"
-        >
-          <div class="mouth-shape" [ngClass]="currentViseme()"></div>
-        </div> -->
 
         <!-- Thinking Sparkle / Particle Indicators -->
-        <div class="thinking-particles" *ngIf="isThinking">
+        <div class="thinking-particles" *ngIf="isThinking || (!actionImage && pose === 'thinking')">
           <span class="particle p1">💭</span>
           <span class="particle p2">✨</span>
           <span class="particle p3">💡</span>
@@ -218,15 +167,17 @@ import { AvatarPose } from './ai-character-assistant.service';
     .character-image {
       position: absolute;
       bottom: 0;
+      left: 0;
+      width: 100%;
       height: 100%;
-      width: auto;
-      max-width: 100%;
       object-fit: contain;
+      object-position: bottom center;
       pointer-events: none;
       filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.35));
-      transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
       opacity: 0;
-      transform: scale(0.97);
+      transform: scale(0.98);
+      user-select: none;
     }
 
     .character-image.visible {
@@ -238,14 +189,8 @@ import { AvatarPose } from './ai-character-assistant.service';
       z-index: 2;
     }
 
-    .pose-overlay {
+    .action-layer {
       z-index: 3;
-      border-radius: 18px;
-      bottom: 20px;
-      max-width: 82%;
-      max-height: 82%;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-      border: 2px solid rgba(255, 255, 255, 0.25);
     }
 
     /* ── Procedural Eyelids ── */
@@ -497,6 +442,8 @@ export class AiAvatarAnimatorComponent implements OnInit, OnDestroy {
   @Input() isListening: boolean = false;
   @Input() isThinking: boolean = false;
   @Input() customImage: string | null = null;
+  @Input() actionImage: string | null = null;
+  @Input() actionLabel: string | null = null;
 
   @Output() avatarClicked = new EventEmitter<void>();
 
@@ -520,6 +467,7 @@ export class AiAvatarAnimatorComponent implements OnInit, OnDestroy {
   });
 
   readonly stateLabel = computed(() => {
+    if (this.actionLabel) return this.actionLabel;
     if (this.isListening) return 'Listening...';
     if (this.isThinking) return 'Thinking...';
     if (this.isSpeaking) return 'Speaking...';

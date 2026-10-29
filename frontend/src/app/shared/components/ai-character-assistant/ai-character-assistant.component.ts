@@ -219,30 +219,58 @@ import { Theme } from '../../../core/services/theme.service';
           <button
             type="button"
             class="chip-btn"
+            (click)="assistantService.sendMessage('Laugh')"
+          >
+            😂 Laugh
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="assistantService.sendMessage('Sad')"
+          >
+            😢 Sad
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="assistantService.sendMessage('Thumbs up')"
+          >
+            👍 Thumbs Up
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="assistantService.sendMessage('Handshake')"
+          >
+            🤝 Handshake
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="assistantService.sendMessage('Explain U2 Tools')"
+          >
+            💡 Explain
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="assistantService.sendMessage('Show multiple actions')"
+          >
+            💃 Actions
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
             (click)="assistantService.sendMessage('Can you change the theme?')"
           >
-            🎨 Change theme
+            🎨 Theme
           </button>
           <button
             type="button"
             class="chip-btn"
             (click)="assistantService.sendMessage('Open Standup Note')"
           >
-            📋 Standup Note
-          </button>
-          <button
-            type="button"
-            class="chip-btn"
-            (click)="assistantService.sendMessage('Tell me about Lodge Booking')"
-          >
-            🏨 Lodge Booking
-          </button>
-          <button
-            type="button"
-            class="chip-btn"
-            (click)="assistantService.sendMessage('What can you do?')"
-          >
-            💡 Help
+            📋 Standup
           </button>
         </div>
 
@@ -307,6 +335,8 @@ import { Theme } from '../../../core/services/theme.service';
         >
           <app-ai-avatar-animator
             [customImage]="charCustomImage()"
+            [actionImage]="assistantService.activeActionImage()"
+            [actionLabel]="assistantService.activeActionLabel()"
             [pose]="assistantService.currentPose()"
             [isSpeaking]="assistantService.isSpeaking()"
             [isListening]="assistantService.isListening()"
@@ -379,7 +409,7 @@ import { Theme } from '../../../core/services/theme.service';
           [style.height.px]="agentSize()"
         >
           <img
-            [src]="agentImage()"
+            [src]="currentLauncherImage()"
             alt="U2 Assistant"
             class="launcher-img"
             [style.width.px]="agentSize() - 4"
@@ -518,6 +548,29 @@ import { Theme } from '../../../core/services/theme.service';
               <button type="button" class="preset-btn" [class.selected]="agentSpeed() === 3" (click)="setSpeed(3)">Normal</button>
               <button type="button" class="preset-btn" [class.selected]="agentSpeed() === 5" (click)="setSpeed(5)">Fast</button>
               <button type="button" class="preset-btn" [class.selected]="agentSpeed() === 8" (click)="setSpeed(8)">Turbo</button>
+            </div>
+          </div>
+
+          <!-- Action Display Duration Control -->
+          <div class="menu-slider-block">
+            <div class="slider-label-row">
+              <span class="slider-title">⏱️ Action Display Duration</span>
+              <span class="slider-value">{{ actionDuration() }}s</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="15"
+              step="1"
+              [value]="actionDuration()"
+              (input)="onActionDurationChange($event)"
+              class="menu-range-slider"
+            />
+            <div class="speed-presets-row">
+              <button type="button" class="preset-btn" [class.selected]="actionDuration() === 2" (click)="setActionDuration(2)">2s</button>
+              <button type="button" class="preset-btn" [class.selected]="actionDuration() === 4" (click)="setActionDuration(4)">4s</button>
+              <button type="button" class="preset-btn" [class.selected]="actionDuration() === 6" (click)="setActionDuration(6)">6s</button>
+              <button type="button" class="preset-btn" [class.selected]="actionDuration() === 10" (click)="setActionDuration(10)">10s</button>
             </div>
           </div>
 
@@ -839,6 +892,29 @@ import { Theme } from '../../../core/services/theme.service';
               <button type="button" class="preset-btn" [class.selected]="charSpeed() === 3" (click)="setCharSpeed(3)">Normal</button>
               <button type="button" class="preset-btn" [class.selected]="charSpeed() === 5" (click)="setCharSpeed(5)">Fast</button>
               <button type="button" class="preset-btn" [class.selected]="charSpeed() === 8" (click)="setCharSpeed(8)">Turbo</button>
+            </div>
+          </div>
+
+          <!-- Action Display Duration Control -->
+          <div class="menu-slider-block">
+            <div class="slider-label-row">
+              <span class="slider-title">⏱️ Action Display Duration</span>
+              <span class="slider-value">{{ actionDuration() }}s</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="15"
+              step="1"
+              [value]="actionDuration()"
+              (input)="onActionDurationChange($event)"
+              class="menu-range-slider"
+            />
+            <div class="speed-presets-row">
+              <button type="button" class="preset-btn" [class.selected]="actionDuration() === 2" (click)="setActionDuration(2)">2s</button>
+              <button type="button" class="preset-btn" [class.selected]="actionDuration() === 4" (click)="setActionDuration(4)">4s</button>
+              <button type="button" class="preset-btn" [class.selected]="actionDuration() === 6" (click)="setActionDuration(6)">6s</button>
+              <button type="button" class="preset-btn" [class.selected]="actionDuration() === 10" (click)="setActionDuration(10)">10s</button>
             </div>
           </div>
 
@@ -2613,6 +2689,20 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
 
   userInput = '';
   readonly isVoiceRecording = computed(() => this.voiceService.isMicRecording());
+  readonly actionDuration = computed(() => this.assistantService.actionDuration());
+  readonly currentLauncherImage = computed(() => this.assistantService.activeActionImage() || this.agentImage());
+
+  onActionDurationChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const val = parseInt(input.value, 10);
+    if (!isNaN(val)) {
+      this.setActionDuration(val);
+    }
+  }
+
+  setActionDuration(seconds: number): void {
+    this.assistantService.setActionDuration(seconds);
+  }
 
   // ── Character Cutout Drag, Movement & Customization State ──
   readonly charScale = signal<number>(1.0);

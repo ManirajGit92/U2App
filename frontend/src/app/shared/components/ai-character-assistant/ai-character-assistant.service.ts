@@ -4,7 +4,16 @@ import { ThemeService, Theme } from '../../../core/services/theme.service';
 import { environment } from '../../../../environments/environment';
 import { AiVoiceService } from './ai-voice.service';
 
-export type AvatarPose = 'idle' | 'listening' | 'thinking' | 'speaking' | 'explaining' | 'pointing' | 'happy';
+export type AvatarPose = 'idle' | 'listening' | 'thinking' | 'speaking' | 'explaining' | 'pointing' | 'happy' | 'sad' | 'laugh';
+
+export interface AssistantAction {
+  id: string;
+  name: string;
+  image: string;
+  pose: AvatarPose;
+  actionLabel: string;
+  reply: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -40,6 +49,13 @@ export class AiCharacterAssistantService {
   readonly isThinking = signal<boolean>(false);
   readonly isMuted = signal<boolean>(false);
   readonly unreadCount = signal<number>(1);
+
+  // Dynamic Character Action State
+  readonly activeActionImage = signal<string | null>(null);
+  readonly activeActionLabel = signal<string | null>(null);
+  readonly actionDuration = signal<number>(4);
+  private actionTimer?: any;
+  private readonly durationStorageKey = 'u2_action_display_duration';
 
   // Message history
   readonly messages = signal<ChatMessage[]>([
@@ -130,6 +146,8 @@ export class AiCharacterAssistantService {
       this.synth = window.speechSynthesis;
     }
 
+    this.loadActionDuration();
+
     // Connect voice interaction dispatcher: when wake word & speech are captured, send to LLM
     this.voiceService.registerMessageDispatcher(async (userPrompt: string) => {
       // Open chat automatically so user sees interaction
@@ -168,7 +186,58 @@ export class AiCharacterAssistantService {
   private warmupBackend(): void {
     const pythonBase = (environment.pythonApiBaseUrl || 'http://127.0.0.1:8000').replace(/\/+$/, '');
     const healthUrl = `${pythonBase}/health`;
-    fetch(healthUrl, { method: 'GET', signal: AbortSignal.timeout(30_000) }).catch(() => {});
+    fetch(healthUrl, { method: 'GET', signal: AbortSignal.timeout(30_000) }).catch(() => { });
+  }
+
+  // ── Action Display Duration & Dynamic Character Actions ──────────
+
+  private loadActionDuration(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(this.durationStorageKey);
+      if (saved) {
+        const val = parseInt(saved, 10);
+        if (!isNaN(val) && val >= 1 && val <= 30) {
+          this.actionDuration.set(val);
+        }
+      }
+    } catch { }
+  }
+
+  setActionDuration(seconds: number): void {
+    const clamped = Math.max(1, Math.min(30, Math.round(seconds)));
+    this.actionDuration.set(clamped);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(this.durationStorageKey, clamped.toString());
+      } catch { }
+    }
+  }
+
+  triggerAction(imagePath: string, pose: AvatarPose = 'happy', label?: string): void {
+    if (this.actionTimer) {
+      clearTimeout(this.actionTimer);
+      this.actionTimer = undefined;
+    }
+
+    this.activeActionImage.set(imagePath);
+    this.activeActionLabel.set(label || null);
+    this.setPose(pose);
+
+    const durationMs = this.actionDuration() * 1000;
+    this.actionTimer = setTimeout(() => {
+      this.clearAction();
+    }, durationMs);
+  }
+
+  clearAction(): void {
+    if (this.actionTimer) {
+      clearTimeout(this.actionTimer);
+      this.actionTimer = undefined;
+    }
+    this.activeActionImage.set(null);
+    this.activeActionLabel.set(null);
+    this.setPose('idle');
   }
 
   // ── Window Controls ──────────────────────────────────────────────
@@ -177,18 +246,13 @@ export class AiCharacterAssistantService {
     this.isOpen.set(true);
     this.isMinimized.set(false);
     this.unreadCount.set(0);
-    this.setPose('explaining');
-    setTimeout(() => {
-      if (this.currentPose() === 'explaining') {
-        this.setPose('idle');
-      }
-    }, 3000);
+    this.triggerAction('assets/images/assistant/HandShake_Hi.gif', 'explaining', 'Here to help 👋');
   }
 
   closeChat(): void {
     this.isOpen.set(false);
     this.stopSpeaking();
-    this.setPose('idle');
+    this.clearAction();
   }
 
   toggleChat(): void {
@@ -214,13 +278,258 @@ export class AiCharacterAssistantService {
     }
   }
 
+  // ── Keyword-Based Action & Fast Intent Detection ──────────────────
+
+  detectAction(input: string): AssistantAction | null {
+    const raw = input.trim();
+    if (!raw) return null;
+    const lower = raw.toLowerCase();
+
+    // Clean up punctuation for consistent keyword matching
+    const normalized = lower.replace(/[!?,.:;'"~`@#$%^&*()_+=/\\<>{}[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+
+    // Priority-ordered matching (ensures no conflicting actions for a single request)
+
+    // 1. Thumbs-up / Approvals / Praise
+    if (
+      /\bthumbs?\s*[-_]?up\b/.test(normalized) ||
+      /\b(well\s+done|good\s+job|great\s+job|nice\s+work|awesome\s+job|you\s+rock|youre?\s+awesome|kudos|superb|high\s+five)\b/.test(normalized) ||
+      /^(thumbs?\s*up|thumb|cool|awesome|perfect|great|nice|like|approve|excellent)$/.test(normalized)
+    ) {
+      return {
+        id: 'thumbs-up',
+        name: 'Thumbs Up',
+        image: 'assets/images/assistant/ThumbsUp.png',
+        pose: 'happy',
+        actionLabel: 'Thumbs Up 👍',
+        reply: "👍 Thumbs up! You're doing great! Let me know if you need any assistance with your tasks."
+      };
+    }
+
+    // 2. Handshake / Greeting Partner
+    if (
+      /\b(hand\s*[-_]?shake|shake\s+(my\s+)?hands?|give\s+me\s+a\s+hand)\b/.test(normalized) ||
+      /\b(pleasure|nice|glad)\s+to\s+meet\s+you\b/.test(normalized)
+    ) {
+      return {
+        id: 'handshake',
+        name: 'Handshake',
+        image: 'assets/images/assistant/HandShake_Hi.gif',
+        pose: 'explaining',
+        actionLabel: 'Handshake 🤝',
+        reply: "🤝 It's a real pleasure to connect with you! Let's get things done together."
+      };
+    }
+
+    // 3. Multiple Actions / Gestures / Dance
+    if (
+      /\b(multiple|multi)\s*[-_]?actions?\b/.test(normalized) ||
+      /\bshow\s+(your\s+)?(actions?|moves|gestures|animations?)\b/.test(normalized) ||
+      /\b(dance|do\s+a\s+dance|perform|celebrate|party)\b/.test(normalized) ||
+      /^(actions|moves|gestures)$/.test(normalized)
+    ) {
+      return {
+        id: 'multiple-actions',
+        name: 'Multiple Actions',
+        image: 'assets/images/assistant/MultipleActions.gif',
+        pose: 'pointing',
+        actionLabel: 'Multiple Actions 💃',
+        reply: "Check out my moves! 💃 I can express greetings, explanations, thumbs-up, deep thoughts, and multiple animated gestures to keep you company while you work."
+      };
+    }
+
+    // 4. Explaining / Overview / Guides
+    if (
+      /\b(explain(\s+(this|to\s+me|it|features|website))?|how\s+(does\s+(it|this)|do\s+you)\s+work|what\s+can\s+you\s+do|walk\s+me\s+through|guide\s+me|instructions|help\s+me\s+understand)\b/.test(normalized) ||
+      /^(explain|features|help|guide|instructions)$/.test(normalized)
+    ) {
+      return {
+        id: 'explaining',
+        name: 'Explaining',
+        image: 'assets/images/assistant/Explaining.png',
+        pose: 'explaining',
+        actionLabel: 'Explaining 💡',
+        reply: "Here is an overview of U2 Tools:\n• **Excel-Powered Apps**: Standup Note, Work Tracker, Estimator App, and Lodge Booking\n• **Productivity Utilities**: HTML Viewer, Document Builder, Diff Compare, and Tax Calculator\n• **Personalization**: Change themes, adjust character speed, and configure action display duration anytime!"
+      };
+    }
+
+    // 5. Welcome & Onboarding
+    if (
+      /\b(welcome(\s+(me|to\s+u2(\s*tools)?|aboard))?|who\s+are\s+you|introduce\s+yourself|meet\s+the\s+assistant|get\s+started|onboard(ing)?)\b/.test(normalized) ||
+      /^(welcome|introduce|intro)$/.test(normalized)
+    ) {
+      return {
+        id: 'welcome',
+        name: 'Welcome',
+        image: 'assets/images/assistant/Welcome.png',
+        pose: 'happy',
+        actionLabel: 'Welcome 🎉',
+        reply: "Welcome to U2Tools! 🎉 I'm your dedicated AI assistant. I'm here to guide you through all our features, help you navigate tools, and personalize your experience."
+      };
+    }
+
+    // 6. Hand in Chin / Hand in Chip / Pondering
+    if (
+      /\bhand\s+(in|on)\s+(chin|chip)\b/.test(normalized) ||
+      /\b(curious|wondering|pondering)\b/.test(normalized) ||
+      /\bwhat\s+do\s+you\s+think\b/.test(normalized) ||
+      /^(chin|chip|curious|hmm+|wondering)$/.test(normalized)
+    ) {
+      return {
+        id: 'hand-in-chin',
+        name: 'Hand in Chin',
+        image: 'assets/images/assistant/HandInChin.png',
+        pose: 'thinking',
+        actionLabel: 'Curious 🤔',
+        reply: "That's an interesting question! 🤔 Let's look into that together and find the best way forward."
+      };
+    }
+
+    // 7. Think / Deep Analysis / Problem Solving
+    if (
+      /\b(let\s+me\s+think|deep\s+thought|think\s+about\s+(it|this)|analyz(e|ing)|brainstorm|solve\s+this|figure\s+it\s+out)\b/.test(normalized) ||
+      /^(think|thinking|ponder|analyze|brainstorm)$/.test(normalized)
+    ) {
+      return {
+        id: 'think',
+        name: 'Think',
+        image: 'assets/images/assistant/Think.png',
+        pose: 'thinking',
+        actionLabel: 'Thinking 💭',
+        reply: "Thinking deeply about this... 💭 Great problems require focused minds! Let's work out the best solution."
+      };
+    }
+
+    // 8. Type / Coding / Working / Taking Notes
+    if (
+      /\b((start\s+)?typing|(take|taking)\s+notes|write\s+(code|notes?)|coding|draft(ing)?)\b/.test(normalized) ||
+      /^(type|typing|write|code)$/.test(normalized)
+    ) {
+      return {
+        id: 'type',
+        name: 'Type',
+        image: 'assets/images/assistant/Type.png',
+        pose: 'explaining',
+        actionLabel: 'Typing ⌨️',
+        reply: "I'm on it! ⌨️ Typing away and keeping your notes, code, and documentation organized."
+      };
+    }
+
+    // 9. Smile and Stand Idle
+    if (
+      /\b(smile\s+and\s+stand|stand\s+idle|smile|relax|stand\s+still|be\s+idle|reset\s+(pose|character|avatar))\b/.test(normalized) ||
+      /^(smile|idle|stand|relax)$/.test(normalized)
+    ) {
+      return {
+        id: 'smile-idle',
+        name: 'Smile & Stand Idle',
+        image: 'assets/images/assistant/SmileAndStandIdle.gif',
+        pose: 'idle',
+        actionLabel: 'Smile & Stand 😊',
+        reply: "Standing by with a smile! 😊 Ready whenever you need assistance."
+      };
+    }
+
+    // 10. Greetings
+    if (
+      /\b(hi|hello|hey|howdy|greetings)\b/.test(normalized) ||
+      /\bgood\s+(morning|afternoon|evening|day)\b/.test(normalized) ||
+      /\bwhat'?s\s+up\b/.test(normalized) ||
+      /^(hi|hello|hey|yo|howdy)$/.test(normalized)
+    ) {
+      return {
+        id: 'greeting',
+        name: 'Greeting',
+        image: 'assets/images/assistant/HandShake_Hi.gif',
+        pose: 'happy',
+        actionLabel: 'Hello! 👋',
+        reply: "Hello there! 👋 Glad to see you! How can I help you with U2 Tools today?"
+      };
+    }
+    // 11. Laugh
+    if (
+      /\b(laugh|laughing|laughter|giggle|giggling|chuckle|chuckling|lol|lmao|hilarious|funny|crack\s+me\s+up)\b/.test(normalized) ||
+      /^(laugh|laughing|giggle|chuckle|lol|lmao|funny)$/.test(normalized)
+    ) {
+      return {
+        id: 'laugh',
+        name: 'Laugh',
+        image: 'assets/images/assistant/Laugh.gif',
+        pose: 'happy',
+        actionLabel: 'Laugh 😂',
+        reply: "😂 Haha! That's hilarious! A little laughter makes every day better. Keep smiling!"
+      };
+    }
+
+    // 12. Sad
+    if (
+      /\b(sad|sadness|unhappy|upset|disappointed|depressed|cry|crying|tears|heartbroken|feeling\s+low|feeling\s+down|miss\s+you|sorry\s+to\s+hear)\b/.test(normalized) ||
+      /^(sad|unhappy|upset|cry|crying|disappointed)$/.test(normalized)
+    ) {
+      return {
+        id: 'sad',
+        name: 'Sad',
+        image: 'assets/images/assistant/Sad.gif',
+        pose: 'sad',
+        actionLabel: 'Sad 😢',
+        reply: "😢 I'm sorry you're feeling this way. Remember, difficult moments don't last forever. I'm here if you need help or someone to talk to."
+      };
+    }
+
+    return null;
+  }
+
+  private checkQuickTheme(input: string): { theme?: Theme } | null {
+    const lower = input.toLowerCase().trim();
+    const validThemes: Theme[] = ['light', 'dark', 'blue', 'green', 'pink'];
+    if (validThemes.includes(lower as Theme)) {
+      return { theme: lower as Theme };
+    }
+
+    const themeKeywords = ['theme', 'dark mode', 'light mode', 'change color', 'switch mode', 'night mode', 'appearance'];
+    if (themeKeywords.some(k => lower.includes(k))) {
+      const themeMap: Record<string, Theme> = {
+        dark: 'dark',
+        light: 'light',
+        blue: 'blue',
+        green: 'green',
+        pink: 'pink',
+        rose: 'pink',
+        night: 'dark',
+        day: 'light'
+      };
+      for (const [kw, thm] of Object.entries(themeMap)) {
+        if (lower.includes(kw)) {
+          return { theme: thm };
+        }
+      }
+      return {};
+    }
+    return null;
+  }
+
+  private checkQuickNavigation(input: string): { name: string; route: string } | null {
+    const lower = input.toLowerCase().trim();
+    const navVerbs = ['open', 'go to', 'take me', 'navigate', 'launch', 'load', 'switch to', 'show me', 'i want to use', 'use'];
+    const hasNavVerb = navVerbs.some(v => lower.includes(v));
+
+    for (const tool of this.tools) {
+      const nameMatch = lower.includes(tool.name.toLowerCase());
+      const kwMatch = tool.keywords.some(k => lower.includes(k));
+      if (nameMatch || (hasNavVerb && kwMatch)) {
+        return { name: tool.name, route: tool.route };
+      }
+    }
+    return null;
+  }
+
   // ── Send User Message ─────────────────────────────────────────────
 
   async sendMessage(userInput: string): Promise<void> {
     const text = userInput.trim();
     if (!text) return;
 
-    // Add user message
+    // Add user message to conversation history
     const userMsg: ChatMessage = {
       id: 'msg-' + Date.now(),
       sender: 'user',
@@ -229,7 +538,40 @@ export class AiCharacterAssistantService {
     };
     this.messages.update(msgs => [...msgs, userMsg]);
 
-    // Assistant switches to thinking state
+    // 1. Fast Keyword-Based Action Detection (Immediate frontend response)
+    const detectedAction = this.detectAction(text);
+    if (detectedAction) {
+      this.triggerAction(detectedAction.image, detectedAction.pose, detectedAction.actionLabel);
+      this.addAssistantResponse({
+        text: detectedAction.reply,
+        pose: detectedAction.pose
+      });
+      return;
+    }
+
+    // 2. Direct Theme Change
+    const themeMatch = this.checkQuickTheme(text);
+    if (themeMatch) {
+      if (themeMatch.theme) {
+        this.applyTheme(themeMatch.theme);
+      } else {
+        this.addAssistantResponse({
+          text: 'Sure! Which theme would you like?',
+          pose: 'pointing',
+          themePicker: true
+        });
+      }
+      return;
+    }
+
+    // 3. Direct Tool Navigation
+    const navMatch = this.checkQuickNavigation(text);
+    if (navMatch) {
+      this.navigateTo(navMatch.route, navMatch.name);
+      return;
+    }
+
+    // 4. Fallback: LLM Processing (retains default character)
     this.setPose('thinking');
     this.isThinking.set(true);
 
@@ -262,18 +604,13 @@ export class AiCharacterAssistantService {
     };
 
     this.messages.update(msgs => [...msgs, confirmMsg]);
-    this.setPose('happy');
+    this.triggerAction('assets/images/assistant/ThumbsUp.png', 'happy', 'Theme Updated 🎨');
     this.speakText(`Theme changed to ${capitalized}! Hope you like it.`);
-
-    setTimeout(() => {
-      this.setPose('idle');
-    }, 4500);
   }
 
   // ── Navigate Action ──────────────────────────────────────────────
 
   navigateTo(route: string, toolName: string): void {
-    this.setPose('pointing');
     this.router.navigateByUrl(route);
     const navMsg: ChatMessage = {
       id: 'msg-' + Date.now(),
@@ -282,11 +619,8 @@ export class AiCharacterAssistantService {
       timestamp: new Date()
     };
     this.messages.update(msgs => [...msgs, navMsg]);
+    this.triggerAction('assets/images/assistant/MultipleActions.gif', 'pointing', `Opening ${toolName} 🚀`);
     this.speakText(`Opening ${toolName}`);
-
-    setTimeout(() => {
-      this.setPose('idle');
-    }, 3500);
   }
 
   // ── Process Intent & Backend Integration (LLM-powered) ───────────
@@ -349,20 +683,20 @@ Rules:
     const pythonBase = (environment.pythonApiBaseUrl || 'http://127.0.0.1:8000').replace(/\/+$/, '');
     const endpoints = isLocal
       ? [
-          'http://127.0.0.1:8000/api/standup-ai/chat',
-          'http://localhost:8000/api/standup-ai/chat',
-          'http://127.0.0.1:8000/api/chat',
-          `${pythonBase}/api/standup-ai/chat`,
-          `${pythonBase}/api/chat`,
-          '/api/standup-ai/chat',
-        ]
+        'http://127.0.0.1:8000/api/standup-ai/chat',
+        'http://localhost:8000/api/standup-ai/chat',
+        'http://127.0.0.1:8000/api/chat',
+        `${pythonBase}/api/standup-ai/chat`,
+        `${pythonBase}/api/chat`,
+        '/api/standup-ai/chat',
+      ]
       : [
-          `${pythonBase}/api/standup-ai/chat`,
-          `${pythonBase}/api/chat`,
-          '/api/standup-ai/chat',
-          'http://127.0.0.1:8000/api/standup-ai/chat',
-          'http://localhost:8000/api/standup-ai/chat',
-        ];
+        `${pythonBase}/api/standup-ai/chat`,
+        `${pythonBase}/api/chat`,
+        '/api/standup-ai/chat',
+        'http://127.0.0.1:8000/api/standup-ai/chat',
+        'http://localhost:8000/api/standup-ai/chat',
+      ];
 
     const recentHistory = this.messages()
       .slice(-6)
@@ -594,9 +928,9 @@ Rules:
     this.setPose(res.pose);
     this.speakText(res.text);
 
-    // Return to idle after speech finishes or a timer
+    // Return to idle after speech finishes or a timer (only when no action is active)
     setTimeout(() => {
-      if (['speaking', 'explaining', 'pointing'].includes(this.currentPose())) {
+      if (!this.activeActionImage() && ['speaking', 'explaining', 'pointing'].includes(this.currentPose())) {
         this.setPose('idle');
       }
     }, 6000);
@@ -606,7 +940,7 @@ Rules:
 
   speakText(text: string): void {
     if (this.isMuted()) return;
-    this.voiceService.speak(text).catch(() => {});
+    this.voiceService.speak(text).catch(() => { });
   }
 
   stopSpeaking(): void {
