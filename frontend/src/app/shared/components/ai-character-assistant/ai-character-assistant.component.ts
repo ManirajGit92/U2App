@@ -42,6 +42,7 @@ import { Theme } from '../../../core/services/theme.service';
       <!-- ────────────────────────────────────────────────────────────── -->
       <section
         class="glass-chat-window"
+        [class.maximized]="assistantService.isMaximized()"
         *ngIf="assistantService.isOpen() && !assistantService.isMinimized()"
         aria-label="U2 AI Assistant Chat Window"
       >
@@ -76,6 +77,17 @@ import { Theme } from '../../../core/services/theme.service';
               aria-label="Minimize chat"
             >
               <i class="pi pi-minus"></i>
+            </button>
+
+            <!-- Maximize / Restore Button -->
+            <button
+              type="button"
+              class="hdr-btn"
+              (click)="assistantService.toggleMaximize()"
+              [title]="assistantService.isMaximized() ? 'Restore chat' : 'Maximize chat'"
+              [attr.aria-label]="assistantService.isMaximized() ? 'Restore chat' : 'Maximize chat'"
+            >
+              <i [class]="assistantService.isMaximized() ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"></i>
             </button>
 
             <!-- Close Button -->
@@ -316,7 +328,7 @@ import { Theme } from '../../../core/services/theme.service';
       <!-- ────────────────────────────────────────────────────────────── -->
       <div
         class="character-dock-container"
-        *ngIf="assistantService.isOpen() && !assistantService.isMinimized()"
+        *ngIf="assistantService.isOpen() && !assistantService.isMaximized()"
         [style.left.px]="charX()"
         [style.top.px]="charY()"
         [style.width.px]="charWidth()"
@@ -326,7 +338,7 @@ import { Theme } from '../../../core/services/theme.service';
         (mousedown)="onCharMouseDown($event)"
         (touchstart)="onCharTouchStart($event)"
         (contextmenu)="onCharContextMenu($event)"
-        title="U2 Assistant Character (Drag to move, right-click for continuous movement & settings)"
+        [title]="assistantService.isMinimized() ? 'Click to reopen chat (Drag to move, right-click for settings)' : 'U2 Assistant Character (Drag to move, right-click for continuous movement & settings)'"
       >
         <div
           class="character-scaler"
@@ -372,15 +384,20 @@ import { Theme } from '../../../core/services/theme.service';
         >
           {{ charMovementMode() === 'horizontal' ? '↔ Moving' : charMovementMode() === 'vertical' ? '↕ Moving' : '↗ Moving' }} ✕
         </span>
+
+        <!-- Minimized restore hint -->
+        <div class="char-minimized-hint" *ngIf="assistantService.isMinimized()">
+          <span>💬 Click to reopen</span>
+        </div>
       </div>
 
 
       <!-- ────────────────────────────────────────────────────────────── -->
-      <!-- 3. FLOATING BADGE & BUBBLE (WHEN MINIMIZED OR CLOSED)          -->
+      <!-- 3. FLOATING BADGE & BUBBLE (WHEN CLOSED)                       -->
       <!-- ────────────────────────────────────────────────────────────── -->
       <div
         class="floating-launcher"
-        *ngIf="!assistantService.isOpen() || assistantService.isMinimized()"
+        *ngIf="!assistantService.isOpen()"
         [style.left.px]="agentX()"
         [style.top.px]="agentY()"
         [class.is-dragging]="isDragging()"
@@ -1183,6 +1200,25 @@ import { Theme } from '../../../core/services/theme.service';
       }
     }
 
+    /* Maximized full-screen state */
+    .glass-chat-window.maximized {
+      position: fixed;
+      inset: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-height: 100vh;
+      border-radius: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10002;
+      animation: expandChat 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes expandChat {
+      0% { transform: scale(0.97); opacity: 0.85; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
     /* ── Header ── */
     .chat-header {
       padding: 14px 18px;
@@ -1661,6 +1697,31 @@ import { Theme } from '../../../core/services/theme.service';
     .char-moving-indicator:hover {
       background: #ef4444;
       box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+    }
+
+    .char-minimized-hint {
+      position: absolute;
+      top: -44px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 5px 14px;
+      color: #ffffff;
+      font-size: 0.74rem;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      z-index: 25;
+      animation: floatBadge 2s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes floatBadge {
+      0% { transform: translateX(-50%) translateY(0px); }
+      100% { transform: translateX(-50%) translateY(-5px); }
     }
 
     @keyframes bouncePulse {
@@ -3486,7 +3547,11 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
     if (this.hasCharMovedDistance) {
       return;
     }
-    this.assistantService.setPose('happy');
+    if (this.assistantService.isMinimized()) {
+      this.assistantService.openChat();
+    } else {
+      this.assistantService.setPose('happy');
+    }
   }
 
   // ── Character Context Menu ──

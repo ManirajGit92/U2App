@@ -43,6 +43,7 @@ export class AiCharacterAssistantService {
   // Assistant UI State
   readonly isOpen = signal<boolean>(false);
   readonly isMinimized = signal<boolean>(false);
+  readonly isMaximized = signal<boolean>(false);
   readonly currentPose = signal<AvatarPose>('idle');
   readonly isSpeaking = signal<boolean>(false);
   readonly isListening = signal<boolean>(false);
@@ -251,6 +252,8 @@ export class AiCharacterAssistantService {
 
   closeChat(): void {
     this.isOpen.set(false);
+    this.isMinimized.set(false);
+    this.isMaximized.set(false);
     this.stopSpeaking();
     this.clearAction();
   }
@@ -264,7 +267,11 @@ export class AiCharacterAssistantService {
   }
 
   minimizeChat(): void {
-    this.isMinimized.update(v => !v);
+    this.isMinimized.set(true);
+  }
+
+  toggleMaximize(): void {
+    this.isMaximized.update(v => !v);
   }
 
   setPose(pose: AvatarPose): void {
