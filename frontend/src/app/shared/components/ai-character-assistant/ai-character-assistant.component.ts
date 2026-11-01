@@ -242,6 +242,31 @@ import { Theme } from '../../../core/services/theme.service';
           >
             😢 Sad
           </button>
+          <!-- Angry -->
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="assistantService.sendMessage('Angry')"
+          >
+            😠 Angry
+          </button>
+          <!-- Fear -->
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="assistantService.sendMessage('Fear')"
+          >
+            😨 Fear
+          </button>
+
+          <!-- Disgust -->
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="assistantService.sendMessage('Disgust')"
+          >
+            🤢 Disgust
+          </button>
           <button
             type="button"
             class="chip-btn"

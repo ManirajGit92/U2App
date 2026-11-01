@@ -4,7 +4,7 @@ import { ThemeService, Theme } from '../../../core/services/theme.service';
 import { environment } from '../../../../environments/environment';
 import { AiVoiceService } from './ai-voice.service';
 
-export type AvatarPose = 'idle' | 'listening' | 'thinking' | 'speaking' | 'explaining' | 'pointing' | 'happy' | 'sad' | 'laugh';
+export type AvatarPose = 'idle' | 'listening' | 'thinking' | 'speaking' | 'explaining' | 'pointing' | 'happy' | 'sad' | 'laugh' | 'angry' | 'fear' | 'disgust';
 
 export interface AssistantAction {
   id: string;
@@ -464,7 +464,7 @@ export class AiCharacterAssistantService {
         image: 'assets/images/assistant/Laugh.gif',
         pose: 'happy',
         actionLabel: 'Laugh 😂',
-        reply: "😂 Haha! That's hilarious! A little laughter makes every day better. Keep smiling!"
+        reply: "ஹாஹா! அடப்பாவி, செம காமெடியா இருக்கே! 😂 கொஞ்சம் சிரிச்சா அந்த நாளே நல்லா போகும். இப்படியே சிரிச்சுக்கிட்டே இருங்க, மாம்ஸ்!"
       };
     }
 
@@ -479,7 +479,52 @@ export class AiCharacterAssistantService {
         image: 'assets/images/assistant/Sad.gif',
         pose: 'sad',
         actionLabel: 'Sad 😢',
-        reply: "😢 I'm sorry you're feeling this way. Remember, difficult moments don't last forever. I'm here if you need help or someone to talk to."
+        reply: "😢ஏய், இப்படி ஃபீல் பண்றதைக் கேட்கவே கஷ்டமா இருக்கு. கவலைப்படாதீங்க, இந்தக் கஷ்டமான நேரமெல்லாம் எப்பவும் அப்படியே இருக்காது. உங்களுக்கு ஏதாவது உதவி வேணும்னாலும் சரி, மனசுல இருக்கிறதை யார்கிட்டயாவது சொல்லணும்னாலும் சரி, நான் இருக்கேன். நாம பேசலாம்!"
+      };
+    }
+
+    // 13. Angry
+    if (
+      /\b(angry|anger|mad|furious|irritated|frustrated|annoyed|rage|enraged)\b/.test(normalized) ||
+      /^(angry|anger|mad|furious|rage)$/.test(normalized)
+    ) {
+      return {
+        id: 'angry',
+        name: 'Angry',
+        image: 'assets/images/assistant/Angry.gif',
+        pose: 'angry',
+        actionLabel: 'Angry 😠',
+        reply: "ச்சே! செம கடுப்பா இருக்குல்ல! கொஞ்சம் ரிலாக்ஸ் பண்ணுங்க. டென்ஷன் ஆகாதீங்க, இதுக்கு ஏதாவது ஒரு வழி கண்டுபிடிச்சிடலாம்!"
+      };
+    }
+
+    // 14. Fear
+    if (
+      /\b(fear|afraid|scared|frightened|terrified|nervous|anxious|panic|fright)\b/.test(normalized) ||
+      /^(fear|afraid|scared|terrified|panic)$/.test(normalized)
+    ) {
+      return {
+        id: 'fear',
+        name: 'Fear',
+        image: 'assets/images/assistant/Fear.gif',
+        pose: 'fear',
+        actionLabel: 'Fear 😨',
+        reply: "ஐயய்யோ! இது கொஞ்சம் பயமா இருக்கே! கொஞ்சம் நல்லா மூச்சு விட்டு ரிலாக்ஸ் பண்ணுங்க. நாம ரெண்டு பேரும் சேர்ந்து இதைச் சமாளிச்சிடலாம்!"
+      };
+    }
+
+    // 15. Disgust
+    if (
+      /\b(disgust|disgusted|disgusting|gross|yuck|eww|nauseating|repulsive|revolting)\b/.test(normalized) ||
+      /^(disgust|disgusted|gross|yuck|eww)$/.test(normalized)
+    ) {
+      return {
+        id: 'disgust',
+        name: 'Disgust',
+        image: 'assets/images/assistant/Disgust.gif',
+        pose: 'disgust',
+        actionLabel: 'Disgust 🤢',
+        reply: "ஐயய்யோ! இதெல்லாம் நல்லாவே இல்லையே! வேற ஏதாவது ட்ரை பண்ணிப் பார்ப்போம்!"
       };
     }
 
