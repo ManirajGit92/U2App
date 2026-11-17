@@ -57,6 +57,20 @@ try:
 except Exception as e:
     print(f"Warning: Could not mount voice_service router: {e}")
 
+# Mount RAG endpoints
+if current_dir.exists() and str(current_dir) not in sys.path:
+    sys.path.append(str(current_dir))
+
+try:
+    try:
+        from standup_note import rag_service
+    except ImportError:
+        import rag_service
+    app.include_router(rag_service.router)
+    print("RAG endpoints mounted successfully (/api/rag/*)")
+except Exception as e:
+    print(f"Warning: Could not mount rag_service router: {e}")
+
 
 
 class MessageItem(BaseModel):

@@ -32,6 +32,32 @@ export interface AvailableTool {
   keywords: string[];
 }
 
+export type DocStatus =
+  | 'upload_pending'
+  | 'uploading'
+  | 'upload_completed'
+  | 'indexing_pending'
+  | 'indexing_in_progress'
+  | 'indexing_completed'
+  | 'failed';
+
+export interface RagDocument {
+  id: string;
+  name: string;
+  size: number;
+  status: DocStatus;
+  error?: string;
+  file_id?: string;
+}
+
+export interface RagState {
+  enabled: boolean;
+  agent_name: string | null;
+  vector_store_id: string | null;
+  documents: RagDocument[];
+  ready: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -57,6 +83,16 @@ export class AiCharacterAssistantService {
   readonly actionDuration = signal<number>(4);
   private actionTimer?: any;
   private readonly durationStorageKey = 'u2_action_display_duration';
+
+  // ── Cloud Agent (Document RAG) State ──────────────────────────────────────
+  readonly cloudAgentEnabled = signal<boolean>(false);
+  readonly ragDocuments = signal<RagDocument[]>([]);
+  readonly ragReady = signal<boolean>(false);
+  readonly ragAgentName = signal<string | null>(null);
+  readonly ragVectorStoreId = signal<string | null>(null);
+  readonly ragLoading = signal<boolean>(false);
+  readonly ragError = signal<string | null>(null);
+  private readonly ragStorageKey = 'u2_cloud_agent_enabled';
 
   // Message history
   readonly messages = signal<ChatMessage[]>([
@@ -148,6 +184,7 @@ export class AiCharacterAssistantService {
     }
 
     this.loadActionDuration();
+    this.loadCloudAgentPreference();
 
     // Connect voice interaction dispatcher: when wake word & speech are captured, send to LLM
     this.voiceService.registerMessageDispatcher(async (userPrompt: string) => {
@@ -623,6 +660,48 @@ export class AiCharacterAssistantService {
       return;
     }
 
+    // 3.5. Cloud Agent RAG (when enabled)
+    if (this.cloudAgentEnabled()) {
+      if (this.ragReady()) {
+        this.setPose('thinking');
+        this.isThinking.set(true);
+        try {
+          const ragResponse = await this.sendRagMessage(text);
+          this.isThinking.set(false);
+          this.addAssistantResponse({
+            text: ragResponse,
+            pose: 'speaking',
+          });
+          return;
+        } catch (err: any) {
+          this.isThinking.set(false);
+          this.addAssistantResponse({
+            text: `⚠️ Cloud Agent query failed: ${err.message || 'Please check document status or try again.'}`,
+            pose: 'explaining',
+          });
+          return;
+        }
+      } else if (this.ragDocuments().some(d => ['upload_pending', 'uploading', 'indexing_pending', 'indexing_in_progress'].includes(d.status))) {
+        this.addAssistantResponse({
+          text: "⏳ Documents are currently being uploaded or indexed. Please wait until indexing is complete before asking document-based questions.",
+          pose: 'explaining',
+        });
+        return;
+      } else if (this.ragDocuments().length === 0) {
+        this.addAssistantResponse({
+          text: "📄 Cloud Agent is enabled, but no documents have been uploaded yet. Please upload documents in the Agent settings (right-click the character or launcher) to start asking questions about your documents.",
+          pose: 'explaining',
+        });
+        return;
+      } else if (this.ragDocuments().some(d => d.status === 'failed')) {
+        this.addAssistantResponse({
+          text: "⚠️ Some documents failed to process. Please check the document list in Agent settings and retry or remove failed documents.",
+          pose: 'explaining',
+        });
+        return;
+      }
+    }
+
     // 4. Fallback: LLM Processing (retains default character)
     this.setPose('thinking');
     this.isThinking.set(true);
@@ -1000,6 +1079,169 @@ Rules:
     if (this.currentPose() === 'speaking') {
       this.setPose('idle');
     }
+  }
+
+  // ── Cloud Agent (Document RAG) ──────────────────────────────────────────
+
+  private getPythonBase(): string {
+    return (environment.pythonApiBaseUrl || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+  }
+
+  private loadCloudAgentPreference(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(this.ragStorageKey);
+      if (saved === 'true') {
+        this.cloudAgentEnabled.set(true);
+        // Sync state from backend on load
+        this.fetchRagStatus().catch(() => {});
+      }
+    } catch { }
+  }
+
+  async fetchRagStatus(): Promise<void> {
+    const base = this.getPythonBase();
+    try {
+      const res = await fetch(`${base}/api/rag/status`, { signal: AbortSignal.timeout(10000) });
+      if (res.ok) {
+        const data: RagState = await res.json();
+        this.cloudAgentEnabled.set(data.enabled);
+        this.ragDocuments.set(data.documents);
+        this.ragReady.set(data.ready);
+        this.ragAgentName.set(data.agent_name);
+        this.ragVectorStoreId.set(data.vector_store_id);
+      }
+    } catch { }
+  }
+
+  async toggleCloudAgent(): Promise<void> {
+    const base = this.getPythonBase();
+    this.ragLoading.set(true);
+    this.ragError.set(null);
+    try {
+      const res = await fetch(`${base}/api/rag/toggle`, { method: 'POST', signal: AbortSignal.timeout(10000) });
+      if (res.ok) {
+        const data: RagState = await res.json();
+        this.cloudAgentEnabled.set(data.enabled);
+        this.ragDocuments.set(data.documents);
+        this.ragReady.set(data.ready);
+        this.ragAgentName.set(data.agent_name);
+        this.ragVectorStoreId.set(data.vector_store_id);
+        if (typeof window !== 'undefined') {
+          try { localStorage.setItem(this.ragStorageKey, data.enabled ? 'true' : 'false'); } catch { }
+        }
+      } else {
+        this.ragError.set('Failed to toggle cloud agent');
+      }
+    } catch (e) {
+      this.ragError.set('Backend unreachable');
+    } finally {
+      this.ragLoading.set(false);
+    }
+  }
+
+  async uploadDocuments(files: File[]): Promise<void> {
+    const base = this.getPythonBase();
+    this.ragLoading.set(true);
+    this.ragError.set(null);
+    try {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('files', file, file.name);
+      }
+      const res = await fetch(`${base}/api/rag/upload`, {
+        method: 'POST',
+        body: formData,
+        signal: AbortSignal.timeout(30000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        this.ragDocuments.set(data.documents);
+        // Start polling for status updates
+        this.startRagStatusPolling();
+      } else {
+        const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
+        this.ragError.set(err.detail || 'Upload failed');
+      }
+    } catch (e) {
+      this.ragError.set('Upload failed - backend unreachable');
+    } finally {
+      this.ragLoading.set(false);
+    }
+  }
+
+  async removeDocument(docId: string): Promise<void> {
+    const base = this.getPythonBase();
+    try {
+      const res = await fetch(`${base}/api/rag/document/${docId}`, {
+        method: 'DELETE',
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        this.ragDocuments.set(data.documents);
+        this.ragReady.set(data.ready ?? false);
+      }
+    } catch { }
+  }
+
+  async retryDocument(docId: string): Promise<void> {
+    const base = this.getPythonBase();
+    try {
+      const res = await fetch(`${base}/api/rag/retry/${docId}`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        this.ragDocuments.set(data.documents);
+        this.startRagStatusPolling();
+      }
+    } catch { }
+  }
+
+  private ragPollingInterval?: ReturnType<typeof setInterval>;
+
+  startRagStatusPolling(intervalMs = 3000): void {
+    this.stopRagStatusPolling();
+    this.ragPollingInterval = setInterval(async () => {
+      await this.fetchRagStatus();
+      // Stop polling when no doc is in progress
+      const docs = this.ragDocuments();
+      const inProgress = docs.some(d =>
+        d.status === 'upload_pending' ||
+        d.status === 'uploading' ||
+        d.status === 'upload_completed' ||
+        d.status === 'indexing_pending' ||
+        d.status === 'indexing_in_progress'
+      );
+      if (!inProgress) {
+        this.stopRagStatusPolling();
+      }
+    }, intervalMs);
+  }
+
+  stopRagStatusPolling(): void {
+    if (this.ragPollingInterval) {
+      clearInterval(this.ragPollingInterval);
+      this.ragPollingInterval = undefined;
+    }
+  }
+
+  async sendRagMessage(userMessage: string): Promise<string> {
+    const base = this.getPythonBase();
+    const res = await fetch(`${base}/api/rag/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: userMessage }),
+      signal: AbortSignal.timeout(60000),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'RAG chat failed' }));
+      throw new Error(err.detail || 'RAG chat failed');
+    }
+    const data = await res.json();
+    return data.response;
   }
 }
 
