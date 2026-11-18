@@ -37,6 +37,14 @@ export const routes: Routes = [
       import('./features/user-admin/admin.component').then((m) => m.AdminComponent),
   },
   {
+    path: 'ai-document-assistant',
+    data: { navLabel: 'AI Document Assistant', showInNav: true },
+    loadComponent: () =>
+      import('./features/ai-document-assistant/ai-document-assistant.component').then(
+        (m) => m.AiDocumentAssistantComponent,
+      ),
+  },
+  {
     path: 'compare',
     data: { navLabel: 'Text / JSON Compare', showInNav: true },
     loadComponent: () =>

@@ -6,6 +6,7 @@ export class NavPreferencesService {
   private readonly orderKey = 'u2app.navOrder';
   private readonly visibilityKey = 'u2app.navVisibility';
   private readonly defaultToolOrder = [
+    'ai-document-assistant',
     'standup-note',
     'work-tracker',
     'unit-test-tracker',

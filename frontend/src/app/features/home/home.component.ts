@@ -568,6 +568,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   private readonly orderKey = 'u2app.navOrder';
   private readonly visibilityKey = 'u2app.navVisibility';
   private readonly defaultToolOrder = [
+    'ai-document-assistant',
     'standup-note',
     'work-tracker',
     'unit-test-tracker',
@@ -584,6 +585,16 @@ export class HomeComponent implements OnInit, OnDestroy {
   private touchEndX = 0;
 
   private readonly allTools: Tool[] = [
+    {
+      id: 'ai-document-assistant',
+      title: 'AI Document Assistant',
+      description:
+        'Chat with your documents, ask questions, and get accurate, context-aware answers with page references using Azure AI Foundry RAG.',
+      icon: '📑',
+      route: '/ai-document-assistant',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(99, 102, 241, 0.22))',
+    },
     {
       id: 'excel-mapper',
       title: 'Excel-to-Excel Mapping Tool',

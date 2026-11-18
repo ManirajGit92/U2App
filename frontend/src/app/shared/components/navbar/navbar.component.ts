@@ -837,6 +837,7 @@ export class NavbarComponent {
   visibleNavItems: NavItem[] = [];
   private draggedItemPath: string | null = null;
   private readonly defaultToolOrder = [
+    'ai-document-assistant',
     'standup-note',
     'work-tracker',
     'unit-test-tracker',
