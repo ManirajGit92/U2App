@@ -19,6 +19,7 @@ export interface DocumentItem {
     | 'failed';
   error?: string | null;
   file_id?: string | null;
+  localUrl?: string;
 }
 
 export interface SourceReference {
@@ -80,6 +81,13 @@ export class AiDocumentAssistantService {
   readonly ragReady = signal<boolean>(false);
   readonly isUploading = signal<boolean>(false);
   readonly uploadError = signal<string | null>(null);
+  readonly selectedDocId = signal<string | null>(null);
+
+  readonly selectedDoc = computed(() => {
+    const id = this.selectedDocId();
+    if (!id) return null;
+    return this.documents().find((d) => d.id === id) || null;
+  });
 
   readonly extractedInfo = signal<ExtractedItem[]>([]);
   readonly referencesList = signal<DocReference[]>([]);
@@ -105,7 +113,27 @@ export class AiDocumentAssistantService {
   }
 
   getPythonBase(): string {
+    if (typeof window !== 'undefined') {
+      const isLocal =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1';
+      if (isLocal) {
+        return 'http://127.0.0.1:8000';
+      }
+    }
     return (environment.pythonApiBaseUrl || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+  }
+
+  toggleSelectDoc(doc: DocumentItem): void {
+    if (this.selectedDocId() === doc.id) {
+      this.selectedDocId.set(null);
+    } else {
+      this.selectedDocId.set(doc.id);
+    }
+  }
+
+  clearSelectedDoc(): void {
+    this.selectedDocId.set(null);
   }
 
   // ── Persistence ──────────────────────────────────────────────────────────
@@ -363,6 +391,14 @@ export class AiDocumentAssistantService {
     this.isUploading.set(true);
     this.uploadError.set(null);
 
+    // Create local object URLs for immediate preview in viewer modal
+    const localUrlMap = new Map<string, string>();
+    for (const f of fileList) {
+      try {
+        localUrlMap.set(f.name, URL.createObjectURL(f));
+      } catch {}
+    }
+
     const base = this.getPythonBase();
     const urls = [
       `${base}/api/rag/upload`,
@@ -387,7 +423,11 @@ export class AiDocumentAssistantService {
         if (res.ok) {
           const data = await res.json();
           if (data.documents) {
-            this.documents.set(data.documents);
+            const mapped = data.documents.map((d: DocumentItem) => ({
+              ...d,
+              localUrl: localUrlMap.get(d.name) || d.localUrl,
+            }));
+            this.documents.set(mapped);
             this.saveDocsToStorage();
           }
           this.toast.show('Upload Successful', `${fileList.length} document(s) uploaded and indexing.`, 'success');
@@ -412,6 +452,7 @@ export class AiDocumentAssistantService {
           extension: ext,
           uploaded_at: 'Just now',
           status: 'indexing_completed',
+          localUrl: localUrlMap.get(f.name),
         };
       });
       this.documents.update((prev) => [...prev, ...newItems]);
@@ -485,8 +526,11 @@ export class AiDocumentAssistantService {
   }
 
   getViewDocumentUrl(doc: DocumentItem): string {
+    if (doc.localUrl) {
+      return doc.localUrl;
+    }
     const base = this.getPythonBase();
-    return `${base}/api/rag/document/${doc.id}/view`;
+    return `${base}/api/rag/document/${encodeURIComponent(doc.id)}/view`;
   }
 
   startRagPolling(intervalMs = 3000): void {
@@ -621,13 +665,20 @@ export class AiDocumentAssistantService {
       let outputTokens = 1200;
       let sources: SourceReference[] = [];
 
+      const selected = this.selectedDoc();
+      const bodyPayload = {
+        message: text,
+        selected_doc_id: selected?.id || null,
+        selected_doc_name: selected?.name || null,
+      };
+
       let answered = false;
       for (const url of urls) {
         try {
           const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text }),
+            body: JSON.stringify(bodyPayload),
             signal: AbortSignal.timeout(60000),
           });
 
@@ -651,14 +702,13 @@ export class AiDocumentAssistantService {
           sources = [];
           outputTokens = 240;
         } else {
-          const lower = text.toLowerCase();
-          const doc = docs[0];
+          const targetDoc = this.selectedDoc() || docs[0];
           answerText =
-            `Based on the uploaded document **${doc.name}**, here are the findings for your query:\n\n` +
+            `Based on the uploaded document **${targetDoc.name}**, here are the findings for your query:\n\n` +
             `• The policy applies to all eligible team members as referenced in section 3.2.\n` +
             `• Relevant requirements and timeline guidelines are detailed on page 12.\n` +
             `• Any exceptions require prior management approval.`;
-          sources = [{ document: doc.name, page: Math.min(doc.pages || 1, 12) }];
+          sources = [{ document: targetDoc.name, page: Math.min(targetDoc.pages || 1, 12) }];
           outputTokens = 850;
         }
       }

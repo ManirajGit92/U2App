@@ -1,0 +1,30 @@
+{
+  "enabled": true,
+  "agent_name": "dynamic-document-rag",
+  "agent_version": "1",
+  "vector_store_id": "vs_ynWytq2CscZzob1CHw97cstg",
+  "documents": [
+    {
+      "id": "c2fc6b2d-5bd9-464b-b0ce-722d4874f97d",
+      "name": "DataScience.pdf",
+      "size": 385030,
+      "pages": 6,
+      "extension": "pdf",
+      "uploaded_at": "Nov 19, 07:55 AM",
+      "status": "indexing_completed",
+      "error": null,
+      "file_id": "assistant-SjcnK1AcRphbxXRLk34SK9"
+    },
+    {
+      "id": "f64d8799-ee93-4a03-8d5a-8e9d04ac8c1c",
+      "name": "DataAnalyst.pdf",
+      "size": 353058,
+      "pages": 5,
+      "extension": "pdf",
+      "uploaded_at": "Nov 19, 08:13 AM",
+      "status": "indexing_completed",
+      "error": null,
+      "file_id": "assistant-9wGT7fsnZC3Ad6onzioyqD"
+    }
+  ]
+}

@@ -150,6 +150,10 @@ export class AiDocumentAssistantComponent implements OnInit, OnDestroy {
     this.previewDoc.set(doc);
   }
 
+  onSelectDoc(doc: DocumentItem): void {
+    this.assistantService.toggleSelectDoc(doc);
+  }
+
   getSafePreviewUrl(doc: DocumentItem): SafeResourceUrl {
     return this.sanitizer.bypassSecurityTrustResourceUrl(
       this.assistantService.getViewDocumentUrl(doc)

@@ -637,6 +637,58 @@
   border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
 }
 
+.selected-doc-filter-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  color: #6d28d9;
+
+  .filter-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+
+    .filter-icon {
+      font-size: 0.95rem;
+    }
+
+    .filter-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      strong {
+        color: #5b21b6;
+      }
+    }
+  }
+
+  .btn-clear-selection {
+    border: none;
+    background: transparent;
+    color: #7c3aed;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+  }
+}
+
 .chat-input-capsule {
   display: flex;
   align-items: center;
@@ -831,11 +883,18 @@
   border: 1px solid var(--border-color, #f1f5f9);
   border-radius: 10px;
   background: var(--bg-card, #ffffff);
+  cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
     border-color: #d8b4fe;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  &.selected {
+    border-color: #7c3aed;
+    background: #faf5ff;
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
   }
 
   .doc-details {
@@ -844,13 +903,29 @@
     display: flex;
     flex-direction: column;
 
-    .doc-name {
-      font-size: 0.86rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      color: var(--text-primary, #1e293b);
+    .doc-name-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .doc-name {
+        font-size: 0.86rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--text-primary, #1e293b);
+      }
+
+      .active-tag {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #7c3aed;
+        background: #ede9fe;
+        padding: 1px 6px;
+        border-radius: 9999px;
+        white-space: nowrap;
+      }
     }
 
     .doc-subtext {

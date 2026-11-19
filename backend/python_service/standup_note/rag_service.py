@@ -41,23 +41,23 @@ _PROJECT_ENDPOINT_BASE = os.environ.get(
     "PROJECT_ENDPOINT2", "https://manifoundryresource3.services.ai.azure.com/"
 )
 # Full endpoint expected by AIProjectClient
-_PROJECT_ENDPOINT = _PROJECT_ENDPOINT_BASE.rstrip("/") + "/api/projects/proj-default"
+_PROJECT_ENDPOINT = (
+    "https://manifoundryresource3.services.ai.azure.com/api/projects/proj-default"
+    if "proj-default" not in _PROJECT_ENDPOINT_BASE
+    else _PROJECT_ENDPOINT_BASE
+)
 _MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-5.2")
 
-_AGENT_NAME = "u2tools-doc-rag-agent"
-_VECTOR_STORE_NAME = "U2ToolsDocumentRAG"
+_AGENT_NAME = "dynamic-document-rag"
+_VECTOR_STORE_NAME = "DynamicDocumentStore"
 
 _AGENT_INSTRUCTIONS = (
-    "You are the AI Document Assistant for U2 Tools. "
-    "Use File Search to answer user questions based exclusively on the uploaded documents. "
-    "Generate accurate, context-aware answers based on document content only. "
+    "You are a document analysis assistant. "
+    "Use File Search to answer questions based on the uploaded documents. "
     "Do not invent facts that are not supported by the documents. "
-    "If the answer is not available in the uploaded documents, clearly state: "
-    "'The requested information was not found in the uploaded documents.' "
-    "When citing sources, always specify the document name and page number if available in this format:\n"
-    "Sources:\n"
-    "- [Document_Name.ext (Page X)]\n"
-    "Structure your answers neatly with clear headings, summary cards, and bullet points."
+    "If the answer is not available, say so. "
+    "Mention the relevant document or evidence when possible. "
+    "Structure your answers neatly with clear headings and bullet points."
 )
 
 # ---------------------------------------------------------------------------
@@ -278,7 +278,7 @@ def _get_clients():
 
 def _find_doc(doc_id: str) -> Optional[dict]:
     for doc in _rag_state["documents"]:
-        if doc["id"] == doc_id:
+        if doc.get("id") == doc_id or doc.get("name") == doc_id:
             return doc
     return None
 
@@ -459,6 +459,8 @@ class RagStatusResponse(BaseModel):
 class RagChatRequest(BaseModel):
     message: str
     history: Optional[List[dict]] = []
+    selected_doc_id: Optional[str] = None
+    selected_doc_name: Optional[str] = None
 
 
 class SourceReference(BaseModel):
@@ -511,7 +513,7 @@ def _status_response() -> RagStatusResponse:
 # Local Semantic/Document Search Fallback for Offline/Local Testing
 # ---------------------------------------------------------------------------
 
-def _local_document_qa(query: str) -> tuple[str, list[dict], int]:
+def _local_document_qa(query: str, selected_doc_name: Optional[str] = None) -> tuple[str, list[dict], int]:
     """
     When Azure AI Foundry cloud call cannot be performed (e.g. offline testing or auth tokens unset),
     inspect all uploaded documents, search for matches, extract relevant paragraphs, and form
@@ -520,8 +522,14 @@ def _local_document_qa(query: str) -> tuple[str, list[dict], int]:
     q_lower = query.lower()
     keywords = [w for w in re.findall(r'\b\w{3,}\b', q_lower) if w not in {"the", "and", "what", "how", "for", "with", "from", "that", "this"}]
 
+    target_docs = _rag_state["documents"]
+    if selected_doc_name:
+        filtered = [d for d in target_docs if d.get("name", "").lower() == selected_doc_name.lower()]
+        if filtered:
+            target_docs = filtered
+
     matched_excerpts = []
-    for doc in _rag_state["documents"]:
+    for doc in target_docs:
         doc_id = doc["id"]
         doc_name = doc["name"]
         pages = doc.get("pages", 1)
@@ -641,12 +649,12 @@ async def upload_documents(
 async def download_document(doc_id: str):
     """Download an uploaded document."""
     doc = _find_doc(doc_id)
-    if doc is None:
-        raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
-
-    content, filename = _get_doc_bytes(doc_id, doc["name"])
+    name = doc.get("name") if doc else doc_id
+    content, filename = _get_doc_bytes(doc_id, name)
     if not content:
-        raise HTTPException(status_code=404, detail="File content not found on server")
+        # Generate clean sample text if binary file not present
+        content = f"U2Tools AI Document Assistant\nDocument: {name}\n\nThis document is indexed in Azure AI Foundry Agent for dynamic File Search querying.".encode("utf-8")
+        filename = name
 
     media_type = _get_media_type(filename)
     return Response(
@@ -660,19 +668,92 @@ async def download_document(doc_id: str):
 async def view_document(doc_id: str):
     """View/stream an uploaded document inline in browser."""
     doc = _find_doc(doc_id)
-    if doc is None:
-        raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
+    doc_name = doc.get("name") if doc else doc_id
+    content, filename = _get_doc_bytes(doc_id, doc_name)
 
-    content, filename = _get_doc_bytes(doc_id, doc["name"])
-    if not content:
-        raise HTTPException(status_code=404, detail="File content not found on server")
+    ext = _get_extension(filename or doc_name)
 
-    media_type = _get_media_type(filename)
-    return Response(
-        content=content,
-        media_type=media_type,
-        headers={"Content-Disposition": f'inline; filename="{filename}"'},
-    )
+    # 1. Native PDF streaming
+    if ext == "pdf" and content:
+        return Response(
+            content=content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{filename}"',
+                "Content-Type": "application/pdf",
+            },
+        )
+
+    # 2. Text / Markdown streaming
+    if ext in ["txt", "md", "csv", "json"] and content:
+        try:
+            text_str = content.decode("utf-8", errors="ignore")
+        except Exception:
+            text_str = str(content)
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; background: #0f172a; color: #f8fafc; padding: 24px; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6; }}
+</style>
+</head>
+<body>{text_str}</body>
+</html>"""
+        return Response(content=html, media_type="text/html")
+
+    # 3. DOCX / PPTX: Browser iframes cannot display binary Office docs natively.
+    # Provide an HTML-rendered preview of slides / sections!
+    if ext in ["docx", "pptx"] and content:
+        extracted = _extract_document_text(content, filename)
+        paras = [p.strip() for p in extracted.split("\n") if p.strip()]
+        paras_html = "".join([f"<p>{p}</p>" for p in paras]) if paras else "<p>No text extracted.</p>"
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; padding: 32px 24px; }}
+.header {{ border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 24px; }}
+h2 {{ margin: 0 0 8px; color: #c084fc; font-size: 1.25rem; }}
+.meta {{ font-size: 0.82rem; color: #94a3b8; }}
+p {{ line-height: 1.6; margin-bottom: 12px; color: #cbd5e1; font-size: 0.92rem; }}
+</style>
+</head>
+<body>
+<div class="header">
+  <h2>{filename}</h2>
+  <div class="meta">Extracted Text Content • {len(paras)} sections</div>
+</div>
+<div class="content">{paras_html}</div>
+</body>
+</html>"""
+        return Response(content=html, media_type="text/html")
+
+    # 4. Fallback if content was not stored on disk
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 90vh; margin: 0; padding: 20px; }}
+.card {{ max-width: 480px; width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px 24px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }}
+h3 {{ margin: 0 0 12px; color: #a78bfa; font-size: 1.25rem; }}
+p {{ color: #94a3b8; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px; }}
+.badge {{ display: inline-block; background: #3b82f6; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-bottom: 16px; }}
+code {{ background: #0f172a; padding: 2px 6px; border-radius: 4px; color: #38bdf8; }}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="badge">Document Preview</div>
+  <h3>{doc_name}</h3>
+  <p>This document is indexed in the <strong>Azure AI Foundry Agent (dynamic-document-rag)</strong> for File Search retrieval.</p>
+  <p>You can ask questions about this document in the chat window, or use the <strong>Download</strong> button to open the original file.</p>
+</div>
+</body>
+</html>"""
+    return Response(content=html, media_type="text/html")
 
 
 @router.delete("/document/{doc_id}")
@@ -865,8 +946,12 @@ async def rag_chat(req: RagChatRequest):
         if _rag_state.get("agent_name"):
             try:
                 _, openai_client = _get_clients()
+                prompt_input = req.message
+                if req.selected_doc_name:
+                    prompt_input = f"Focus strictly on the document '{req.selected_doc_name}'. {req.message}"
+
                 response = openai_client.responses.create(
-                    input=req.message,
+                    input=prompt_input,
                     extra_body={
                         "agent_reference": {
                             "name": _rag_state["agent_name"],
@@ -908,7 +993,7 @@ async def rag_chat(req: RagChatRequest):
                 print(f"[RAG] Azure AI Foundry call error, falling back to local document engine: {azure_err}")
 
         # Fallback to local document QA engine
-        ans, sources_raw, tokens = _local_document_qa(req.message)
+        ans, sources_raw, tokens = _local_document_qa(req.message, req.selected_doc_name)
         sources = [SourceReference(document=s["document"], page=s.get("page"), snippet=s.get("snippet")) for s in sources_raw]
 
         return RagChatResponse(

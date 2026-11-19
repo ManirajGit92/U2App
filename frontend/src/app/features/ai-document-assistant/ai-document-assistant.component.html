@@ -333,6 +333,23 @@
 
         <!-- BOTTOM CHAT INPUT BAR -->
         <div class="chat-input-wrapper">
+          @if (assistantService.selectedDoc(); as selDoc) {
+            <div class="selected-doc-filter-pill">
+              <div class="filter-left">
+                <span class="filter-icon">🎯</span>
+                <span class="filter-text">Focused on: <strong>{{ selDoc.name }}</strong></span>
+              </div>
+              <button
+                type="button"
+                class="btn-clear-selection"
+                (click)="assistantService.clearSelectedDoc()"
+                title="Search across all documents"
+              >
+                ✕ Search all docs
+              </button>
+            </div>
+          }
+
           <div class="chat-input-capsule">
             <input
               type="file"
@@ -356,7 +373,7 @@
             <input
               type="text"
               class="chat-text-input"
-              placeholder="Ask a question about your documents..."
+              [placeholder]="assistantService.selectedDoc() ? ('Ask about ' + assistantService.selectedDoc()?.name + '...') : 'Ask a question about your documents...'"
               [(ngModel)]="userInput"
               (keydown)="onKeyDown($event)"
               [disabled]="assistantService.isGenerating()"
@@ -440,7 +457,12 @@
         <!-- DOCUMENT CARDS LIST -->
         <div class="docs-list">
           @for (doc of assistantService.documents(); track doc.id) {
-            <div class="doc-card">
+            <div
+              class="doc-card"
+              [class.selected]="assistantService.selectedDocId() === doc.id"
+              (click)="onSelectDoc(doc)"
+              title="Click to select/filter questions to this document"
+            >
               <!-- File Type Badge -->
               <div class="file-type-badge" [ngClass]="getFileIconClass(doc.extension)">
                 <span>{{ getFileBadgeLabel(doc.extension) }}</span>
@@ -448,7 +470,12 @@
 
               <!-- Document Details -->
               <div class="doc-details">
-                <span class="doc-name" [title]="doc.name">{{ doc.name }}</span>
+                <div class="doc-name-line">
+                  <span class="doc-name" [title]="doc.name">{{ doc.name }}</span>
+                  @if (assistantService.selectedDocId() === doc.id) {
+                    <span class="active-tag">Active</span>
+                  }
+                </div>
                 <div class="doc-subtext">
                   <span>{{ formatFileSize(doc.size) }}</span>
                   @if (doc.pages) {
@@ -458,7 +485,7 @@
                   @if (doc.status === 'uploading' || doc.status === 'indexing_in_progress') {
                     <span class="status-tag indexing">Indexing...</span>
                   } @else if (doc.status === 'failed') {
-                    <span class="status-tag failed" title="Click to retry" (click)="onRetryDocument(doc.id)">
+                    <span class="status-tag failed" title="Click to retry" (click)="$event.stopPropagation(); onRetryDocument(doc.id)">
                       Failed (Retry)
                     </span>
                   }
@@ -466,7 +493,7 @@
               </div>
 
               <!-- Action Icons -->
-              <div class="doc-actions">
+              <div class="doc-actions" (click)="$event.stopPropagation()">
                 <button
                   class="icon-action-btn"
                   type="button"
