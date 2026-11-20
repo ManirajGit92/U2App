@@ -25,6 +25,36 @@
       "status": "indexing_completed",
       "error": null,
       "file_id": "assistant-9wGT7fsnZC3Ad6onzioyqD"
+    },
+    {
+      "id": "d88cb01f-0340-474f-8cb2-9bad7337f8f9",
+      "name": "DataAnalyst.pdf",
+      "size": 353058,
+      "pages": 5,
+      "extension": "pdf",
+      "uploaded_at": "Nov 19, 05:29 PM",
+      "status": "indexing_completed",
+      "error": null,
+      "file_id": "assistant-AM8zY8RxktgJgzHALGsmWu",
+      "access_type": "public",
+      "container_name": "u2tools-public",
+      "blob_name": "DataAnalyst.pdf",
+      "blob_url": "https://u2toolsdocuments.blob.core.windows.net/u2tools-public/DataAnalyst.pdf"
+    },
+    {
+      "id": "3ffee4ab-3397-475a-9822-59ac4e63609a",
+      "name": "Maniraj_Senior_Angular_Developer_Resume.pdf",
+      "size": 4205374,
+      "pages": 3,
+      "extension": "pdf",
+      "uploaded_at": "Nov 19, 05:35 PM",
+      "status": "indexing_completed",
+      "error": null,
+      "file_id": "assistant-LRYdfVUkxvLN8WpMfm3qLA",
+      "access_type": "public",
+      "container_name": "u2tools-public",
+      "blob_name": "Maniraj_Senior_Angular_Developer_Resume.pdf",
+      "blob_url": "https://u2toolsdocuments.blob.core.windows.net/u2tools-public/Maniraj_Senior_Angular_Developer_Resume.pdf"
     }
   ]
 }

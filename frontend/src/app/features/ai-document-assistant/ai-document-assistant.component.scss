@@ -1473,3 +1473,182 @@
     display: none;
   }
 }
+
+/* ───── Azure Storage Access Badges & Popup Modal ───── */
+.access-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.private {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+  }
+
+  &.public {
+    background: rgba(16, 185, 129, 0.14);
+    color: #059669;
+  }
+}
+
+.access-modal {
+  max-width: 540px;
+  width: 92vw;
+}
+
+.access-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .access-header-icon {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.access-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.access-modal-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary, #475569);
+  line-height: 1.5;
+}
+
+.pending-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-input, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.pending-file-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82rem;
+
+  .pending-file-name {
+    font-weight: 600;
+    color: var(--text-primary, #1e293b);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pending-file-size {
+    color: var(--text-tertiary, #64748b);
+    font-size: 0.74rem;
+    white-space: nowrap;
+  }
+}
+
+.access-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.access-option-card {
+  text-align: left;
+  padding: 14px;
+  border-radius: 12px;
+  border: 2px solid var(--border-color, #e2e8f0);
+  background: var(--bg-card, #ffffff);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.18s ease;
+
+  &:hover {
+    border-color: #c4b5fd;
+    background: #faf5ff;
+  }
+
+  &.selected {
+    border-color: #7c3aed;
+    background: #f5f3ff;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.18);
+  }
+
+  .option-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+  .option-icon {
+    font-size: 1.4rem;
+  }
+
+  .option-radio {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    position: relative;
+    transition: all 0.15s ease;
+
+    &.checked {
+      border-color: #7c3aed;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 3px;
+        border-radius: 50%;
+        background: #7c3aed;
+      }
+    }
+  }
+
+  .option-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary, #1e293b);
+  }
+
+  .option-container-badge {
+    display: inline-block;
+    width: fit-content;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #6d28d9;
+    background: #ede9fe;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+  }
+
+  .option-desc {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    color: var(--text-secondary, #64748b);
+    line-height: 1.4;
+  }
+}

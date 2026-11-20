@@ -13,4 +13,7 @@ pytest==8.4.1
 openai>=1.50.0
 python-dotenv>=1.0.0
 azure-cognitiveservices-speech>=1.40.0
+azure-identity>=1.19.0
+azure-ai-projects>=1.0.0b1
+azure-storage-blob>=12.23.0
 

@@ -482,7 +482,18 @@
                     <span class="dot">•</span>
                     <span>{{ doc.pages }} pages</span>
                   }
-                  @if (doc.status === 'uploading' || doc.status === 'indexing_in_progress') {
+                  @if (doc.access_type) {
+                    <span class="dot">•</span>
+                    <span
+                      class="access-pill"
+                      [class.public]="doc.access_type === 'public'"
+                      [class.private]="doc.access_type === 'private'"
+                      [title]="'Azure Container: ' + (doc.container_name || (doc.access_type === 'public' ? 'u2tools-public' : 'u2tools-private'))"
+                    >
+                      {{ doc.access_type === 'public' ? '🌐 Public' : '🔒 Private' }}
+                    </span>
+                  }
+                  @if (doc.status === 'uploading' || doc.status === 'indexing_pending' || doc.status === 'indexing_in_progress') {
                     <span class="status-tag indexing">Indexing...</span>
                   } @else if (doc.status === 'failed') {
                     <span class="status-tag failed" title="Click to retry" (click)="$event.stopPropagation(); onRetryDocument(doc.id)">
@@ -591,6 +602,7 @@
               <th>Format</th>
               <th>Size</th>
               <th>Pages / Slides</th>
+              <th>Access / Container</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -609,6 +621,16 @@
                 <td>{{ (doc.extension || 'PDF') | uppercase }}</td>
                 <td>{{ formatFileSize(doc.size) }}</td>
                 <td>{{ doc.pages || 1 }} pages</td>
+                <td>
+                  <span
+                    class="access-pill"
+                    [class.public]="doc.access_type === 'public'"
+                    [class.private]="doc.access_type !== 'public'"
+                    [title]="doc.container_name || (doc.access_type === 'public' ? 'u2tools-public' : 'u2tools-private')"
+                  >
+                    {{ doc.access_type === 'public' ? '🌐 Public' : '🔒 Private' }}
+                  </span>
+                </td>
                 <td>
                   <span class="badge-status" [ngClass]="doc.status">
                     {{ doc.status === 'indexing_completed' ? 'Indexed' : doc.status }}
@@ -808,6 +830,81 @@
             class="doc-iframe"
             title="Document Preview"
           ></iframe>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: Azure Storage Access Selection (Public vs Private Container) -->
+  @if (showAccessModal()) {
+    <div class="modal-backdrop" (click)="onCancelAccessModal()">
+      <div class="modal-card access-modal glass-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="access-modal-title">
+            <span class="access-header-icon">☁️</span>
+            <h3>Select Storage Access Level</h3>
+          </div>
+          <button class="modal-close" type="button" (click)="onCancelAccessModal()">×</button>
+        </div>
+
+        <div class="modal-body access-modal-body">
+          <p class="access-modal-desc">
+            Choose where to store {{ pendingUploadFiles().length === 1 ? 'this document' : ('these ' + pendingUploadFiles().length + ' documents') }} in Azure Blob Storage before Azure AI Foundry search indexing begins:
+          </p>
+
+          <!-- Selected Files Summary -->
+          <div class="pending-files-list">
+            @for (file of pendingUploadFiles(); track file.name) {
+              <div class="pending-file-chip">
+                <span class="pending-file-name" [title]="file.name">📄 {{ file.name }}</span>
+                <span class="pending-file-size">{{ formatFileSize(file.size) }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- Access Type Options -->
+          <div class="access-options-grid">
+            <button
+              type="button"
+              class="access-option-card"
+              [class.selected]="selectedAccessType() === 'private'"
+              (click)="selectedAccessType.set('private')"
+            >
+              <div class="option-top">
+                <span class="option-icon">🔒</span>
+                <span class="option-radio" [class.checked]="selectedAccessType() === 'private'"></span>
+              </div>
+              <div class="option-title">Private Access</div>
+              <div class="option-container-badge">Container: u2tools-private</div>
+              <p class="option-desc">
+                Authentication required. Stored securely in the private Azure Storage container.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              class="access-option-card"
+              [class.selected]="selectedAccessType() === 'public'"
+              (click)="selectedAccessType.set('public')"
+            >
+              <div class="option-top">
+                <span class="option-icon">🌐</span>
+                <span class="option-radio" [class.checked]="selectedAccessType() === 'public'"></span>
+              </div>
+              <div class="option-title">Public Access</div>
+              <div class="option-container-badge">Container: u2tools-public</div>
+              <p class="option-desc">
+                Public Blob URL access enabled. Stored in the public Azure Storage container.
+              </p>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" type="button" (click)="onCancelAccessModal()">Cancel</button>
+          <button class="btn btn-primary" type="button" (click)="onConfirmUploadWithAccess()">
+            Upload to {{ selectedAccessType() === 'public' ? 'Public' : 'Private' }} & Index
+          </button>
         </div>
       </div>
     </div>

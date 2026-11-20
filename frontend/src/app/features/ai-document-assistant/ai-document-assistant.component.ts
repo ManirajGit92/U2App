@@ -30,6 +30,11 @@ export class AiDocumentAssistantComponent implements OnInit, OnDestroy {
   showSettingsModal = false;
   previewDoc = signal<DocumentItem | null>(null);
 
+  // Storage Access Selection Modal (Public vs Private Azure Container)
+  showAccessModal = signal<boolean>(false);
+  pendingUploadFiles = signal<File[]>([]);
+  selectedAccessType = signal<'private' | 'public'>('private');
+
   // Settings
   modelDeployment = 'gpt-5.2';
   backendEndpoint = '';
@@ -118,7 +123,7 @@ export class AiDocumentAssistantComponent implements OnInit, OnDestroy {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.assistantService.uploadFiles(Array.from(input.files));
+      this.openAccessModalForFiles(Array.from(input.files));
       input.value = '';
     }
   }
@@ -140,7 +145,28 @@ export class AiDocumentAssistantComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     this.isDragOver = false;
     if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
-      this.assistantService.uploadFiles(Array.from(event.dataTransfer.files));
+      this.openAccessModalForFiles(Array.from(event.dataTransfer.files));
+    }
+  }
+
+  openAccessModalForFiles(files: File[]): void {
+    this.pendingUploadFiles.set(files);
+    this.selectedAccessType.set('private');
+    this.showAccessModal.set(true);
+  }
+
+  onCancelAccessModal(): void {
+    this.showAccessModal.set(false);
+    this.pendingUploadFiles.set([]);
+  }
+
+  onConfirmUploadWithAccess(): void {
+    const files = this.pendingUploadFiles();
+    const accessType = this.selectedAccessType();
+    this.showAccessModal.set(false);
+    this.pendingUploadFiles.set([]);
+    if (files.length > 0) {
+      this.assistantService.uploadFiles(files, accessType);
     }
   }
 

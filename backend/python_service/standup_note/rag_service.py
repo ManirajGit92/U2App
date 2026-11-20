@@ -10,6 +10,7 @@ import io
 import json
 import os
 import re
+import sys
 import uuid
 import zipfile
 import xml.etree.ElementTree as ET
@@ -17,13 +18,46 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile, Response
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Response
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import FileSearchTool, PromptAgentDefinition
+# Ensure backend/python_service/.venv site-packages is discoverable even if uvicorn
+# was launched from the workspace root .venv or global Python 3.12 interpreter.
+_rag_current_dir = Path(__file__).resolve().parent
+_rag_python_service_dir = _rag_current_dir.parent
+_local_venv_site = _rag_python_service_dir / ".venv" / "Lib" / "site-packages"
+if _local_venv_site.exists():
+    _site_str = str(_local_venv_site)
+    if _site_str not in sys.path:
+        sys.path.append(_site_str)
+    _azure_ns_dir = _local_venv_site / "azure"
+    if _azure_ns_dir.exists() and "azure" in sys.modules:
+        _azure_mod = sys.modules["azure"]
+        if hasattr(_azure_mod, "__path__") and str(_azure_ns_dir) not in _azure_mod.__path__:
+            _azure_mod.__path__.append(str(_azure_ns_dir))
+
+try:
+    from azure.identity import DefaultAzureCredential
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import FileSearchTool, PromptAgentDefinition
+    _AZURE_AI_AVAILABLE = True
+except ImportError as _ai_imp_err:
+    DefaultAzureCredential = None  # type: ignore
+    AIProjectClient = None  # type: ignore
+    FileSearchTool = None  # type: ignore
+    PromptAgentDefinition = None  # type: ignore
+    _AZURE_AI_AVAILABLE = False
+    print(f"[RAG] Warning: Azure AI Foundry SDK not installed in this Python interpreter ({_ai_imp_err}). Use backend/python_service/.venv.")
+
+try:
+    from azure.storage.blob import BlobServiceClient, ContentSettings
+    _AZURE_BLOB_AVAILABLE = True
+except ImportError as _blob_imp_err:
+    BlobServiceClient = None  # type: ignore
+    ContentSettings = None  # type: ignore
+    _AZURE_BLOB_AVAILABLE = False
+    print(f"[RAG] Warning: azure-storage-blob not installed in this Python interpreter ({_blob_imp_err}). Use backend/python_service/.venv.")
 
 # ---------------------------------------------------------------------------
 # Load environment variables
@@ -61,14 +95,19 @@ _AGENT_INSTRUCTIONS = (
 )
 
 # ---------------------------------------------------------------------------
-# Storage paths
+# Azure Blob Storage configuration (referencing AzureBlobStorageDemo/upload.py)
 # ---------------------------------------------------------------------------
 
+_AZURE_STORAGE_CONNECTION_STRING = os.environ.get("AZURE_STORAGE_CONNECTION_STRING", "")
+_PRIVATE_CONTAINER = "u2tools-private"
+_PUBLIC_CONTAINER = "u2tools-public"
+
+# Lightweight local JSON state persistence (metadata only; documents live in Azure Blob Storage)
 _storage_dir = _current_dir / "rag_storage"
 _storage_docs_dir = _storage_dir / "docs"
 _state_file = _storage_dir / "rag_state.json"
 
-_storage_docs_dir.mkdir(parents=True, exist_ok=True)
+_storage_dir.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # State Management & Persistence
@@ -83,10 +122,11 @@ _rag_state: dict = {
 }
 
 # Cached Azure clients (created lazily, reused across calls)
-_project_client: Optional[AIProjectClient] = None
+_project_client: Optional[Any] = None
 _openai_client = None
+_blob_service_client: Optional[Any] = None
 
-# Cache for raw document bytes to support retry/download/view on failed uploads/indexing
+# In-memory cache for raw document bytes (populated on upload or on-demand from Azure Blob Storage)
 _file_bytes_cache: dict = {}
 
 
@@ -266,6 +306,11 @@ def _get_media_type(filename: str) -> str:
 def _get_clients():
     """Return (project, openai_client), creating them once and caching."""
     global _project_client, _openai_client
+    if not _AZURE_AI_AVAILABLE:
+        raise RuntimeError(
+            "azure-ai-projects / azure-identity is not installed in the active Python environment. "
+            "Start the server with: .\\.venv\\Scripts\\uvicorn standup_note.ai_assistent:app --host 0.0.0.0 --port 8000 --reload"
+        )
     if _project_client is None:
         credential = DefaultAzureCredential()
         _project_client = AIProjectClient(
@@ -274,6 +319,85 @@ def _get_clients():
         )
         _openai_client = _project_client.get_openai_client()
     return _project_client, _openai_client
+
+
+def _get_blob_service_client() -> Any:
+    """Return cached Azure BlobServiceClient using AZURE_STORAGE_CONNECTION_STRING."""
+    global _blob_service_client
+    if not _AZURE_BLOB_AVAILABLE:
+        raise RuntimeError(
+            "azure-storage-blob is not installed in the active Python environment. "
+            "Start the server with: .\\.venv\\Scripts\\uvicorn standup_note.ai_assistent:app --host 0.0.0.0 --port 8000 --reload"
+        )
+    if _blob_service_client is None:
+        conn_str = _AZURE_STORAGE_CONNECTION_STRING or os.environ.get("AZURE_STORAGE_CONNECTION_STRING", "")
+        if not conn_str:
+            raise ValueError("AZURE_STORAGE_CONNECTION_STRING not found in .env")
+        _blob_service_client = BlobServiceClient.from_connection_string(conn_str)
+    return _blob_service_client
+
+
+def _upload_to_azure_blob(
+    blob_name: str,
+    content: bytes,
+    access_type: str,
+    filename: str,
+) -> tuple[str, str]:
+    """
+    Upload document bytes to Azure Blob Storage container based on access_type.
+    Matches AzureBlobStorageDemo/upload.py container logic:
+      - 'public'  -> container 'u2tools-public' (public_access='blob')
+      - 'private' -> container 'u2tools-private'
+    Returns (container_name, blob_url).
+    """
+    is_public = access_type.strip().lower() == "public"
+    container_name = _PUBLIC_CONTAINER if is_public else _PRIVATE_CONTAINER
+
+    blob_service_client = _get_blob_service_client()
+    container_client = blob_service_client.get_container_client(container_name)
+
+    if not container_client.exists():
+        if is_public:
+            container_client.create_container(public_access="blob")
+        else:
+            container_client.create_container()
+
+    blob_client = container_client.get_blob_client(blob_name)
+    media_type = _get_media_type(filename)
+    blob_client.upload_blob(
+        content,
+        overwrite=True,
+        content_settings=ContentSettings(content_type=media_type),
+    )
+    return container_name, blob_client.url
+
+
+def _download_from_azure_blob(container_name: str, blob_name: str) -> Optional[bytes]:
+    """Download document bytes from Azure Blob Storage."""
+    try:
+        blob_service_client = _get_blob_service_client()
+        blob_client = blob_service_client.get_blob_client(
+            container=container_name,
+            blob=blob_name,
+        )
+        return blob_client.download_blob().readall()
+    except Exception as exc:
+        print(f"[RAG] Warning: Failed to download blob {container_name}/{blob_name}: {exc}")
+        return None
+
+
+def _delete_from_azure_blob(container_name: str, blob_name: str) -> None:
+    """Delete a blob from Azure Blob Storage (best-effort)."""
+    try:
+        blob_service_client = _get_blob_service_client()
+        blob_client = blob_service_client.get_blob_client(
+            container=container_name,
+            blob=blob_name,
+        )
+        if blob_client.exists():
+            blob_client.delete_blob()
+    except Exception as exc:
+        print(f"[RAG] Warning: Failed to delete blob {container_name}/{blob_name}: {exc}")
 
 
 def _find_doc(doc_id: str) -> Optional[dict]:
@@ -290,10 +414,19 @@ def _update_doc(doc_id: str, **kwargs):
         _save_state_to_disk()
 
 
-def _create_doc_record(name: str, size: int, content: bytes) -> dict:
+def _create_doc_record(
+    name: str,
+    size: int,
+    content: bytes,
+    access_type: str = "private",
+    container_name: Optional[str] = None,
+    blob_name: Optional[str] = None,
+    blob_url: Optional[str] = None,
+) -> dict:
     pages = _estimate_pages(content, name)
     ext = _get_extension(name)
     now_str = datetime.now().strftime("%b %d, %I:%M %p")
+    normalized_access = "public" if access_type.strip().lower() == "public" else "private"
     return {
         "id": str(uuid.uuid4()),
         "name": name,
@@ -304,6 +437,10 @@ def _create_doc_record(name: str, size: int, content: bytes) -> dict:
         "status": "upload_pending",
         "error": None,
         "file_id": None,
+        "access_type": normalized_access,
+        "container_name": container_name or (_PUBLIC_CONTAINER if normalized_access == "public" else _PRIVATE_CONTAINER),
+        "blob_name": blob_name or name,
+        "blob_url": blob_url,
     }
 
 
@@ -312,6 +449,15 @@ def _get_doc_bytes(doc_id: str, default_name: str) -> tuple[Optional[bytes], str
         filename, content = _file_bytes_cache[doc_id]
         return content, filename
 
+    doc = _find_doc(doc_id)
+    if doc and doc.get("container_name") and doc.get("blob_name"):
+        blob_bytes = _download_from_azure_blob(doc["container_name"], doc["blob_name"])
+        if blob_bytes is not None:
+            fname = doc.get("name", default_name)
+            _file_bytes_cache[doc_id] = (fname, blob_bytes)
+            return blob_bytes, fname
+
+    # Legacy fallback if an older document was stored locally before Azure Blob migration
     disk_path = _storage_docs_dir / f"{doc_id}_{default_name}"
     if disk_path.exists():
         try:
@@ -403,7 +549,7 @@ def _process_document(doc_id: str, file_bytes: bytes, filename: str):
         _update_doc(doc_id, status="indexing_completed", error=None)
 
 
-def _ensure_agent(project: AIProjectClient, openai_client):
+def _ensure_agent(project: Any, openai_client):
     """Create or update the RAG agent with all current vector store files."""
     vector_store_id = _rag_state["vector_store_id"]
     if vector_store_id is None:
@@ -611,36 +757,62 @@ async def toggle_rag():
 async def upload_documents(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
+    access_type: str = Form("private"),
 ):
     """
-    Accept multipart file uploads (PDF, DOCX, TXT, PPTX).
-    Saves file to disk, adds to state immediately, and processes in background.
+    Accept multipart file uploads (PDF, DOCX, TXT, PPTX) with access_type ('public' | 'private').
+    Step 1: Stores each file in the corresponding Azure Blob Storage container
+            ('u2tools-public' for public, 'u2tools-private' for private), referencing upload.py.
+    Step 2: Queues background search indexing into Azure AI Foundry Vector Store & Agent.
     """
     try:
         # Automatically enable RAG when files are uploaded
         _rag_state["enabled"] = True
+        normalized_access = "public" if (access_type or "").strip().lower() == "public" else "private"
 
         for file in files:
             content = await file.read()
             filename = file.filename or "unknown"
-            doc = _create_doc_record(filename, len(content), content)
+
+            # Step 1: Upload document to Azure Blob Storage container
+            try:
+                container_name, blob_url = await asyncio.to_thread(
+                    _upload_to_azure_blob,
+                    filename,
+                    content,
+                    normalized_access,
+                    filename,
+                )
+                print(f"[RAG] Uploaded '{filename}' to Azure container '{container_name}' ({normalized_access}) -> {blob_url}")
+            except Exception as blob_err:
+                err_msg = f"Azure Blob Storage upload failed for '{filename}': {blob_err}"
+                if normalized_access == "public":
+                    err_msg += " (Check Azure anonymous blob access settings.)"
+                raise HTTPException(status_code=500, detail=err_msg)
+
+            # Create document record with Azure Blob metadata
+            doc = _create_doc_record(
+                name=filename,
+                size=len(content),
+                content=content,
+                access_type=normalized_access,
+                container_name=container_name,
+                blob_name=filename,
+                blob_url=blob_url,
+            )
+            doc["status"] = "indexing_pending"
             _rag_state["documents"].append(doc)
             _file_bytes_cache[doc["id"]] = (filename, content)
 
-            # Persist to disk
-            disk_path = _storage_docs_dir / f"{doc['id']}_{filename}"
-            try:
-                with open(disk_path, "wb") as f:
-                    f.write(content)
-            except Exception as e:
-                print(f"[RAG] Warning: could not write doc to disk: {e}")
-
+            # Step 2: Queue search indexing in Azure AI Foundry
             background_tasks.add_task(
                 _process_document, doc["id"], content, filename
             )
 
         _save_state_to_disk()
         return {"documents": list(_rag_state["documents"]), "ready": _compute_ready()}
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -759,7 +931,7 @@ code {{ background: #0f172a; padding: 2px 6px; border-radius: 4px; color: #38bdf
 @router.delete("/document/{doc_id}")
 async def delete_document(doc_id: str):
     """
-    Remove a document from the list and delete it from disk and vector store.
+    Remove a document from the list and delete it from Azure Blob Storage and vector store.
     """
     try:
         doc = _find_doc(doc_id)
@@ -768,6 +940,13 @@ async def delete_document(doc_id: str):
 
         _file_bytes_cache.pop(doc_id, None)
 
+        # Delete from Azure Blob Storage container
+        if doc.get("container_name") and doc.get("blob_name"):
+            await asyncio.to_thread(
+                _delete_from_azure_blob, doc["container_name"], doc["blob_name"]
+            )
+
+        # Clean up legacy local disk file if present
         disk_path = _storage_docs_dir / f"{doc_id}_{doc['name']}"
         if disk_path.exists():
             try:
@@ -801,15 +980,22 @@ async def delete_document(doc_id: str):
 
 @router.delete("/clear-all")
 async def clear_all_documents():
-    """Clear all uploaded documents and reset state."""
+    """Clear all uploaded documents from Azure Blob Storage and reset state."""
     try:
+        for doc in _rag_state.get("documents", []):
+            if doc.get("container_name") and doc.get("blob_name"):
+                await asyncio.to_thread(
+                    _delete_from_azure_blob, doc["container_name"], doc["blob_name"]
+                )
+
         _file_bytes_cache.clear()
-        for p in _storage_docs_dir.glob("*"):
-            try:
-                if p.is_file():
-                    p.unlink()
-            except Exception:
-                pass
+        if _storage_docs_dir.exists():
+            for p in _storage_docs_dir.glob("*"):
+                try:
+                    if p.is_file():
+                        p.unlink()
+                except Exception:
+                    pass
 
         _rag_state["documents"] = []
         _save_state_to_disk()

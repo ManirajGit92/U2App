@@ -10,16 +10,19 @@ export interface DocumentItem {
   extension?: string;
   uploaded_at?: string;
   status:
-    | 'upload_pending'
-    | 'uploading'
-    | 'upload_completed'
-    | 'indexing_pending'
-    | 'indexing_in_progress'
-    | 'indexing_completed'
-    | 'failed';
+  | 'upload_pending'
+  | 'uploading'
+  | 'upload_completed'
+  | 'indexing_pending'
+  | 'indexing_in_progress'
+  | 'indexing_completed'
+  | 'failed';
   error?: string | null;
   file_id?: string | null;
   localUrl?: string;
+  access_type?: 'public' | 'private';
+  container_name?: string;
+  blob_url?: string | null;
 }
 
 export interface SourceReference {
@@ -342,21 +345,21 @@ export class AiDocumentAssistantService {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(this.conversations()));
-    } catch {}
+    } catch { }
   }
 
   private saveActiveIdToStorage(): void {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(STORAGE_ACTIVE_ID_KEY, this.activeConversationId());
-    } catch {}
+    } catch { }
   }
 
   private saveDocsToStorage(): void {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(STORAGE_DOCS_CACHE_KEY, JSON.stringify(this.documents()));
-    } catch {}
+    } catch { }
   }
 
   // ── Document RAG Backend Integration ──────────────────────────────────────
@@ -381,11 +384,11 @@ export class AiDocumentAssistantService {
           this.ragReady.set(data.ready ?? (this.documents().length > 0));
           return;
         }
-      } catch {}
+      } catch { }
     }
   }
 
-  async uploadFiles(fileList: File[]): Promise<void> {
+  async uploadFiles(fileList: File[], accessType: 'public' | 'private' = 'private'): Promise<void> {
     if (!fileList || fileList.length === 0) return;
 
     this.isUploading.set(true);
@@ -396,7 +399,7 @@ export class AiDocumentAssistantService {
     for (const f of fileList) {
       try {
         localUrlMap.set(f.name, URL.createObjectURL(f));
-      } catch {}
+      } catch { }
     }
 
     const base = this.getPythonBase();
@@ -407,11 +410,15 @@ export class AiDocumentAssistantService {
     ];
 
     const formData = new FormData();
+    formData.append('access_type', accessType);
     for (const file of fileList) {
       formData.append('files', file, file.name);
     }
 
+    const containerLabel = accessType === 'public' ? 'u2tools-public (Public)' : 'u2tools-private (Private)';
     let success = false;
+    let backendError: string | null = null;
+
     for (const url of urls) {
       try {
         const res = await fetch(url, {
@@ -430,17 +437,31 @@ export class AiDocumentAssistantService {
             this.documents.set(mapped);
             this.saveDocsToStorage();
           }
-          this.toast.show('Upload Successful', `${fileList.length} document(s) uploaded and indexing.`, 'success');
+          this.toast.show(
+            'Uploaded to Azure Storage',
+            `${fileList.length} document(s) stored in ${containerLabel} and queued for search indexing.`,
+            'success'
+          );
           this.startRagPolling();
           success = true;
           break;
+        } else {
+          // Backend was reachable but returned an error (e.g. Azure Storage error)
+          const errData = await res.json().catch(() => null);
+          if (errData?.detail) {
+            backendError = errData.detail;
+            break;
+          }
         }
       } catch (e) {
         // try next endpoint fallback
       }
     }
 
-    if (!success) {
+    if (backendError) {
+      this.uploadError.set(backendError);
+      this.toast.show('Upload Failed', backendError, 'error');
+    } else if (!success) {
       // Local fallback simulation if offline backend
       const newItems: DocumentItem[] = fileList.map((f) => {
         const ext = f.name.split('.').pop()?.toLowerCase() || 'pdf';
@@ -453,11 +474,13 @@ export class AiDocumentAssistantService {
           uploaded_at: 'Just now',
           status: 'indexing_completed',
           localUrl: localUrlMap.get(f.name),
+          access_type: accessType,
+          container_name: accessType === 'public' ? 'u2tools-public' : 'u2tools-private',
         };
       });
       this.documents.update((prev) => [...prev, ...newItems]);
       this.saveDocsToStorage();
-      this.toast.show('Documents Added', `${fileList.length} document(s) added successfully.`, 'success');
+      this.toast.show('Documents Added', `${fileList.length} document(s) added (${containerLabel}).`, 'success');
     }
 
     this.isUploading.set(false);
@@ -483,7 +506,7 @@ export class AiDocumentAssistantService {
           deletedFromBackend = true;
           break;
         }
-      } catch {}
+      } catch { }
     }
 
     if (!deletedFromBackend) {
@@ -508,7 +531,7 @@ export class AiDocumentAssistantService {
         }
         this.startRagPolling();
       }
-    } catch {}
+    } catch { }
   }
 
   downloadDocument(doc: DocumentItem): void {
@@ -690,7 +713,7 @@ export class AiDocumentAssistantService {
             answered = true;
             break;
           }
-        } catch {}
+        } catch { }
       }
 
       if (!answered) {
@@ -704,10 +727,10 @@ export class AiDocumentAssistantService {
         } else {
           const targetDoc = this.selectedDoc() || docs[0];
           answerText =
-            `Based on the uploaded document **${targetDoc.name}**, here are the findings for your query:\n\n` +
-            `• The policy applies to all eligible team members as referenced in section 3.2.\n` +
-            `• Relevant requirements and timeline guidelines are detailed on page 12.\n` +
-            `• Any exceptions require prior management approval.`;
+            `Based on the uploaded document **${targetDoc.name}**, Due to service unavailability unable to get the details:\n\n` +
+            `• Check the backend service are run correctly\n` +
+            `• Check foundry is available to serve the request\n` +
+            `• Check is any error occured while runing the services`;
           sources = [{ document: targetDoc.name, page: Math.min(targetDoc.pages || 1, 12) }];
           outputTokens = 850;
         }
@@ -791,7 +814,7 @@ export class AiDocumentAssistantService {
         this.extractedInfo.set(data.items || []);
         return;
       }
-    } catch {}
+    } catch { }
 
     // Fallback extraction view computed from existing documents
     const fallback: ExtractedItem[] = this.documents().map((doc) => ({
@@ -820,7 +843,7 @@ export class AiDocumentAssistantService {
         this.referencesList.set(data.references || []);
         return;
       }
-    } catch {}
+    } catch { }
 
     // Fallback references
     const refs: DocReference[] = [];
