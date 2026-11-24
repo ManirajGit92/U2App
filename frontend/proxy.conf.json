@@ -4,6 +4,11 @@
     "secure": false,
     "changeOrigin": true
   },
+  "/api/voice": {
+    "target": "http://127.0.0.1:8000",
+    "secure": false,
+    "changeOrigin": true
+  },
   "/api/standup-ai": {
     "target": "https://u2tools.onrender.com",
     "secure": false,

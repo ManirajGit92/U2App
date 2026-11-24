@@ -5,7 +5,7 @@
     "ng": "ng",
     "start": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-with-tanglish.ps1",
     "start:frontend": "ng serve",
-    "start:python-api": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"cd ../backend/python-service; ./.venv/Scripts/python -m uvicorn app.main:socket_app --host 127.0.0.1 --port 8000\"",
+    "start:python-api": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"cd ../backend/python_service; ./.venv/Scripts/python -m uvicorn standup_note.ai_assistent:app --host 127.0.0.1 --port 8000 --reload\"",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"

@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
-$backendProject = Resolve-Path (Join-Path $repoRoot '..\backend\python-service')
+$backendProject = Resolve-Path (Join-Path $repoRoot '..\backend\python_service')
 $backendUrl = 'http://127.0.0.1:8000/api/health'
 $venvPython = Join-Path $backendProject '.venv\Scripts\python.exe'
 $pythonExe = if (Test-Path $venvPython) { $venvPython } else { 'python' }
@@ -20,7 +20,7 @@ if (-not (Test-PythonBackend)) {
 
   Start-Process `
     -FilePath $pythonExe `
-    -ArgumentList @('-m', 'uvicorn', 'app.main:socket_app', '--host', '127.0.0.1', '--port', '8000') `
+    -ArgumentList @('-m', 'uvicorn', 'standup_note.ai_assistent:app', '--host', '127.0.0.1', '--port', '8000') `
     -WorkingDirectory $backendProject `
     -WindowStyle Hidden | Out-Null
 
