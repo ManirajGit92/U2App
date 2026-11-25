@@ -568,6 +568,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   private readonly orderKey = 'u2app.navOrder';
   private readonly visibilityKey = 'u2app.navVisibility';
   private readonly defaultToolOrder = [
+    'goal-quest',
     'ai-document-assistant',
     'standup-note',
     'work-tracker',
@@ -585,6 +586,16 @@ export class HomeComponent implements OnInit, OnDestroy {
   private touchEndX = 0;
 
   private readonly allTools: Tool[] = [
+    {
+      id: 'goal-quest',
+      title: 'GoalQuest – Gamified Goal Tracker',
+      description:
+        'Turn real-life goals into an RPG adventure with interactive roadmaps, timed checkpoint assessments, Game Cash rewards, character customization, and bulk Excel import/export.',
+      icon: '🎮',
+      route: '/goal-quest',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(245, 158, 11, 0.24))',
+    },
     {
       id: 'ai-document-assistant',
       title: 'AI Document Assistant',

@@ -206,6 +206,12 @@ export const routes: Routes = [
       import('./features/flip-book/flip-book.component').then((m) => m.FlipBookComponent),
   },
   {
+    path: 'goal-quest',
+    data: { navLabel: 'GoalQuest', showInNav: true },
+    loadComponent: () =>
+      import('./features/goal-quest/goal-quest.component').then((m) => m.GoalQuestComponent),
+  },
+  {
     path: 'angular-performance-playground',
     data: { navLabel: 'Angular Performance Playground', showInNav: true },
     loadComponent: () =>

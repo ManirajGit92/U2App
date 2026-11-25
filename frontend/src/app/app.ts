@@ -53,6 +53,7 @@ export class App {
       url.includes('/free-billing') ||
       url.includes('/lodge-booking') ||
       url.includes('/easy-documents') ||
-      url.includes('/billing-templates');
+      url.includes('/billing-templates') ||
+      url.includes('/goal-quest');
   }
 }

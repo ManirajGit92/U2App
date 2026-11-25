@@ -1,0 +1,1357 @@
+<div class="gq-shell" [ngClass]="activeThemeClass()">
+  <!-- ═══════ TOP RPG HEADER BAR ═══════ -->
+  <header class="gq-topbar">
+    <div class="brand">
+      <div class="brand-icon">🎮</div>
+      <div class="brand-text">
+        <span class="brand-name">GoalQuest</span>
+        <span class="brand-sub">Turn Your Goals into a Game</span>
+      </div>
+    </div>
+
+    <nav class="top-nav">
+      <a routerLink="/" class="top-nav-btn">🏠 Home</a>
+      <button
+        type="button"
+        class="top-nav-btn"
+        [class.active]="activeTab() === 'roadmap'"
+        (click)="setTab('roadmap')"
+      >
+        🗺️ My Roadmap
+      </button>
+      <button
+        type="button"
+        class="top-nav-btn"
+        [class.active]="activeTab() === 'customize'"
+        (click)="setTab('customize')"
+      >
+        ✨ Customize
+      </button>
+      <button
+        type="button"
+        class="top-nav-btn"
+        [class.active]="activeTab() === 'rewards'"
+        (click)="setTab('rewards')"
+      >
+        🛒 Rewards Shop
+      </button>
+      <button
+        type="button"
+        class="top-nav-btn"
+        [class.active]="activeTab() === 'reports'"
+        (click)="setTab('reports')"
+      >
+        📊 Reports
+      </button>
+    </nav>
+
+    <div class="top-right">
+      @if (!api.isDemoMode()) {
+        <button
+          type="button"
+          class="mode-switch-btn"
+          (click)="enterPracticeMode()"
+          title="Try features safely in isolated Practice Mode"
+        >
+          🧪 Practice Mode
+        </button>
+      }
+      <button type="button" class="gold-pill" (click)="setTab('rewards')" title="Open Game Cash Wallet & Shop">
+        <span class="coin-badge">G</span>
+        <span class="coin-amount">{{ profile()?.gameCashBalance ?? 0 | number }}</span>
+        <span class="coin-plus">+</span>
+      </button>
+      <button
+        type="button"
+        class="icon-pill"
+        (click)="notificationOpen.set(!notificationOpen())"
+        title="Achievements & Notifications"
+      >
+        🔔
+        @if ((dashboard()?.totalAchievements ?? 0) > 0) {
+          <span class="notif-dot"></span>
+        }
+      </button>
+      <button type="button" class="avatar-pill" (click)="setTab('customize')" title="Hero Profile">
+        🧑‍🚀
+      </button>
+    </div>
+  </header>
+
+  @if (api.isDemoMode()) {
+    <div class="demo-mode-banner">
+      <div class="demo-banner-left">
+        <span class="demo-tag">DEMO / PRACTICE MODE</span>
+        <span class="demo-copy">
+          Exploring preloaded sample quests, wallet &amp; shop. Completely isolated from your personal data.
+        </span>
+      </div>
+      <div class="demo-banner-actions">
+        <button type="button" class="demo-btn tour" (click)="showWalkthrough.set(true)">
+          🧭 Guided Tour
+        </button>
+        <button
+          type="button"
+          class="demo-btn reset"
+          [disabled]="isResettingDemo()"
+          (click)="resetDemoData()"
+        >
+          {{ isResettingDemo() ? 'Resetting...' : '🔄 Reset Demo Data' }}
+        </button>
+        <button type="button" class="demo-btn personal" (click)="startMyOwnJourney()">
+          🚀 Start My Own Journey
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (api.apiOffline()) {
+    <div class="offline-banner">
+      ⚠️ GoalQuest backend API (<code>http://127.0.0.1:5110</code>) is offline. Run
+      <code>dotnet run --project backend/dotnet_service/U2Tools.Api</code> to enable live SQL Server persistence.
+    </div>
+  }
+
+  <!-- ═══════ MAIN 3-COLUMN WORKSPACE ═══════ -->
+  <div class="gq-workspace">
+    <!-- Left Sidebar -->
+    <aside class="gq-sidebar">
+      <button
+        type="button"
+        class="side-item"
+        [class.active]="activeTab() === 'dashboard'"
+        (click)="setTab('dashboard')"
+      >
+        <span>🏠</span> Dashboard
+      </button>
+      <button
+        type="button"
+        class="side-item"
+        [class.active]="activeTab() === 'goals'"
+        (click)="setTab('goals')"
+      >
+        <span>🎯</span> My Goals
+      </button>
+      <button
+        type="button"
+        class="side-item"
+        [class.active]="activeTab() === 'roadmap'"
+        (click)="setTab('roadmap')"
+      >
+        <span>🗺️</span> Roadmap
+      </button>
+      <button
+        type="button"
+        class="side-item"
+        [class.active]="activeTab() === 'assessment'"
+        (click)="setTab('assessment')"
+      >
+        <span>📝</span> Assessment
+      </button>
+      <button
+        type="button"
+        class="side-item"
+        [class.active]="activeTab() === 'rewards'"
+        (click)="setTab('rewards')"
+      >
+        <span>🏆</span> Rewards
+      </button>
+      <button
+        type="button"
+        class="side-item"
+        [class.active]="activeTab() === 'customize'"
+        (click)="setTab('customize')"
+      >
+        <span>👕</span> Customize
+      </button>
+      <button
+        type="button"
+        class="side-item"
+        [class.active]="activeTab() === 'themes'"
+        (click)="setTab('themes')"
+      >
+        <span>🎨</span> Themes
+      </button>
+      <button
+        type="button"
+        class="side-item"
+        [class.active]="activeTab() === 'settings'"
+        (click)="setTab('settings')"
+      >
+        <span>⚙️</span> Settings
+      </button>
+    </aside>
+
+    <!-- Center Main View -->
+    <main class="gq-main">
+      <!-- ════════ 1. INTERACTIVE RPG ROADMAP VIEW ════════ -->
+      @if (activeTab() === 'roadmap') {
+        <!-- Roadmap Header Banner with Prominent Import/Export Excel -->
+        <section class="roadmap-banner glass-panel">
+          <div class="goal-picker-block">
+            <div class="target-orb">🎯</div>
+            <div class="goal-title-wrap">
+              <span class="mini-label">
+                My Goal
+                @if (api.isDemoMode()) {
+                  <span class="inline-demo-pill">DEMO</span>
+                }
+              </span>
+              <div class="goal-select-row">
+                @if (goals().length > 0) {
+                  <select
+                    class="goal-switcher"
+                    [ngModel]="selectedGoal()?.id"
+                    (ngModelChange)="selectGoal(+$event)"
+                  >
+                    @for (g of goals(); track g.id) {
+                      <option [value]="g.id">{{ g.title }}</option>
+                    }
+                  </select>
+                } @else {
+                  <span class="no-goal-title">No Active Quest Yet</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (selectedGoal(); as goal) {
+            <div class="goal-meta-pill">
+              <span class="meta-k">📅 Target Date</span>
+              <span class="meta-v">{{ goal.targetDateUtc | date: 'dd MMM yyyy' }}</span>
+            </div>
+
+            <div class="goal-progress-pill">
+              <span class="meta-k">Progress</span>
+              <div class="progress-inline">
+                <div class="progress-track">
+                  <div class="progress-fill" [style.width.%]="goal.progressPercent"></div>
+                </div>
+                <span class="progress-num">{{ goal.progressPercent }}%</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="btn-edit-goal"
+              title="Edit Goal"
+              (click)="openEditGoalModal(goal)"
+            >
+              ✏️
+            </button>
+          }
+
+          <!-- Prominent Import Excel (Green) & Export Excel (Purple) Buttons -->
+          <div class="excel-btn-group">
+            <button
+              type="button"
+              class="btn-excel-import"
+              (click)="showImportModal.set(true)"
+            >
+              <span class="xl-icon">📗</span>
+              <span class="xl-text">
+                <strong>Import Excel</strong>
+                <small>(Add/Update Goals)</small>
+              </span>
+            </button>
+
+            <div class="export-split">
+              <button type="button" class="btn-excel-export" (click)="exportCurrentData()">
+                <span class="xl-icon">📘</span>
+                <span class="xl-text">
+                  <strong>Export Excel</strong>
+                  <small>(Current Data)</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="btn-excel-caret"
+                (click)="showExportMenu.set(!showExportMenu())"
+                aria-label="Template downloads"
+              >
+                ▾
+              </button>
+
+              @if (showExportMenu()) {
+                <div class="export-dropdown">
+                  <button type="button" (click)="excel.downloadBlankTemplate(); showExportMenu.set(false)">
+                    📄 Download Blank Template
+                  </button>
+                  <button type="button" (click)="excel.downloadSampleTemplate(); showExportMenu.set(false)">
+                    ✨ Download Sample Template
+                  </button>
+                  <button type="button" (click)="excel.downloadTemplateGuide(); showExportMenu.set(false)">
+                    ℹ️ Template Guide
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- Interactive RPG Adventure Map Canvas -->
+        <section class="rpg-map-stage">
+          <!-- Scenic SVG Backdrop (Mountains, Valley, Castle, Glowing Winding Path) -->
+          <svg class="map-scenery" viewBox="0 0 1200 540" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#1e1b4b" />
+                <stop offset="45%" stop-color="#312e81" />
+                <stop offset="100%" stop-color="#0f172a" />
+              </linearGradient>
+              <linearGradient id="trailGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#fbbf24" />
+                <stop offset="55%" stop-color="#f59e0b" />
+                <stop offset="100%" stop-color="#a855f7" />
+              </linearGradient>
+            </defs>
+            <rect width="1200" height="540" fill="url(#skyGrad)" />
+            <!-- Distant Peaks -->
+            <polygon points="0,340 160,160 320,310 510,140 720,300 940,150 1200,290 1200,540 0,540" fill="#1e293b" opacity="0.65" />
+            <polygon points="0,400 220,240 440,360 700,220 980,340 1200,250 1200,540 0,540" fill="#0f2942" opacity="0.85" />
+            <!-- Glowing Adventure Trail -->
+            <path
+              d="M 110 460 C 260 440, 320 340, 480 320 C 640 300, 740 230, 910 215 C 990 205, 1050 175, 1095 160"
+              fill="none"
+              stroke="url(#trailGlow)"
+              stroke-width="20"
+              stroke-linecap="round"
+              opacity="0.28"
+            />
+            <path
+              d="M 110 460 C 260 440, 320 340, 480 320 C 640 300, 740 230, 910 215 C 990 205, 1050 175, 1095 160"
+              fill="none"
+              stroke="url(#trailGlow)"
+              stroke-width="7"
+              stroke-dasharray="14 8"
+              stroke-linecap="round"
+            />
+          </svg>
+
+          <!-- Hero Pedestal (Left) -->
+          <div class="hero-pedestal-overlay">
+            <app-gq-avatar-renderer
+              [characterCode]="profile()?.selectedCharacterCode ?? 'CHAR-HERO'"
+              [costumeCode]="profile()?.equippedCostumeCode ?? 'COST-CYBER-JACKET'"
+              [accessoryCode]="profile()?.equippedAccessoryCode ?? 'ACC-NEON-HEADSET'"
+              [hairstyleCode]="profile()?.equippedHairstyleCode ?? 'HAIR-SPIKY-AZURE'"
+              [effectCode]="profile()?.equippedEffectCode ?? 'EFF-STARLIGHT'"
+              [badgeCode]="profile()?.equippedBadgeCode ?? 'BADGE-EXPLORER'"
+              [compact]="true"
+            />
+            <button type="button" class="btn-customize-hero" (click)="setTab('customize')">
+              👕 Customize Character
+            </button>
+          </div>
+
+          <!-- Start Flag -->
+          <div class="start-marker">
+            <span class="flag">🏁</span>
+            <span class="banner-tag">Start</span>
+          </div>
+
+          <!-- Final Castle Destination -->
+          <div class="castle-marker" [class.conquered]="selectedGoal()?.status === 'Completed'">
+            <span class="trophy">🏆</span>
+            <span class="castle">🏰</span>
+            <span class="goal-tag">Goal</span>
+          </div>
+
+          <!-- Dynamic Checkpoint Nodes along Trail -->
+          @if (selectedGoal(); as goal) {
+            @for (cp of goal.checkpoints; track cp.id; let i = $index) {
+              <div
+                class="cp-node"
+                [class.completed]="cp.status === 'Completed'"
+                [class.active]="cp.status === 'InProgress'"
+                [class.locked]="cp.status === 'Locked'"
+                [class.selected]="selectedCheckpoint()?.id === cp.id"
+                [ngStyle]="getNodePosition(i, goal.checkpoints.length)"
+                (click)="selectCheckpoint(cp)"
+              >
+                <div class="cp-card">
+                  <div class="cp-code">CP{{ cp.sequenceOrder }} · {{ cp.title }}</div>
+                  <div class="cp-sub">
+                    @if (cp.status === 'Completed') {
+                      <span class="status-done">✓ Completed</span>
+                    } @else if (cp.status === 'InProgress') {
+                      <span class="status-active">In Progress</span>
+                    } @else {
+                      <span>Due: {{ cp.dueDateUtc | date: 'dd MMM yyyy' }}</span>
+                    }
+                  </div>
+                </div>
+                <div class="cp-orb">
+                  @if (cp.status === 'Completed') {
+                    ✓
+                  } @else if (cp.status === 'InProgress') {
+                    ⭐
+                  } @else {
+                    🔒
+                  }
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="empty-map-cta">
+              <h3>Begin Your First GoalQuest!</h3>
+              <p>Create a custom goal or load the sample Azure AI Certification quest.</p>
+              <div class="cta-row">
+                <button type="button" class="btn-gold" (click)="openNewGoalModal()">+ Create Goal</button>
+                <button type="button" class="btn-purple" (click)="createSampleQuest()">✨ Load Sample Quest</button>
+              </div>
+            </div>
+          }
+
+          <!-- Floating Checkpoint Assessment Card -->
+          @if (selectedCheckpoint(); as cp) {
+            <div class="assessment-float-card">
+              <div class="afc-header">
+                <h4>📋 Checkpoint Assessment — CP{{ cp.sequenceOrder }}: {{ cp.title }}</h4>
+                <div class="afc-tools">
+                  <button type="button" class="mini-btn" (click)="openEditCheckpointModal(cp)">✏️ Edit</button>
+                  <button type="button" class="mini-btn" (click)="setTab('assessment')">⚙️ Questions</button>
+                </div>
+              </div>
+              <p class="afc-desc">{{ cp.description || 'Answer the questions to conquer this checkpoint.' }}</p>
+              <div class="afc-footer">
+                <div class="afc-specs">
+                  <span>📝 Questions: <strong>{{ cp.questionCount }}</strong></span>
+                  <span>✅ Pass Mark: <strong>{{ cp.passingPercentage }}%</strong></span>
+                  <span>⏱️ Time Limit: <strong>{{ cp.timeLimitMinutes }} Minutes</strong></span>
+                  <span>🪙 Reward: <strong class="gold">+{{ cp.rewardCash }} G</strong> (Early +{{ cp.earlyBonusCash }} G)</span>
+                </div>
+                <button
+                  type="button"
+                  class="btn-start-assessment"
+                  [disabled]="cp.status === 'Locked'"
+                  (click)="launchAssessment(cp)"
+                >
+                  {{ cp.status === 'Locked' ? '🔒 Locked' : '▶ Start Assessment' }}
+                </button>
+              </div>
+            </div>
+          }
+        </section>
+
+        <!-- Bottom "Customize Everything" Dock -->
+        <section class="customize-dock glass-panel">
+          <div class="dock-title">⚙️ Customize Everything</div>
+          <div class="dock-items">
+            <button type="button" (click)="setTab('goals')"><span>🎯</span>Your Goals</button>
+            <button type="button" (click)="openNewCheckpointModal()"><span>🚩</span>Add Checkpoint</button>
+            <button type="button" (click)="setTab('assessment')"><span>📝</span>Assessments</button>
+            <button type="button" (click)="setTab('settings')"><span>⏱️</span>Time Interval</button>
+            <button type="button" (click)="setTab('themes')"><span>🏔️</span>Roadmap Theme</button>
+            <button type="button" (click)="setTab('customize')"><span>🎮</span>Game Character</button>
+            <button type="button" (click)="setTab('settings')"><span>🏆</span>Rewards &amp; Penalty</button>
+          </div>
+        </section>
+      }
+
+      <!-- ════════ 2. DASHBOARD VIEW ════════ -->
+      @if (activeTab() === 'dashboard' && dashboard(); as dash) {
+        <section class="panel-view">
+          <div class="view-header">
+            <div>
+              <h2>🏠 Command Dashboard</h2>
+              <p>Welcome back, <strong>{{ dash.profile.displayName }}</strong>! Track your quests, gold, and achievements.</p>
+            </div>
+            <div class="header-actions">
+              <button type="button" class="btn-purple" (click)="createSampleQuest()">✨ Load Sample Quest</button>
+              <button type="button" class="btn-gold" (click)="openNewGoalModal()">+ New Goal</button>
+            </div>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-icon">🎯</span>
+              <span class="kpi-val">{{ dash.totalGoals }}</span>
+              <span class="kpi-lbl">Total Goals ({{ dash.completedGoals }} Completed)</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-icon">🚩</span>
+              <span class="kpi-val">{{ dash.activeCheckpoints }}</span>
+              <span class="kpi-lbl">Active Checkpoints ({{ dash.completedCheckpoints }}/{{ dash.totalCheckpoints }} Done)</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-icon">📈</span>
+              <span class="kpi-val">{{ dash.overallProgressPercent }}%</span>
+              <span class="kpi-lbl">Overall Quest Progress</span>
+            </div>
+            <div class="kpi-card gold-card">
+              <span class="kpi-icon">🪙</span>
+              <span class="kpi-val">{{ dash.profile.gameCashBalance | number }}</span>
+              <span class="kpi-lbl">Game Cash Balance</span>
+            </div>
+          </div>
+
+          <div class="dash-split">
+            <div class="glass-card-box">
+              <h3>🏆 Achievements ({{ dash.achievements.length }})</h3>
+              @if (dash.achievements.length === 0) {
+                <p class="muted">Complete checkpoints and assessments to unlock achievements!</p>
+              } @else {
+                <div class="ach-grid">
+                  @for (ach of dash.achievements; track ach.achievementCode) {
+                    <div class="ach-item">
+                      <span class="ach-icon">{{ ach.icon }}</span>
+                      <div>
+                        <strong>{{ ach.title }}</strong>
+                        <p>{{ ach.description }}</p>
+                      </div>
+                      <span class="gold">+{{ ach.rewardCash }} G</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="glass-card-box">
+              <h3>⚡ Active Quests</h3>
+              @for (g of goals(); track g.id) {
+                <div class="goal-mini-row" (click)="selectGoal(g.id); setTab('roadmap')">
+                  <div>
+                    <strong>{{ g.title }}</strong>
+                    <span class="meta-small">{{ g.category }} · {{ g.priority }} · Due {{ g.targetDateUtc | date: 'dd MMM yyyy' }}</span>
+                  </div>
+                  <span class="pct-pill">{{ g.progressPercent }}%</span>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- ════════ 3. GOALS & CHECKPOINTS MANAGEMENT VIEW ════════ -->
+      @if (activeTab() === 'goals') {
+        <section class="panel-view">
+          <div class="view-header">
+            <div>
+              <h2>🎯 My Goals &amp; Checkpoints</h2>
+              <p>Create, edit, delete goals and configure checkpoint intervals, rewards, and penalties.</p>
+            </div>
+            <div class="header-actions">
+              <button type="button" class="btn-excel-import compact" (click)="showImportModal.set(true)">📗 Import Excel</button>
+              <button type="button" class="btn-gold" (click)="openNewGoalModal()">+ Create Goal</button>
+            </div>
+          </div>
+
+          <div class="goals-grid">
+            @for (g of goals(); track g.id) {
+              <div class="goal-manage-card" [class.selected]="selectedGoal()?.id === g.id">
+                <div class="gmc-top">
+                  <span class="priority-tag" [ngClass]="'p-' + g.priority.toLowerCase()">{{ g.priority }}</span>
+                  <span class="status-tag">{{ g.status }}</span>
+                </div>
+                <h3>{{ g.title }}</h3>
+                <p class="muted">{{ g.description || 'No description provided.' }}</p>
+                <div class="gmc-meta">
+                  <span>📁 {{ g.category }}</span>
+                  <span>📅 {{ g.targetDateUtc | date: 'dd MMM yyyy' }}</span>
+                  <span>🚩 {{ g.completedCheckpoints }}/{{ g.totalCheckpoints }} CPs</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" [style.width.%]="g.progressPercent"></div>
+                </div>
+                <div class="gmc-actions">
+                  <button type="button" class="mini-btn primary" (click)="selectGoal(g.id); setTab('roadmap')">🗺️ Open Map</button>
+                  <button type="button" class="mini-btn" (click)="selectGoal(g.id)">🚩 Checkpoints</button>
+                  <button type="button" class="mini-btn" (click)="openEditGoalModal(g)">✏️ Edit</button>
+                  <button type="button" class="mini-btn danger" (click)="deleteGoal(g.id)">🗑️</button>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (selectedGoal(); as goal) {
+            <div class="glass-card-box cp-manager-box">
+              <div class="view-header compact">
+                <h3>🚩 Checkpoints for: {{ goal.title }}</h3>
+                <button type="button" class="btn-purple" (click)="openNewCheckpointModal()">+ Add Checkpoint</button>
+              </div>
+              <div class="table-wrap">
+                <table class="gq-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Title</th>
+                      <th>Due Date</th>
+                      <th>Interval</th>
+                      <th>Pass %</th>
+                      <th>Reward / Early / Late</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (cp of goal.checkpoints; track cp.id) {
+                      <tr>
+                        <td>CP{{ cp.sequenceOrder }}</td>
+                        <td><strong>{{ cp.title }}</strong></td>
+                        <td>{{ cp.dueDateUtc | date: 'dd MMM yyyy' }}</td>
+                        <td>{{ cp.intervalValue }} {{ cp.intervalUnit }}</td>
+                        <td>{{ cp.passingPercentage }}% ({{ cp.timeLimitMinutes }}m)</td>
+                        <td>
+                          <span class="gold">+{{ cp.rewardCash }}</span> /
+                          <span class="emerald">+{{ cp.earlyBonusCash }}</span> /
+                          <span class="crimson">-{{ cp.latePenaltyCash }}</span>
+                        </td>
+                        <td><span class="status-tag">{{ cp.status }}</span></td>
+                        <td class="row-actions">
+                          <button type="button" class="mini-btn" (click)="openEditCheckpointModal(cp)">✏️</button>
+                          <button type="button" class="mini-btn" (click)="selectCheckpoint(cp); setTab('assessment')">📝</button>
+                          <button type="button" class="mini-btn danger" (click)="deleteCheckpoint(cp.id)">🗑️</button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- ════════ 4. ASSESSMENT QUESTION BUILDER VIEW ════════ -->
+      @if (activeTab() === 'assessment') {
+        <section class="panel-view">
+          <div class="view-header">
+            <div>
+              <h2>📝 Checkpoint Assessment Builder</h2>
+              <p>Configure Multiple Choice, Multiple Select, True/False, and Short Answer questions.</p>
+            </div>
+            @if (selectedCheckpoint(); as cp) {
+              <button
+                type="button"
+                class="btn-gold"
+                [disabled]="cp.status === 'Locked'"
+                (click)="launchAssessment(cp)"
+              >
+                ▶ Launch Live Assessment
+              </button>
+            }
+          </div>
+
+          @if (selectedGoal(); as goal) {
+            <div class="cp-selector-strip">
+              @for (cp of goal.checkpoints; track cp.id) {
+                <button
+                  type="button"
+                  class="cp-pill-btn"
+                  [class.active]="selectedCheckpoint()?.id === cp.id"
+                  (click)="selectCheckpoint(cp)"
+                >
+                  CP{{ cp.sequenceOrder }}: {{ cp.title }} ({{ cp.questionCount }})
+                </button>
+              }
+            </div>
+          }
+
+          @if (selectedCheckpoint(); as cp) {
+            <div class="dash-split">
+              <!-- Question Form -->
+              <div class="glass-card-box">
+                <h3>{{ editingQuestionId() ? 'Edit Question' : 'Add New Question' }} — CP{{ cp.sequenceOrder }}</h3>
+                <div class="form-grid">
+                  <label>
+                    Question Text
+                    <textarea rows="3" [(ngModel)]="qForm.questionText" placeholder="Enter assessment question..."></textarea>
+                  </label>
+                  <div class="two-col">
+                    <label>
+                      Question Type
+                      <select [(ngModel)]="qForm.questionType">
+                        <option value="MultipleChoice">Multiple Choice</option>
+                        <option value="MultipleSelect">Multiple Select</option>
+                        <option value="TrueFalse">True / False</option>
+                        <option value="ShortAnswer">Short Answer</option>
+                      </select>
+                    </label>
+                    <label>
+                      Points
+                      <input type="number" min="1" [(ngModel)]="qForm.points" />
+                    </label>
+                  </div>
+                  @if (qForm.questionType === 'MultipleChoice' || qForm.questionType === 'MultipleSelect') {
+                    <label>
+                      Options (separated by <code>|</code>)
+                      <input type="text" [(ngModel)]="qForm.optionsText" />
+                    </label>
+                  }
+                  <label>
+                    Correct Answer(s) (use <code>|</code> for multiple correct answers / synonyms)
+                    <input type="text" [(ngModel)]="qForm.correctAnswerText" />
+                  </label>
+                  <label>
+                    Explanation (shown after grading)
+                    <input type="text" [(ngModel)]="qForm.explanation" />
+                  </label>
+                  <div class="form-actions">
+                    <button type="button" class="btn-secondary" (click)="resetQuestionForm()">Reset</button>
+                    <button type="button" class="btn-purple" (click)="saveQuestion()">💾 Save Question</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Question List -->
+              <div class="glass-card-box">
+                <h3>Configured Questions ({{ questions().length }})</h3>
+                @if (questions().length === 0) {
+                  <p class="muted">No questions added yet for this checkpoint.</p>
+                } @else {
+                  <div class="q-admin-list">
+                    @for (q of questions(); track q.id; let i = $index) {
+                      <div class="q-admin-card">
+                        <div class="q-admin-top">
+                          <span class="q-badge">Q{{ i + 1 }} · {{ q.questionType }}</span>
+                          <div>
+                            <button type="button" class="mini-btn" (click)="editQuestion(q)">✏️</button>
+                            <button type="button" class="mini-btn danger" (click)="deleteQuestion(q.id)">🗑️</button>
+                          </div>
+                        </div>
+                        <p class="q-admin-text">{{ q.questionText }}</p>
+                        <small class="emerald">Answer: {{ q.correctAnswers.join(' | ') }}</small>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- ════════ 5. REWARDS SHOP & WALLET VIEW ════════ -->
+      @if (activeTab() === 'rewards') {
+        <section class="panel-view">
+          <div class="view-header">
+            <div>
+              <h2>🛒 Rewards Shop &amp; Game Cash</h2>
+              <p>Spend your earned Game Cash on costumes, accessories, avatars, effects, badges, and themes.</p>
+            </div>
+            <div class="wallet-hero-badge">🪙 Balance: {{ profile()?.gameCashBalance ?? 0 | number }} G</div>
+          </div>
+
+          <div class="filter-bar">
+            @for (cat of shopCategories; track cat) {
+              <button
+                type="button"
+                class="filter-pill"
+                [class.active]="shopCategoryFilter() === cat"
+                (click)="shopCategoryFilter.set(cat)"
+              >
+                {{ cat }}
+              </button>
+            }
+          </div>
+
+          <div class="shop-grid">
+            @for (item of filteredShopItems(); track item.itemCode) {
+              <div class="shop-card" [class.owned]="item.isOwned">
+                <div class="shop-rarity" [ngClass]="'r-' + item.rarity.toLowerCase()">{{ item.rarity }}</div>
+                <div class="shop-preview" [style.borderColor]="item.accentColor">{{ item.previewAsset }}</div>
+                <h4>{{ item.name }}</h4>
+                <span class="shop-cat">{{ item.category }}</span>
+                <p class="muted">{{ item.description }}</p>
+                <div class="shop-footer">
+                  <span class="price-tag">🪙 {{ item.price }} G</span>
+                  @if (item.isOwned) {
+                    <span class="owned-badge">{{ item.isEquipped ? '✓ Equipped' : '✓ Owned' }}</span>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn-gold compact"
+                      [disabled]="(profile()?.gameCashBalance ?? 0) < item.price"
+                      (click)="buyShopItem(item)"
+                    >
+                      Buy Now
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (transactions().length > 0) {
+            <div class="glass-card-box">
+              <h3>📜 Game Cash Transaction History</h3>
+              <div class="table-wrap">
+                <table class="gq-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Type</th>
+                      <th>Description</th>
+                      <th>Amount</th>
+                      <th>Balance After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (tx of transactions(); track tx.id) {
+                      <tr>
+                        <td>{{ tx.createdAtUtc | date: 'dd MMM HH:mm' }}</td>
+                        <td>{{ tx.transactionType }}</td>
+                        <td>{{ tx.description }}</td>
+                        <td [class.emerald]="tx.amount > 0" [class.crimson]="tx.amount < 0">
+                          {{ tx.amount > 0 ? '+' : '' }}{{ tx.amount }} G
+                        </td>
+                        <td>{{ tx.balanceAfter | number }} G</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- ════════ 6. CHARACTER CUSTOMIZATION VIEW ════════ -->
+      @if (activeTab() === 'customize') {
+        <section class="panel-view">
+          <div class="view-header">
+            <div>
+              <h2>👕 Character Customization</h2>
+              <p>Select your RPG hero and equip unlocked costumes, hairstyles, accessories, effects, and badges.</p>
+            </div>
+            <button type="button" class="btn-purple" (click)="setTab('rewards')">🛒 Unlock More in Shop</button>
+          </div>
+
+          <div class="customizer-layout">
+            <div class="glass-card-box avatar-preview-panel">
+              <app-gq-avatar-renderer
+                [characterCode]="profile()?.selectedCharacterCode ?? 'CHAR-HERO'"
+                [costumeCode]="profile()?.equippedCostumeCode ?? 'COST-CYBER-JACKET'"
+                [accessoryCode]="profile()?.equippedAccessoryCode ?? 'ACC-NEON-HEADSET'"
+                [hairstyleCode]="profile()?.equippedHairstyleCode ?? 'HAIR-SPIKY-AZURE'"
+                [effectCode]="profile()?.equippedEffectCode ?? 'EFF-STARLIGHT'"
+                [badgeCode]="profile()?.equippedBadgeCode ?? 'BADGE-EXPLORER'"
+              />
+              <h3>{{ profile()?.displayName }}</h3>
+              <p class="muted">Changes apply immediately across your RPG Roadmap!</p>
+            </div>
+
+            <div class="wardrobe-sections">
+              <div class="glass-card-box">
+                <h4>🦸 Playable Characters</h4>
+                <div class="wardrobe-grid">
+                  @for (ch of characters(); track ch.characterCode) {
+                    <button
+                      type="button"
+                      class="wardrobe-tile"
+                      [class.selected]="ch.isSelected"
+                      (click)="unlockAndSelectCharacter(ch)"
+                    >
+                      <strong>{{ ch.name }}</strong>
+                      <small>{{ ch.title }}</small>
+                      <span class="tile-status">
+                        {{ ch.isSelected ? '✓ Active' : ch.isOwned ? 'Equip' : '🪙 ' + ch.price + ' G' }}
+                      </span>
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="glass-card-box">
+                <h4>🧥 Costumes</h4>
+                <div class="wardrobe-grid">
+                  @for (item of ownedCostumes(); track item.itemCode) {
+                    <button
+                      type="button"
+                      class="wardrobe-tile"
+                      [class.selected]="profile()?.equippedCostumeCode === item.itemCode"
+                      (click)="equipItem('costumeCode', item.itemCode)"
+                    >
+                      <span>{{ item.previewAsset }} {{ item.name }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="glass-card-box">
+                <h4>💇 Hairstyles &amp; 🎧 Accessories</h4>
+                <div class="wardrobe-grid">
+                  @for (item of ownedHairstyles(); track item.itemCode) {
+                    <button
+                      type="button"
+                      class="wardrobe-tile"
+                      [class.selected]="profile()?.equippedHairstyleCode === item.itemCode"
+                      (click)="equipItem('hairstyleCode', item.itemCode)"
+                    >
+                      <span>{{ item.previewAsset }} {{ item.name }}</span>
+                    </button>
+                  }
+                  @for (item of ownedAccessories(); track item.itemCode) {
+                    <button
+                      type="button"
+                      class="wardrobe-tile"
+                      [class.selected]="profile()?.equippedAccessoryCode === item.itemCode"
+                      (click)="equipItem('accessoryCode', item.itemCode)"
+                    >
+                      <span>{{ item.previewAsset }} {{ item.name }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="glass-card-box">
+                <h4>🌟 Aura Effects &amp; 🏅 Badges</h4>
+                <div class="wardrobe-grid">
+                  @for (item of ownedEffects(); track item.itemCode) {
+                    <button
+                      type="button"
+                      class="wardrobe-tile"
+                      [class.selected]="profile()?.equippedEffectCode === item.itemCode"
+                      (click)="equipItem('effectCode', item.itemCode)"
+                    >
+                      <span>{{ item.previewAsset }} {{ item.name }}</span>
+                    </button>
+                  }
+                  @for (item of ownedBadges(); track item.itemCode) {
+                    <button
+                      type="button"
+                      class="wardrobe-tile"
+                      [class.selected]="profile()?.equippedBadgeCode === item.itemCode"
+                      (click)="equipItem('badgeCode', item.itemCode)"
+                    >
+                      <span>{{ item.previewAsset }} {{ item.name }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- ════════ 7. THEMES VIEW ════════ -->
+      @if (activeTab() === 'themes') {
+        <section class="panel-view">
+          <div class="view-header">
+            <div>
+              <h2>🎨 Roadmap Themes</h2>
+              <p>Transform your GoalQuest world with unlockable RPG visual themes.</p>
+            </div>
+          </div>
+
+          <div class="themes-grid">
+            @for (th of themes(); track th.themeCode) {
+              <div class="theme-card" [class.active]="th.isActive">
+                <div
+                  class="theme-banner"
+                  [style.background]="'linear-gradient(135deg,' + th.primaryColor + ',' + th.secondaryColor + ')'"
+                >
+                  <span class="theme-accent-dot" [style.background]="th.accentColor"></span>
+                </div>
+                <h3>{{ th.name }}</h3>
+                <p class="muted">{{ th.description }}</p>
+                <div class="theme-footer">
+                  <span class="price-tag">{{ th.price === 0 ? 'Free' : '🪙 ' + th.price + ' G' }}</span>
+                  <button
+                    type="button"
+                    class="btn-purple compact"
+                    (click)="unlockAndSelectTheme(th)"
+                  >
+                    {{ th.isActive ? '✓ Active Theme' : th.isOwned ? 'Apply Theme' : 'Unlock & Apply' }}
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ════════ 8. REPORTS & ANALYTICS VIEW ════════ -->
+      @if (activeTab() === 'reports' && reports(); as rep) {
+        <section class="panel-view">
+          <div class="view-header">
+            <div>
+              <h2>📊 Quest Analytics &amp; Reports</h2>
+              <p>Goal progress, assessment scores, rewards vs penalties, and completion statistics.</p>
+            </div>
+            <button type="button" class="btn-excel-export compact" (click)="exportCurrentData()">
+              📘 Export Full Excel Report
+            </button>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-icon">🎯</span>
+              <span class="kpi-val">{{ rep.averageScorePercent }}%</span>
+              <span class="kpi-lbl">Avg Assessment Score ({{ rep.passedAttempts }}/{{ rep.totalAttempts }} Passed)</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-icon">⚡</span>
+              <span class="kpi-val">{{ rep.earlyCompletions }}</span>
+              <span class="kpi-lbl">Early Completions (On-Time: {{ rep.onTimeCompletions }}, Late: {{ rep.lateCompletions }})</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-icon">💰</span>
+              <span class="kpi-val emerald">+{{ rep.totalRewardsEarned | number }}</span>
+              <span class="kpi-lbl">Total Rewards Earned</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-icon">⚠️</span>
+              <span class="kpi-val crimson">-{{ rep.totalPenaltiesDeducted | number }}</span>
+              <span class="kpi-lbl">Total Late Penalties</span>
+            </div>
+          </div>
+
+          <div class="glass-card-box">
+            <h3>📈 Goal Progress Breakdown</h3>
+            <div class="table-wrap">
+              <table class="gq-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Goal</th>
+                    <th>Category</th>
+                    <th>Progress</th>
+                    <th>Avg Score</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (gp of rep.goalProgress; track gp.goalCode) {
+                    <tr>
+                      <td>{{ gp.goalCode }}</td>
+                      <td><strong>{{ gp.title }}</strong></td>
+                      <td>{{ gp.category }}</td>
+                      <td>{{ gp.completedCheckpoints }}/{{ gp.totalCheckpoints }} ({{ gp.progressPercent }}%)</td>
+                      <td>{{ gp.averageScorePercent }}%</td>
+                      <td><span class="status-tag">{{ gp.status }}</span></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="glass-card-box">
+            <h3>📝 Assessment Attempt History</h3>
+            @if (rep.assessmentHistory.length === 0) {
+              <p class="muted">No assessment attempts recorded yet.</p>
+            } @else {
+              <div class="table-wrap">
+                <table class="gq-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Goal</th>
+                      <th>Checkpoint</th>
+                      <th>Score</th>
+                      <th>Timing</th>
+                      <th>Cash Delta</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (att of rep.assessmentHistory; track att.attemptId) {
+                      <tr>
+                        <td>{{ att.submittedAtUtc | date: 'dd MMM HH:mm' }}</td>
+                        <td>{{ att.goalTitle }}</td>
+                        <td>{{ att.checkpointTitle }}</td>
+                        <td [class.emerald]="att.passed" [class.crimson]="!att.passed">
+                          {{ att.scorePercent }}% ({{ att.passed ? 'PASS' : 'FAIL' }})
+                        </td>
+                        <td>{{ att.completionTiming }}</td>
+                        <td [class.emerald]="att.cashDelta > 0" [class.crimson]="att.cashDelta < 0">
+                          {{ att.cashDelta >= 0 ? '+' : '' }}{{ att.cashDelta }} G
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ════════ 9. SETTINGS VIEW ════════ -->
+      @if (activeTab() === 'settings') {
+        <section class="panel-view">
+          <div class="view-header">
+            <div>
+              <h2>⚙️ Quest Rules &amp; Preferences</h2>
+              <p>Configure default pass mark, assessment time limits, reward multipliers, and late penalties.</p>
+            </div>
+          </div>
+
+          <div class="glass-card-box settings-box">
+            <div class="form-grid">
+              <div class="two-col">
+                <label>
+                  Hero Display Name
+                  <input type="text" [(ngModel)]="settingsForm.displayName" />
+                </label>
+                <label>
+                  Default Passing Percentage (%)
+                  <input type="number" min="1" max="100" [(ngModel)]="settingsForm.defaultPassPercentage" />
+                </label>
+              </div>
+              <div class="two-col">
+                <label>
+                  Default Time Limit (Minutes)
+                  <input type="number" min="1" max="240" [(ngModel)]="settingsForm.defaultTimeLimitMinutes" />
+                </label>
+                <label>
+                  Default Checkpoint Reward (G)
+                  <input type="number" min="0" [(ngModel)]="settingsForm.defaultRewardCash" />
+                </label>
+              </div>
+              <div class="two-col">
+                <label>
+                  Early Completion Multiplier (e.g. 2.0 = Double Reward)
+                  <input type="number" step="0.5" min="1" max="10" [(ngModel)]="settingsForm.earlyBonusMultiplier" />
+                </label>
+                <label>
+                  Default Late Penalty (G)
+                  <input type="number" min="0" [(ngModel)]="settingsForm.defaultLatePenaltyCash" />
+                </label>
+              </div>
+              <div class="toggle-row">
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="settingsForm.soundEnabled" />
+                  Enable Game Sound Effects
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="settingsForm.animationsEnabled" />
+                  Enable Glowing RPG Animations
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn-gold" (click)="saveSettings()">💾 Save Settings</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      }
+    </main>
+
+    <!-- Right Rail: Wallet, Recent Rewards, Penalties, Quick Shop -->
+    <aside class="gq-right-rail">
+      <div class="rail-card wallet-card">
+        <div class="wallet-label">
+          Game Cash Wallet
+          @if (api.isDemoMode()) {
+            <span class="inline-demo-pill">PRACTICE</span>
+          }
+        </div>
+        <div class="wallet-value">
+          <span class="coin-lg">G</span>
+          <span>{{ profile()?.gameCashBalance ?? 0 | number }}</span>
+        </div>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-title">🎁 Recent Rewards</div>
+        @if ((dashboard()?.recentRewards?.length ?? 0) === 0) {
+          <p class="rail-empty">Complete checkpoints to earn Gold!</p>
+        } @else {
+          @for (rw of dashboard()?.recentRewards ?? []; track rw.id) {
+            <div class="tx-line">
+              <span class="tx-desc">{{ rw.description }}</span>
+              <span class="tx-amt emerald">+{{ rw.amount }} 🪙</span>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="rail-card penalty-card">
+        <div class="rail-title">⚠️ Penalties</div>
+        @if ((dashboard()?.recentPenalties?.length ?? 0) === 0) {
+          <p class="rail-empty">Zero penalties — great streak!</p>
+        } @else {
+          @for (pen of dashboard()?.recentPenalties ?? []; track pen.id) {
+            <div class="tx-line">
+              <span class="tx-desc">{{ pen.description }}</span>
+              <span class="tx-amt crimson">{{ pen.amount }} 🪙</span>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-title clickable" (click)="setTab('rewards')">
+          <span>🛒 Rewards Shop</span>
+          <span>›</span>
+        </div>
+        <div class="quick-shop-grid">
+          <button type="button" class="qs-tile" (click)="shopCategoryFilter.set('Costume'); setTab('rewards')">
+            <span>🧥</span><small>Costumes</small>
+          </button>
+          <button type="button" class="qs-tile" (click)="shopCategoryFilter.set('Accessory'); setTab('rewards')">
+            <span>🎧</span><small>Accessories</small>
+          </button>
+          <button type="button" class="qs-tile" (click)="shopCategoryFilter.set('Character'); setTab('rewards')">
+            <span>🦸</span><small>Avatars</small>
+          </button>
+          <button type="button" class="qs-tile" (click)="shopCategoryFilter.set('Effect'); setTab('rewards')">
+            <span>🪽</span><small>Effects</small>
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ═══════ MODALS ═══════ -->
+  @if (showWalkthrough()) {
+    <app-gq-onboarding-walkthrough
+      (close)="dismissWalkthrough()"
+      (startPersonal)="startMyOwnJourney()"
+    />
+  }
+
+  @if (showImportModal()) {
+    <app-gq-excel-import-modal
+      (close)="showImportModal.set(false)"
+      (imported)="onExcelImported($event)"
+    />
+  }
+
+  @if (activeAssessmentSession(); as session) {
+    <app-gq-assessment-modal
+      [session]="session"
+      (close)="activeAssessmentSession.set(null)"
+      (completed)="onAssessmentCompleted($event)"
+    />
+  }
+
+  <!-- Goal Create/Edit Modal -->
+  @if (showGoalForm()) {
+    <div class="gq-modal-backdrop">
+      <div class="gq-form-modal">
+        <div class="form-modal-header">
+          <h3>{{ editingGoalId() ? '✏️ Edit Goal' : '🎯 Create New Goal' }}</h3>
+          <button type="button" class="modal-close-x" (click)="showGoalForm.set(false)" aria-label="Close">✕</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            Goal Title
+            <input type="text" [(ngModel)]="goalForm.title" placeholder="e.g. Complete Azure AI Certification (AI-900)" />
+          </label>
+          <label>
+            Description
+            <textarea rows="3" [(ngModel)]="goalForm.description"></textarea>
+          </label>
+          <div class="two-col">
+            <label>
+              Category
+              <input type="text" [(ngModel)]="goalForm.category" />
+            </label>
+            <label>
+              Priority
+              <select [(ngModel)]="goalForm.priority">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </label>
+          </div>
+          <div class="two-col">
+            <label>
+              Target Date
+              <input type="date" [(ngModel)]="goalForm.targetDateUtc" />
+            </label>
+            <label>
+              Status
+              <select [(ngModel)]="goalForm.status">
+                <option value="NotStarted">Not Started</option>
+                <option value="InProgress">In Progress</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" (click)="showGoalForm.set(false)">Cancel</button>
+            <button type="button" class="btn-gold" (click)="saveGoal()">💾 Save Goal</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Checkpoint Create/Edit Modal -->
+  @if (showCheckpointForm()) {
+    <div class="gq-modal-backdrop">
+      <div class="gq-form-modal">
+        <div class="form-modal-header">
+          <h3>{{ editingCheckpointId() ? '✏️ Edit Checkpoint' : '🚩 Add Checkpoint' }}</h3>
+          <button type="button" class="modal-close-x" (click)="showCheckpointForm.set(false)" aria-label="Close">✕</button>
+        </div>
+        <div class="form-grid">
+          <div class="two-col">
+            <label>
+              Sequence #
+              <input type="number" min="1" [(ngModel)]="cpForm.sequenceOrder" />
+            </label>
+            <label>
+              Title
+              <input type="text" [(ngModel)]="cpForm.title" placeholder="e.g. Practice + Assessment" />
+            </label>
+          </div>
+          <label>
+            Description
+            <textarea rows="2" [(ngModel)]="cpForm.description"></textarea>
+          </label>
+          <div class="two-col">
+            <label>
+              Due Date
+              <input type="date" [(ngModel)]="cpForm.dueDateUtc" />
+            </label>
+            <label>
+              Time Interval
+              <div class="inline-pair">
+                <input type="number" min="1" [(ngModel)]="cpForm.intervalValue" />
+                <select [(ngModel)]="cpForm.intervalUnit">
+                  <option value="Minutes">Minutes</option>
+                  <option value="Hours">Hours</option>
+                  <option value="Days">Days</option>
+                  <option value="Weeks">Weeks</option>
+                </select>
+              </div>
+            </label>
+          </div>
+          <div class="three-col">
+            <label>
+              Reward (G)
+              <input type="number" min="0" [(ngModel)]="cpForm.rewardCash" />
+            </label>
+            <label>
+              Early Bonus (G)
+              <input type="number" min="0" [(ngModel)]="cpForm.earlyBonusCash" />
+            </label>
+            <label>
+              Late Penalty (G)
+              <input type="number" min="0" [(ngModel)]="cpForm.latePenaltyCash" />
+            </label>
+          </div>
+          <div class="three-col">
+            <label>
+              Pass Mark (%)
+              <input type="number" min="1" max="100" [(ngModel)]="cpForm.passingPercentage" />
+            </label>
+            <label>
+              Time Limit (Min)
+              <input type="number" min="1" max="240" [(ngModel)]="cpForm.timeLimitMinutes" />
+            </label>
+            <label>
+              Status
+              <select [(ngModel)]="cpForm.status">
+                <option value="Locked">Locked</option>
+                <option value="InProgress">In Progress</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" (click)="showCheckpointForm.set(false)">Cancel</button>
+            <button type="button" class="btn-gold" (click)="saveCheckpoint()">💾 Save Checkpoint</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>
