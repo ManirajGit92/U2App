@@ -31,6 +31,7 @@ import { ExcelImportModalComponent } from './components/excel-import-modal/excel
 import { AssessmentModalComponent } from './components/assessment-modal/assessment-modal.component';
 import { OnboardingWalkthroughComponent } from './components/onboarding-walkthrough/onboarding-walkthrough.component';
 import { SnakeLadderBoardComponent } from './components/snake-ladder-board/snake-ladder-board.component';
+import { AiGoalAssistantComponent } from './components/ai-goal-assistant/ai-goal-assistant.component';
 
 @Component({
   selector: 'app-goal-quest',
@@ -45,6 +46,7 @@ import { SnakeLadderBoardComponent } from './components/snake-ladder-board/snake
     AssessmentModalComponent,
     OnboardingWalkthroughComponent,
     SnakeLadderBoardComponent,
+    AiGoalAssistantComponent,
   ],
   templateUrl: './goal-quest.component.html',
   styleUrl: './goal-quest.component.scss',
@@ -63,6 +65,7 @@ export class GoalQuestComponent implements OnInit {
   readonly showExportMenu = signal(false);
   readonly showImportModal = signal(false);
   readonly showBackgroundModal = signal(false);
+  readonly showAiAssistant = signal(false);
   readonly showWalkthrough = signal(false);
   readonly isResettingDemo = signal(false);
   bgUrlInput = '';
@@ -379,6 +382,17 @@ export class GoalQuestComponent implements OnInit {
     if (this.activeTab() === 'assessment') {
       await this.loadQuestions(cp.id);
     }
+  }
+
+  async onAiPlanAccepted(createdGoal: GoalDetail): Promise<void> {
+    this.showAiAssistant.set(false);
+    this.toast.show(
+      'AI Quest Created!',
+      `"${createdGoal.title}" added with ${createdGoal.checkpoints.length} checkpoints & assessments.`,
+      'success',
+    );
+    await this.refreshAll(createdGoal.id);
+    this.activeTab.set('roadmap');
   }
 
   // ─── Roadmap Background Image (Local Browse + Image URL) ───

@@ -313,6 +313,18 @@
         }
       }
 
+      .top-nav-btn.ai-assistant-trigger {
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.45), rgba(59, 130, 246, 0.42));
+        border: 1.5px solid rgba(196, 181, 253, 0.72);
+        color: #f5f3ff;
+        box-shadow: 0 0 18px rgba(139, 92, 246, 0.48);
+
+        &:hover {
+          background: linear-gradient(135deg, #7c3aed, #2563eb);
+          box-shadow: 0 0 24px rgba(168, 85, 247, 0.7);
+        }
+      }
+
       .top-right {
         display: flex;
         align-items: center;

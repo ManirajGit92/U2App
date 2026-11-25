@@ -43,6 +43,13 @@
       >
         📊 Reports
       </button>
+      <button
+        type="button"
+        class="top-nav-btn ai-assistant-trigger"
+        (click)="showAiAssistant.set(true)"
+      >
+        ✨ AI Assistant
+      </button>
     </nav>
 
     <div class="top-right">
@@ -1273,6 +1280,13 @@
   </div>
 
   <!-- ═══════ MODALS ═══════ -->
+  @if (showAiAssistant()) {
+    <app-gq-ai-goal-assistant
+      (close)="showAiAssistant.set(false)"
+      (planAccepted)="onAiPlanAccepted($event)"
+    />
+  }
+
   @if (showWalkthrough()) {
     <app-gq-onboarding-walkthrough
       (close)="dismissWalkthrough()"
