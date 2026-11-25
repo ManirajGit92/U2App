@@ -404,6 +404,34 @@ export class AiAssistantService {
     }
   }
 
+  /**
+   * Public reusable AI completion entry point shared across U2Tools screens.
+   * Reuses the configured AI provider (Azure AI Foundry backend, OpenAI, Gemini, Anthropic)
+   * and returns response text alongside token usage metadata.
+   */
+  async invokeCompletion(
+    userMessage: string,
+    history: Array<{ role: 'user' | 'assistant'; content: string }>,
+    systemInstructions: string,
+    overrideConfig?: Partial<AiConfig>
+  ): Promise<AiCallResult> {
+    const baseCfg = this._config();
+    const effectiveCfg: AiConfig = {
+      ...baseCfg,
+      ...overrideConfig,
+      systemInstructions: systemInstructions || baseCfg.systemInstructions,
+    };
+
+    const normalizedHistory: ChatMessage[] = history.map((m, idx) => ({
+      id: `shared-hist-${idx}`,
+      role: m.role,
+      content: m.content,
+      timestamp: '',
+    }));
+
+    return this.callAI(userMessage, normalizedHistory, effectiveCfg);
+  }
+
   private async callAI(
     userMessage: string,
     history: ChatMessage[],

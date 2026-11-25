@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import * as XLSX from 'xlsx';
+import { FlipBookAiAssistantComponent } from './ai-assistant/flip-book-ai-assistant.component';
+import { SlideAcceptPayload } from './ai-assistant/flip-book-ai.models';
+import { sanitizeSlideHtml } from './ai-assistant/slide-html-sanitizer';
 
 interface PageContent {
   sno: number;
@@ -48,7 +51,7 @@ const VOICE_PREFERENCES_KEY = 'u2app_flipbook_voice_preferences_v1';
 @Component({
   selector: 'app-flip-book',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FlipBookAiAssistantComponent],
   templateUrl: './flip-book.component.html',
   styleUrl: './flip-book.component.scss'
 })
@@ -180,6 +183,11 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   selectedEditingPageId: number = 0;
   editingPage: PageContent = this.blankPage(1);
 
+  // AI Assistant overlay state
+  showAiAssistant: boolean = false;
+  aiStatusMessage: string = '';
+  private aiStatusTimer: ReturnType<typeof setTimeout> | null = null;
+
   // Drag physics state
   isDragging: boolean = false;
   draggedPageId: number | null = null;
@@ -207,6 +215,7 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.stopAutoPlay();
     this.stopSpeaking();
+    if (this.aiStatusTimer) clearTimeout(this.aiStatusTimer);
     if ('speechSynthesis' in window) {
       window.speechSynthesis.removeEventListener('voiceschanged', this.voicesChangedHandler);
     }
@@ -370,8 +379,9 @@ export class FlipBookComponent implements OnInit, OnDestroy {
   }
 
   parseContentFields(page: PageContent) {
+    const cleanHtml = page.htmlContent ? sanitizeSlideHtml(page.htmlContent) : '';
     return {
-      safeHtml: page.htmlContent ? this.sanitizer.bypassSecurityTrustHtml(page.htmlContent) : undefined,
+      safeHtml: cleanHtml ? this.sanitizer.bypassSecurityTrustHtml(cleanHtml) : undefined,
       safeIframeUrl: page.iframeUrl ? this.sanitizer.bypassSecurityTrustResourceUrl(page.iframeUrl) : undefined
     };
   }
@@ -1355,8 +1365,102 @@ export class FlipBookComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ============== AI ASSISTANT INTEGRATION ==============
+
+  openAiAssistant() {
+    if (this.isPlaying) {
+      this.stopAutoPlay();
+    }
+    this.stopSpeaking();
+    this.showAiAssistant = true;
+    this.cdr.detectChanges();
+  }
+
+  closeAiAssistant() {
+    this.showAiAssistant = false;
+    this.cdr.detectChanges();
+  }
+
+  onAiSlidesAccepted(payload: SlideAcceptPayload) {
+    if (!payload.pages || payload.pages.length === 0) {
+      this.showAiAssistant = false;
+      return;
+    }
+
+    const incomingPages: PageContent[] = payload.pages.map((p, idx) => ({
+      sno: p.sno || idx + 1,
+      title: p.title || `Slide ${idx + 1}`,
+      layout: p.layout,
+      htmlContent: p.htmlContent ? sanitizeSlideHtml(p.htmlContent) : '',
+      imageUrl: p.imageUrl || '',
+      iframeUrl: p.iframeUrl || '',
+      voiceOver: p.voiceOver || '',
+    }));
+
+    const activeBook = this.books.find(b => b.id === this.selectedBookId);
+
+    if (payload.target === 'new-book' || !activeBook) {
+      const newBook: Book = {
+        id: 'book_' + Date.now(),
+        name: payload.deckTitle?.trim() || 'AI Generated Presentation',
+        pages: incomingPages.map((p, idx) => ({ ...p, sno: idx + 1 })),
+      };
+      this.books.push(newBook);
+      this.selectedBookId = newBook.id;
+      this.saveBooksList();
+      this.selectBook(newBook.id);
+      this.showAiStatusBanner(
+        `Created "${newBook.name}" with ${newBook.pages.length} AI-generated slides.`
+      );
+    } else {
+      const existingCount = activeBook.pages.length;
+      const appendedPages = incomingPages.map((p, idx) => ({
+        ...p,
+        sno: existingCount + idx + 1,
+      }));
+      activeBook.pages = [...activeBook.pages, ...appendedPages];
+      this.saveBooksList();
+
+      // Rebuild pages & physical papers while preserving existing slides and jumping to the first newly added slide
+      this.pages = activeBook.pages.map(p => ({
+        ...p,
+        ...this.parseContentFields(p),
+      }));
+      this.physicalPages = [];
+      for (let i = 0; i < this.pages.length; i += 2) {
+        this.physicalPages.push({
+          index: i / 2,
+          front: this.pages[i],
+          back: this.pages[i + 1],
+        });
+      }
+
+      const firstNewIndex = existingCount;
+      this.currentPageIndex = firstNewIndex;
+      this.speakCurrentLeftAndRight();
+      this.showAiStatusBanner(
+        `Added ${appendedPages.length} AI-generated slide${appendedPages.length === 1 ? '' : 's'} to "${activeBook.name}".`
+      );
+    }
+
+    this.showAiAssistant = false;
+    this.cdr.detectChanges();
+  }
+
+  private showAiStatusBanner(message: string) {
+    this.aiStatusMessage = message;
+    if (this.aiStatusTimer) clearTimeout(this.aiStatusTimer);
+    this.aiStatusTimer = setTimeout(() => {
+      this.aiStatusMessage = '';
+      this.cdr.detectChanges();
+    }, 5000);
+  }
+
   @HostListener('window:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent) {
+    if (this.showAiAssistant || this.showBookModal) {
+      return;
+    }
     const activeEl = document.activeElement;
     if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.getAttribute('contenteditable') === 'true')) {
       return;

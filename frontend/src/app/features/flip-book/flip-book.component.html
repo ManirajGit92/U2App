@@ -185,6 +185,9 @@
       <div style="flex: 1;"></div>
 
       <div class="action-status-indicators">
+        <button class="btn icon-btn ai-assistant-header-btn" (click)="openAiAssistant()" title="Open AI Assistant to generate presentation slides">
+          ✨ AI Assistant
+        </button>
         <button class="btn icon-btn theme-quick-btn" [class.jarvis-active]="selectedTheme === 'jarvis'" (click)="toggleTheme()" title="Toggle J.A.R.V.I.S. HUD Theme">
           {{ selectedTheme === 'jarvis' ? '⚡ J.A.R.V.I.S. Mode' : '🎨 Default Theme' }}
         </button>
@@ -203,6 +206,12 @@
     <!-- ERROR BANNER -->
     <div class="error-banner" *ngIf="errorMessage">
       ⚠️ {{ errorMessage }}
+    </div>
+
+    <!-- AI STATUS BANNER -->
+    <div class="ai-status-banner" *ngIf="aiStatusMessage">
+      <span>✨ {{ aiStatusMessage }}</span>
+      <button type="button" class="ai-status-close" (click)="aiStatusMessage = ''">✕</button>
     </div>
 
     <!-- PERSPECTIVE VIEWPORT -->
@@ -620,5 +629,14 @@
       </div>
     </div>
   </div>
+
+  <!-- FULL-SCREEN AI ASSISTANT OVERLAY -->
+  <app-flip-book-ai-assistant
+    *ngIf="showAiAssistant"
+    [activeBookName]="getSelectedBookName()"
+    [existingPageCount]="pages.length"
+    (closeAssistant)="closeAiAssistant()"
+    (slidesAccepted)="onAiSlidesAccepted($event)"
+  ></app-flip-book-ai-assistant>
 
 </div>

@@ -1,0 +1,840 @@
+<div class="fb-ai-overlay" role="dialog" aria-modal="true" aria-label="Flipbook AI Assistant">
+  <!-- ==================== TOP GLOBAL BAR ==================== -->
+  <header class="fb-ai-topbar">
+    <div class="topbar-left">
+      <button
+        type="button"
+        class="btn-icon-ghost mobile-sidebar-toggle"
+        (click)="chatSidebarOpen = !chatSidebarOpen"
+        title="Toggle conversations sidebar"
+      >
+        ☰
+      </button>
+      <div class="brand-badge">
+        <span class="brand-logo">U2</span>
+        <span class="brand-name">U2Tools</span>
+      </div>
+      <span class="topbar-divider"></span>
+      <span class="topbar-title">Flipbook — AI Assistant</span>
+      @if (activeBookName) {
+        <span class="active-book-pill" title="Active Flipbook">📖 {{ activeBookName }}</span>
+      }
+    </div>
+
+    <div class="topbar-right">
+      <div class="model-select-wrap" title="Select AI Model">
+        <select
+          [(ngModel)]="selectedModel"
+          (ngModelChange)="onModelSelectChange()"
+          class="model-select"
+          aria-label="AI Model"
+        >
+          <optgroup label="Azure AI Foundry (Backend Default)">
+            <option value="gpt-5.6-luna">gpt-5.6-luna (Foundry)</option>
+          </optgroup>
+          <optgroup label="OpenAI">
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="gpt-4o-mini">GPT-4o mini</option>
+          </optgroup>
+          <optgroup label="Google Gemini">
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+          </optgroup>
+          <optgroup label="Anthropic Claude">
+            <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        class="topbar-btn key-pill"
+        [class.configured]="hasApiKey"
+        (click)="openSettings()"
+        title="Configure AI Provider & API Key"
+      >
+        🔑 {{ hasApiKey ? 'AI Ready' : 'Set Key' }}
+      </button>
+
+      <button type="button" class="topbar-btn" (click)="showHelpModal = true">
+        ❓ Help
+      </button>
+
+      <button
+        type="button"
+        class="topbar-btn close-assistant-btn"
+        (click)="closeAssistant.emit()"
+        title="Return to Flipbook without losing progress"
+      >
+        ✕ Close
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== BODY SHELL ==================== -->
+  <div class="fb-ai-shell" [class.sidebar-open]="chatSidebarOpen">
+    <!-- LEFT CONVERSATION SIDEBAR -->
+    <aside class="chat-sidebar" [class.open]="chatSidebarOpen">
+      <button type="button" class="new-chat-btn" (click)="newChat()">
+        <span>＋</span>
+        <span>New Chat</span>
+      </button>
+
+      <div class="sidebar-search">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
+          placeholder="Search conversations..."
+          class="search-input"
+        />
+      </div>
+
+      <div class="session-list">
+        @if (pinnedSessions.length > 0) {
+          <div class="session-group-label">PINNED</div>
+          @for (s of pinnedSessions; track s.id) {
+            <div
+              class="session-item"
+              [class.active]="s.id === aiSvc.activeSessionId()"
+              (click)="selectSession(s.id)"
+            >
+              <span class="session-icon">💬</span>
+              <div class="session-info">
+                @if (renamingSessionId !== s.id) {
+                  <span class="session-title">{{ s.title }}</span>
+                } @else {
+                  <input
+                    class="rename-input"
+                    [value]="s.title"
+                    (blur)="finishRename($event, s.id)"
+                    (keydown.enter)="finishRename($event, s.id)"
+                    (click)="$event.stopPropagation()"
+                  />
+                }
+                <span class="session-date">{{ formatSessionDate(s.updatedAt) }}</span>
+              </div>
+              <div class="session-actions" (click)="$event.stopPropagation()">
+                <button type="button" (click)="aiSvc.togglePin(s.id)" title="Unpin">📌</button>
+                <button type="button" (click)="startRename(s.id)" title="Rename">✏️</button>
+                <button type="button" (click)="confirmDeleteSession(s.id)" title="Delete">🗑️</button>
+              </div>
+            </div>
+          }
+        }
+
+        <div class="session-group-label">RECENT CONVERSATIONS</div>
+        @for (s of recentSessions; track s.id) {
+          <div
+            class="session-item"
+            [class.active]="s.id === aiSvc.activeSessionId()"
+            (click)="selectSession(s.id)"
+          >
+            <span class="session-icon">📄</span>
+            <div class="session-info">
+              @if (renamingSessionId !== s.id) {
+                <span class="session-title">{{ s.title }}</span>
+              } @else {
+                <input
+                  class="rename-input"
+                  [value]="s.title"
+                  (blur)="finishRename($event, s.id)"
+                  (keydown.enter)="finishRename($event, s.id)"
+                  (click)="$event.stopPropagation()"
+                />
+              }
+              <span class="session-date">{{ formatSessionDate(s.updatedAt) }}</span>
+            </div>
+            <div class="session-actions" (click)="$event.stopPropagation()">
+              <button type="button" (click)="aiSvc.togglePin(s.id)" title="Pin">📌</button>
+              <button type="button" (click)="startRename(s.id)" title="Rename">✏️</button>
+              <button type="button" (click)="confirmDeleteSession(s.id)" title="Delete">🗑️</button>
+            </div>
+          </div>
+        }
+
+        @if (sessions.length === 0) {
+          <div class="empty-history">
+            <p>No conversations yet.</p>
+          </div>
+        }
+      </div>
+
+      @if (sessions.length > 0) {
+        <div class="sidebar-footer">
+          <button type="button" class="clear-history-btn" (click)="confirmClearAllHistory()">
+            🗑️ Clear All History
+          </button>
+        </div>
+      }
+    </aside>
+
+    <!-- MAIN CHAT & SLIDE PREVIEW WORKSPACE -->
+    <main class="workspace-main">
+      <!-- Banner Header -->
+      <div class="workspace-banner">
+        <div class="banner-icon">✨</div>
+        <div class="banner-text">
+          <h1>AI Assistant — Create Flipbook Slides</h1>
+          <p>
+            Describe your topic, slide count and style. I'll create ready-to-use slides with text,
+            images and HTML (if needed).
+          </p>
+        </div>
+        @if (currentSession && aiSvc.getSessionTotalTokens(currentSession) > 0) {
+          <div class="tokens-badge" title="Total tokens used in this chat">
+            ⚡ {{ aiSvc.getSessionTotalTokens(currentSession) | number }} tokens
+          </div>
+        }
+      </div>
+
+      @if (toastMessage()) {
+        <div class="toast-strip">✓ {{ toastMessage() }}</div>
+      }
+
+      <!-- Scrollable Conversation + Inline Slides Preview -->
+      <div class="workspace-scroll" #chatScrollArea>
+        <!-- Empty State -->
+        @if (!currentSession || currentSession.messages.length === 0) {
+          <div class="empty-chat-state">
+            <div class="empty-hero-icon">🪄</div>
+            <h2>Create Stunning Flipbook Presentations with AI</h2>
+            <p>
+              Tell me your topic, exact number of slides, and preferred tone or visual style.
+              You can preview, edit, or regenerate any slide before adding them to your Flipbook.
+            </p>
+            <div class="starter-grid">
+              @for (item of starterPrompts; track item.label) {
+                <button
+                  type="button"
+                  class="starter-card"
+                  (click)="useStarterPrompt(item.prompt)"
+                  [disabled]="aiSvc.isProcessing()"
+                >
+                  <span class="starter-emoji">{{ item.icon }}</span>
+                  <div class="starter-body">
+                    <strong>{{ item.label }}</strong>
+                    <span>{{ item.prompt }}</span>
+                  </div>
+                </button>
+              }
+            </div>
+          </div>
+        } @else {
+          <!-- Message Stream -->
+          <div class="messages-stream">
+            @for (msg of currentSession.messages; track msg.id) {
+              <div
+                class="msg-row"
+                [class.user-msg]="msg.role === 'user'"
+                [class.assistant-msg]="msg.role === 'assistant'"
+              >
+                @if (msg.role === 'assistant') {
+                  <div class="msg-avatar ai-avatar">✨</div>
+                }
+
+                <div class="msg-bubble">
+                  @if (msg.attachmentName) {
+                    <div class="msg-attachment-tag">📎 {{ msg.attachmentName }}</div>
+                  }
+                  <div class="msg-text">{{ msg.content }}</div>
+                  <div class="msg-meta">
+                    <span>{{ formatTime(msg.timestamp) }}</span>
+                    @if (msg.slideCount) {
+                      <span class="slide-count-chip">📑 {{ msg.slideCount }} slides</span>
+                    }
+                    @if (!msg.tokensUnavailable && msg.tokens !== undefined) {
+                      <span>{{ msg.tokens | number }} tokens</span>
+                    }
+                    <button
+                      type="button"
+                      class="copy-mini-btn"
+                      (click)="copyMessage(msg.id, msg.content)"
+                    >
+                      {{ copiedMessageIds.has(msg.id) ? '✓ Copied' : 'Copy' }}
+                    </button>
+                  </div>
+                </div>
+
+                @if (msg.role === 'user') {
+                  <div class="msg-avatar user-avatar">👤</div>
+                }
+              </div>
+            }
+
+            <!-- Loading State -->
+            @if (aiSvc.isProcessing()) {
+              <div class="msg-row assistant-msg">
+                <div class="msg-avatar ai-avatar">✨</div>
+                <div class="msg-bubble loading-bubble">
+                  <div class="typing-dots"><span></span><span></span><span></span></div>
+                  <span>Designing slides, layouts, visuals, and voiceover narration...</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ==================== GENERATED SLIDES PREVIEW CARD ==================== -->
+        @if (draftDeck && draftSlides.length > 0) {
+          <section class="slides-preview-card">
+            <!-- Preview Header -->
+            <div class="preview-card-header">
+              <div class="preview-title-group">
+                <span class="preview-icon">📊</span>
+                <div>
+                  <h3>
+                    Generated Slides Preview
+                    <span class="count-accent">({{ draftSlides.length }} Slides)</span>
+                  </h3>
+                  <span class="deck-subtitle">{{ draftDeck.deckTitle }} · {{ draftDeck.themeStyle }}</span>
+                </div>
+              </div>
+
+              <div class="preview-header-actions">
+                <button
+                  type="button"
+                  class="btn-outline"
+                  (click)="regenerateAll()"
+                  [disabled]="aiSvc.isProcessing()"
+                >
+                  ↻ Regenerate All
+                </button>
+                <button
+                  type="button"
+                  class="btn-outline"
+                  [class.active]="isEditingSlide"
+                  (click)="toggleEditMode()"
+                >
+                  {{ isEditingSlide ? '✓ Done Editing' : '✏️ Edit' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Horizontal Thumbnails Carousel -->
+            <div class="thumb-carousel-wrap">
+              <button
+                type="button"
+                class="carousel-arrow left"
+                (click)="scrollThumbs(-1)"
+                aria-label="Scroll slides left"
+              >
+                ‹
+              </button>
+
+              <div class="thumb-strip" #thumbCarousel>
+                @for (slide of draftSlides; track slide.id; let idx = $index) {
+                  <div
+                    class="slide-thumb-wrapper"
+                    [class.active]="idx === selectedSlideIndex"
+                    (click)="selectSlide(idx)"
+                  >
+                    <div
+                      class="slide-thumb-card"
+                      [style.background]="slide.style.background"
+                      [style.color]="slide.style.textColor"
+                      [style.font-family]="slide.style.fontFamily"
+                    >
+                      @if (slide.isRegenerating) {
+                        <div class="thumb-loading-mask">
+                          <div class="mini-spinner"></div>
+                        </div>
+                      }
+                      <div class="thumb-mini-content" [class.has-img]="slide.layout.includes('image')">
+                        <div class="thumb-text-col">
+                          <div class="thumb-title">{{ slide.title }}</div>
+                          @if (slide.bulletPoints.length > 0) {
+                            <ul class="thumb-bullets">
+                              @for (pt of slide.bulletPoints.slice(0, 3); track $index) {
+                                <li>{{ pt }}</li>
+                              }
+                            </ul>
+                          }
+                        </div>
+                        @if (slide.layout.includes('image')) {
+                          <div class="thumb-img-col">
+                            <img
+                              [src]="getDisplayImageUrl(slide, idx)"
+                              (error)="onPreviewImageError($event, slide, idx)"
+                              [alt]="slide.title"
+                            />
+                          </div>
+                        }
+                      </div>
+                    </div>
+                    <div class="thumb-caption">{{ idx + 1 }}. {{ slide.title }}</div>
+                  </div>
+                }
+              </div>
+
+              <button
+                type="button"
+                class="carousel-arrow right"
+                (click)="scrollThumbs(1)"
+                aria-label="Scroll slides right"
+              >
+                ›
+              </button>
+            </div>
+
+            <!-- Selected Slide Details Panel -->
+            @if (selectedSlide; as slide) {
+              <div class="slide-details-section">
+                <div class="details-top-bar">
+                  <div class="details-heading">
+                    <span>🖼️</span>
+                    <strong>Slide Details</strong>
+                    <span class="slide-index-pill">
+                      Slide {{ selectedSlideIndex + 1 }} of {{ draftSlides.length }}
+                    </span>
+                    <span class="layout-pill">{{ slide.layout }}</span>
+                  </div>
+
+                  <div class="view-mode-toggle">
+                    <button
+                      type="button"
+                      [class.active]="detailViewMode === 'preview'"
+                      (click)="detailViewMode = 'preview'"
+                    >
+                      🖥️ Preview
+                    </button>
+                    <button
+                      type="button"
+                      [class.active]="detailViewMode === 'html'"
+                      (click)="detailViewMode = 'html'"
+                    >
+                      &lt;/&gt; HTML
+                    </button>
+                  </div>
+                </div>
+
+                <div class="details-grid">
+                  <!-- LEFT: Live Scaled Slide Visual Preview -->
+                  <div class="live-slide-stage">
+                    @if (slide.isRegenerating) {
+                      <div class="stage-regenerating-overlay">
+                        <div class="mini-spinner"></div>
+                        <span>Regenerating Slide {{ selectedSlideIndex + 1 }}...</span>
+                      </div>
+                    }
+
+                    @if (slide.layout === 'full-image') {
+                      <div class="stage-full-image">
+                        <img
+                          [src]="getDisplayImageUrl(slide, selectedSlideIndex)"
+                          (error)="onPreviewImageError($event, slide, selectedSlideIndex)"
+                          [alt]="slide.title"
+                        />
+                      </div>
+                    } @else if (slide.layout === 'split-html-image') {
+                      <div class="stage-split">
+                        <div
+                          class="stage-html-pane"
+                          [innerHTML]="getSafeSlideHtml(slide)"
+                        ></div>
+                        <div class="stage-image-pane">
+                          <img
+                            [src]="getDisplayImageUrl(slide, selectedSlideIndex)"
+                            (error)="onPreviewImageError($event, slide, selectedSlideIndex)"
+                            [alt]="slide.title"
+                          />
+                        </div>
+                      </div>
+                    } @else {
+                      <div
+                        class="stage-full-html"
+                        [innerHTML]="getSafeSlideHtml(slide)"
+                      ></div>
+                    }
+                  </div>
+
+                  <!-- RIGHT: Slide Metadata / HTML Viewer / Inline Editor -->
+                  <div class="details-inspector">
+                    @if (!isEditingSlide) {
+                      @if (detailViewMode === 'preview') {
+                        <div class="inspector-read-view">
+                          <div class="meta-row">
+                            <span class="meta-label">Title:</span>
+                            <strong class="meta-value">{{ slide.title }}</strong>
+                          </div>
+                          @if (slide.subtitle) {
+                            <div class="meta-row">
+                              <span class="meta-label">Subtitle:</span>
+                              <span class="meta-value">{{ slide.subtitle }}</span>
+                            </div>
+                          }
+                          @if (slide.summary) {
+                            <div class="meta-block">
+                              <span class="meta-label">Overview:</span>
+                              <p>{{ slide.summary }}</p>
+                            </div>
+                          }
+                          @if (slide.bulletPoints.length > 0) {
+                            <div class="meta-block">
+                              <span class="meta-label">Content Points:</span>
+                              <ul class="inspector-bullets">
+                                @for (pt of slide.bulletPoints; track $index) {
+                                  <li>{{ pt }}</li>
+                                }
+                              </ul>
+                            </div>
+                          }
+                          @if (slide.keyTakeaway) {
+                            <div class="takeaway-box">
+                              <strong>Key Takeaway:</strong> {{ slide.keyTakeaway }}
+                            </div>
+                          }
+                          @if (slide.voiceOver) {
+                            <div class="voiceover-box">
+                              <span class="meta-label">🔊 Voice Narration Script:</span>
+                              <p>{{ slide.voiceOver }}</p>
+                            </div>
+                          }
+                        </div>
+                      } @else {
+                        <div class="html-code-panel">
+                          <div class="html-code-header">
+                            <span>Sanitized Slide HTML</span>
+                            <button type="button" class="copy-code-btn" (click)="copySlideHtml()">
+                              {{ copiedHtml ? '✓ Copied' : '⎘ Copy HTML' }}
+                            </button>
+                          </div>
+                          <pre class="html-code-view">{{ slide.htmlContent }}</pre>
+                        </div>
+                      }
+                    } @else {
+                      <!-- INLINE SLIDE EDITOR -->
+                      <div class="inspector-edit-form">
+                        <div class="edit-row-two">
+                          <label class="edit-field">
+                            <span>Slide Title</span>
+                            <input
+                              type="text"
+                              [(ngModel)]="slide.title"
+                              (ngModelChange)="onSlideFieldChanged(true)"
+                            />
+                          </label>
+                          <label class="edit-field">
+                            <span>Layout</span>
+                            <select
+                              [(ngModel)]="slide.layout"
+                              (ngModelChange)="onSlideFieldChanged(true)"
+                            >
+                              <option value="full-html">Full HTML</option>
+                              <option value="split-html-image">Split HTML + Image</option>
+                              <option value="full-image">Full Image</option>
+                            </select>
+                          </label>
+                        </div>
+
+                        <div class="edit-row-two">
+                          <label class="edit-field">
+                            <span>Font Family</span>
+                            <select
+                              [(ngModel)]="slide.style.fontFamily"
+                              (ngModelChange)="onSlideFieldChanged(true)"
+                            >
+                              @for (f of fontOptions; track f.value) {
+                                <option [value]="f.value">{{ f.label }}</option>
+                              }
+                            </select>
+                          </label>
+                          <div class="edit-field">
+                            <span>Color Theme Preset</span>
+                            <div class="preset-swatches">
+                              @for (preset of backgroundPresets; track preset.label) {
+                                <button
+                                  type="button"
+                                  class="swatch-btn"
+                                  [style.background]="preset.bg"
+                                  [style.border-color]="preset.accent"
+                                  [title]="preset.label"
+                                  (click)="applyBackgroundPreset(preset)"
+                                ></button>
+                              }
+                            </div>
+                          </div>
+                        </div>
+
+                        @if (detailViewMode === 'preview') {
+                          <label class="edit-field">
+                            <span>Bullet Points (one per line)</span>
+                            <textarea
+                              rows="3"
+                              [(ngModel)]="editBulletsText"
+                              (ngModelChange)="onSlideFieldChanged(true)"
+                            ></textarea>
+                          </label>
+
+                          <label class="edit-field">
+                            <span>Key Takeaway</span>
+                            <input
+                              type="text"
+                              [(ngModel)]="slide.keyTakeaway"
+                              (ngModelChange)="onSlideFieldChanged(true)"
+                            />
+                          </label>
+                        } @else {
+                          <label class="edit-field">
+                            <span>Custom HTML (Sanitized Automatically)</span>
+                            <textarea
+                              rows="5"
+                              class="mono-textarea"
+                              [ngModel]="slide.htmlContent"
+                              (ngModelChange)="onDirectHtmlChanged($event)"
+                            ></textarea>
+                          </label>
+                        }
+
+                        @if (slide.layout.includes('image')) {
+                          <div class="edit-field">
+                            <span>Image URL or Upload</span>
+                            <div class="image-edit-row">
+                              <input
+                                type="text"
+                                [(ngModel)]="slide.imageUrl"
+                                (ngModelChange)="onSlideFieldChanged(false)"
+                                placeholder="https://images.unsplash.com/..."
+                              />
+                              <label class="upload-img-btn">
+                                📁 Upload
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  hidden
+                                  (change)="onSlideImageUpload($event)"
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        }
+
+                        <label class="edit-field">
+                          <span>Voice Narration Script</span>
+                          <textarea
+                            rows="2"
+                            [(ngModel)]="slide.voiceOver"
+                            (ngModelChange)="onSlideFieldChanged(false)"
+                          ></textarea>
+                        </label>
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Preview Card Footer Actions -->
+                <div class="preview-card-footer">
+                  <div class="footer-left-actions">
+                    <button
+                      type="button"
+                      class="btn-outline"
+                      (click)="regenerateSelectedSlide()"
+                      [disabled]="slide.isRegenerating || aiSvc.isProcessing()"
+                    >
+                      {{ slide.isRegenerating ? '⏳ Regenerating...' : '↻ Regenerate This Slide' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-outline"
+                      [class.active]="isEditingSlide"
+                      (click)="toggleEditMode()"
+                    >
+                      {{ isEditingSlide ? '✓ Finish Slide Edit' : '✏️ Edit This Slide' }}
+                    </button>
+                    @if (draftSlides.length > 1) {
+                      <button
+                        type="button"
+                        class="btn-outline btn-danger-outline"
+                        (click)="removeSelectedSlide()"
+                        title="Remove this slide from preview"
+                      >
+                        🗑️ Remove
+                      </button>
+                    }
+                  </div>
+
+                  <div class="footer-right-actions">
+                    <select
+                      class="target-select"
+                      [(ngModel)]="acceptTarget"
+                      title="Choose how to add approved slides"
+                    >
+                      <option value="append">Append to current Flipbook</option>
+                      <option value="new-book">Create as new Flipbook</option>
+                    </select>
+                    <button type="button" class="btn-cancel" (click)="cancelDraft()">
+                      ✕ Cancel
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-accept-primary"
+                      (click)="acceptAndAddToFlipbook()"
+                      [disabled]="aiSvc.isProcessing()"
+                    >
+                      ✓ Accept &amp; Add to Flipbook
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </section>
+        }
+      </div>
+
+      <!-- Error Banner -->
+      @if (aiSvc.error()) {
+        <div class="error-strip">
+          <span>⚠️ {{ aiSvc.error() }}</span>
+          <div class="error-strip-actions">
+            <button type="button" (click)="openSettings()">Settings</button>
+            <button type="button" (click)="aiSvc.error.set(null)">✕</button>
+          </div>
+        </div>
+      }
+
+      <!-- Attachment Chip -->
+      @if (currentAttachment) {
+        <div class="attachment-strip">
+          <span>📎 Reference attached: <strong>{{ currentAttachment.fileName }}</strong></span>
+          <button type="button" (click)="clearAttachment()">✕</button>
+        </div>
+      }
+
+      <!-- Bottom Chat Input Bar -->
+      <div class="chat-input-dock">
+        <div class="chat-input-box">
+          <label class="attach-icon-btn" title="Attach outline or notes (.txt, .md, .json, .csv)">
+            📎
+            <input
+              type="file"
+              hidden
+              accept=".txt,.md,.json,.csv"
+              (change)="onFileSelected($event)"
+            />
+          </label>
+          <textarea
+            [(ngModel)]="messageText"
+            (keydown)="onInputKeydown($event)"
+            rows="1"
+            class="chat-textarea"
+            [disabled]="aiSvc.isProcessing()"
+            placeholder="Ask me to create slides, modify content, or change the design..."
+          ></textarea>
+          <button
+            type="button"
+            class="send-circle-btn"
+            (click)="sendMessage()"
+            [disabled]="(!messageText.trim() && !currentAttachment) || aiSvc.isProcessing()"
+            aria-label="Send message"
+          >
+            ➤
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== SETTINGS MODAL ==================== -->
+  @if (showSettingsModal) {
+    <div class="ai-modal-backdrop" (click)="showSettingsModal = false">
+      <div class="ai-modal-card" (click)="$event.stopPropagation()">
+        <div class="ai-modal-header">
+          <h3>AI Provider &amp; Model Settings</h3>
+          <button type="button" class="modal-x" (click)="showSettingsModal = false">✕</button>
+        </div>
+        <div class="ai-modal-body">
+          <label class="modal-field">
+            <span>AI Provider (Shared across U2Tools)</span>
+            <select
+              [(ngModel)]="settingsDraft.provider"
+              (ngModelChange)="onSettingsProviderChange()"
+            >
+              <option value="foundry">Azure AI Foundry (Backend Default)</option>
+              <option value="openai">OpenAI (Direct API)</option>
+              <option value="gemini">Google Gemini (Direct API)</option>
+              <option value="anthropic">Anthropic Claude (Direct API)</option>
+            </select>
+          </label>
+
+          <label class="modal-field">
+            <span>Model</span>
+            <select [(ngModel)]="settingsDraft.model">
+              @if (settingsDraft.provider === 'foundry') {
+                <option value="gpt-5.6-luna">gpt-5.6-luna (Foundry)</option>
+              } @else if (settingsDraft.provider === 'openai') {
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4o-mini">GPT-4o mini</option>
+              } @else if (settingsDraft.provider === 'gemini') {
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+              } @else {
+                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+              }
+            </select>
+          </label>
+
+          <label class="modal-field">
+            <span>API Key (Optional for Foundry Backend, Required for Direct API)</span>
+            <div class="password-row">
+              <input
+                [type]="showApiKey ? 'text' : 'password'"
+                [(ngModel)]="settingsDraft.apiKey"
+                placeholder="Enter API Key (sk-... or AIza...)"
+              />
+              <button type="button" (click)="showApiKey = !showApiKey">
+                {{ showApiKey ? '🙈' : '👁️' }}
+              </button>
+            </div>
+          </label>
+        </div>
+        <div class="ai-modal-footer">
+          <button type="button" class="btn-cancel" (click)="showSettingsModal = false">Cancel</button>
+          <button type="button" class="btn-accept-primary" (click)="saveSettings()">
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== HELP MODAL ==================== -->
+  @if (showHelpModal) {
+    <div class="ai-modal-backdrop" (click)="showHelpModal = false">
+      <div class="ai-modal-card" (click)="$event.stopPropagation()">
+        <div class="ai-modal-header">
+          <h3>How Flipbook AI Assistant Works</h3>
+          <button type="button" class="modal-x" (click)="showHelpModal = false">✕</button>
+        </div>
+        <div class="ai-modal-body help-steps">
+          <div class="help-step">
+            <span class="step-badge">1</span>
+            <div>
+              <strong>Describe Your Presentation</strong>
+              <p>Type any topic, exact slide count (e.g. "Create 5 slides on AI in Education"), style, or attach outline notes.</p>
+            </div>
+          </div>
+          <div class="help-step">
+            <span class="step-badge">2</span>
+            <div>
+              <strong>Preview, Edit &amp; Regenerate</strong>
+              <p>Inspect every generated slide, switch between live Preview and sanitized HTML, edit text/colors/images, or regenerate individual slides.</p>
+            </div>
+          </div>
+          <div class="help-step">
+            <span class="step-badge">3</span>
+            <div>
+              <strong>Approve &amp; Add to Flipbook</strong>
+              <p>Click <em>Accept &amp; Add to Flipbook</em> to append slides to your current Flipbook (preserving existing pages) or create a new book with full theme, autoplay, and voice narration support.</p>
+            </div>
+          </div>
+        </div>
+        <div class="ai-modal-footer">
+          <button type="button" class="btn-accept-primary" (click)="showHelpModal = false">
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

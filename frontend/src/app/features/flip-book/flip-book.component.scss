@@ -377,6 +377,22 @@
   .action-status-indicators {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .ai-assistant-header-btn {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #9333ea) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(139, 92, 246, 0.5) !important;
+    font-weight: 700;
+    box-shadow: 0 3px 12px rgba(99, 102, 241, 0.28);
+    transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease;
+
+    &:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 5px 16px rgba(99, 102, 241, 0.38);
+    }
   }
 }
 .error-banner {
@@ -386,6 +402,27 @@
   text-align: center;
   font-weight: bold;
   font-size: 0.85rem;
+}
+.ai-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.14), rgba(139, 92, 246, 0.14));
+  border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+  color: var(--accent-primary, #6366f1);
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 0.84rem;
+
+  .ai-status-close {
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-weight: 800;
+    padding: 0 4px;
+  }
 }
 .viewer-canvas {
   flex: 1;
