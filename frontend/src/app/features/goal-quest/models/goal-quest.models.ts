@@ -87,6 +87,7 @@ export interface GoalSummary {
   targetDateUtc: string;
   status: GoalStatus;
   themeCode: string;
+  backgroundImageUrl?: string;
   totalCheckpoints: number;
   completedCheckpoints: number;
   progressPercent: number;
@@ -127,6 +128,7 @@ export interface GoalDetail {
   targetDateUtc: string;
   status: GoalStatus;
   themeCode: string;
+  backgroundImageUrl?: string;
   progressPercent: number;
   checkpoints: Checkpoint[];
   createdAtUtc: string;
@@ -142,6 +144,7 @@ export interface SaveGoalRequest {
   targetDateUtc: string;
   status?: GoalStatus;
   themeCode?: string;
+  backgroundImageUrl?: string;
 }
 
 export interface SaveCheckpointRequest {
@@ -387,6 +390,7 @@ export interface ExcelGoalRow {
   targetDate: string;
   status: string;
   themeCode: string;
+  backgroundImageUrl?: string;
 }
 
 export interface ExcelCheckpointRow {

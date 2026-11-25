@@ -46,6 +46,54 @@
     </nav>
 
     <div class="top-right">
+      <!-- Roadmap Mode Selector Dropdown -->
+      <div class="roadmap-mode-picker">
+        <button
+          type="button"
+          class="roadmap-mode-btn"
+          (click)="showRoadmapModeMenu.set(!showRoadmapModeMenu())"
+        >
+          <span>{{ roadmapMode() === 'snake-ladder' ? '🎲 Mode: Snake & Ladder' : '🗺️ Mode: Default Roadmap' }}</span>
+          <span class="caret">▾</span>
+        </button>
+
+        @if (showRoadmapModeMenu()) {
+          <div class="roadmap-mode-menu">
+            <div class="rm-menu-title">Choose Roadmap Mode</div>
+            <button
+              type="button"
+              class="rm-option"
+              [class.selected]="roadmapMode() === 'default'"
+              (click)="setRoadmapMode('default')"
+            >
+              <span class="rm-ico">🗺️</span>
+              <span class="rm-txt">
+                <strong>Default Roadmap</strong>
+                <small>Adventure path with checkpoints</small>
+              </span>
+              @if (roadmapMode() === 'default') {
+                <span class="rm-check">✓</span>
+              }
+            </button>
+            <button
+              type="button"
+              class="rm-option"
+              [class.selected]="roadmapMode() === 'snake-ladder'"
+              (click)="setRoadmapMode('snake-ladder')"
+            >
+              <span class="rm-ico">🎲</span>
+              <span class="rm-txt">
+                <strong>Snake &amp; Ladder</strong>
+                <small>Board-based journey with days</small>
+              </span>
+              @if (roadmapMode() === 'snake-ladder') {
+                <span class="rm-check">✓</span>
+              }
+            </button>
+          </div>
+        }
+      </div>
+
       @if (!api.isDemoMode()) {
         <button
           type="button"
@@ -239,6 +287,15 @@
             >
               ✏️
             </button>
+
+            <button
+              type="button"
+              class="btn-bg-picker"
+              title="Change Roadmap Background (Local Image or URL)"
+              (click)="openBackgroundModal()"
+            >
+              🖼️ Background
+            </button>
           }
 
           <!-- Prominent Import Excel (Green) & Export Excel (Purple) Buttons -->
@@ -289,9 +346,27 @@
           </div>
         </section>
 
+        <!-- Interactive Roadmap Visualization (Default Adventure Map OR Snake & Ladder Board) -->
+        @if (roadmapMode() === 'snake-ladder' && selectedGoal(); as slGoal) {
+          <app-gq-snake-ladder-board
+            [goal]="slGoal"
+            [selectedCheckpoint]="selectedCheckpoint()"
+            [profile]="profile()"
+            [backgroundImageUrl]="slGoal.backgroundImageUrl ?? null"
+            (selectCheckpoint)="selectCheckpoint($event)"
+            (launchAssessment)="launchAssessment($event)"
+            (editCheckpoint)="openEditCheckpointModal($event)"
+            (openQuestions)="setTab('assessment')"
+          />
+        } @else {
         <!-- Interactive RPG Adventure Map Canvas -->
-        <section class="rpg-map-stage">
+        <section
+          class="rpg-map-stage"
+          [class.has-custom-bg]="!!selectedGoal()?.backgroundImageUrl"
+          [style.backgroundImage]="selectedGoal()?.backgroundImageUrl ? 'linear-gradient(rgba(8, 13, 34, 0.42), rgba(8, 13, 34, 0.58)), url(' + selectedGoal()?.backgroundImageUrl + ')' : null"
+        >
           <!-- Scenic SVG Backdrop (Mountains, Valley, Castle, Glowing Winding Path) -->
+          @if (!selectedGoal()?.backgroundImageUrl) {
           <svg class="map-scenery" viewBox="0 0 1200 540" preserveAspectRatio="none" aria-hidden="true">
             <defs>
               <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -327,6 +402,7 @@
               stroke-linecap="round"
             />
           </svg>
+          }
 
           <!-- Hero Pedestal (Left) -->
           <div class="hero-pedestal-overlay">
@@ -433,6 +509,7 @@
             </div>
           }
         </section>
+        }
 
         <!-- Bottom "Customize Everything" Dock -->
         <section class="customize-dock glass-panel">
@@ -1216,6 +1293,49 @@
       (close)="activeAssessmentSession.set(null)"
       (completed)="onAssessmentCompleted($event)"
     />
+  }
+
+  <!-- Roadmap Background Modal -->
+  @if (showBackgroundModal()) {
+    <div class="gq-modal-backdrop">
+      <div class="gq-form-modal">
+        <div class="form-modal-header">
+          <h3>🖼️ Roadmap Background Image</h3>
+          <button type="button" class="modal-close-x" (click)="showBackgroundModal.set(false)" aria-label="Close">✕</button>
+        </div>
+
+        <div class="form-grid">
+          <div class="bg-preview-box" [style.backgroundImage]="bgPreviewUrl() ? 'url(' + bgPreviewUrl() + ')' : null">
+            @if (!bgPreviewUrl()) {
+              <span>Default Theme Background Active</span>
+            }
+          </div>
+
+          <label>
+            Option 1: Paste Image URL (saved &amp; included in Excel Export)
+            <input
+              type="text"
+              [ngModel]="bgUrlInput"
+              (ngModelChange)="onBgUrlInputChange($event)"
+              placeholder="https://images.unsplash.com/..."
+            />
+          </label>
+
+          <div class="bg-or-divider">— OR —</div>
+
+          <label class="bg-file-upload">
+            <input type="file" accept="image/*" (change)="onLocalBgFileSelected($event)" />
+            <span>📁 Option 2: Browse Local System Image (PNG / JPG / WebP, max 4 MB)</span>
+          </label>
+
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" (click)="resetBackgroundImage()">Reset Default</button>
+            <button type="button" class="btn-secondary" (click)="showBackgroundModal.set(false)">Cancel</button>
+            <button type="button" class="btn-gold" (click)="saveBackgroundImage()">💾 Save Background</button>
+          </div>
+        </div>
+      </div>
+    </div>
   }
 
   <!-- Goal Create/Edit Modal -->

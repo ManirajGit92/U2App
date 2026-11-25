@@ -248,6 +248,7 @@ export class GoalQuestLocalStoreService {
       targetDateUtc: req.targetDateUtc || new Date(Date.now() + 60 * 86400000).toISOString(),
       status: req.status || 'InProgress',
       themeCode: req.themeCode || state.profile.activeThemeCode,
+      backgroundImageUrl: req.backgroundImageUrl?.trim() || '',
       progressPercent: 0,
       checkpoints: [],
       createdAtUtc: now,
@@ -284,6 +285,7 @@ export class GoalQuestLocalStoreService {
     if (req.targetDateUtc) goal.targetDateUtc = req.targetDateUtc;
     if (req.status) goal.status = req.status;
     if (req.themeCode) goal.themeCode = req.themeCode;
+    if (req.backgroundImageUrl !== undefined) goal.backgroundImageUrl = req.backgroundImageUrl.trim();
     goal.updatedAtUtc = new Date().toISOString();
 
     this.saveState(userId, mode, state);
@@ -887,6 +889,7 @@ export class GoalQuestLocalStoreService {
         targetDate: g.targetDateUtc.slice(0, 10),
         status: g.status,
         themeCode: g.themeCode,
+        backgroundImageUrl: g.backgroundImageUrl ?? '',
       })),
       checkpoints: allCps.map((c, i) => ({
         rowNumber: i + 2,
@@ -1211,6 +1214,9 @@ export class GoalQuestLocalStoreService {
         existing.targetDateUtc = new Date(r.targetDate).toISOString();
         existing.status = r.status as GoalStatus;
         existing.themeCode = r.themeCode?.trim() || 'THEME-FANTASY';
+        if (r.backgroundImageUrl !== undefined) {
+          existing.backgroundImageUrl = r.backgroundImageUrl.trim();
+        }
         existing.updatedAtUtc = now;
       } else {
         const created: GoalDetail = {
@@ -1223,6 +1229,7 @@ export class GoalQuestLocalStoreService {
           targetDateUtc: new Date(r.targetDate).toISOString(),
           status: r.status as GoalStatus,
           themeCode: r.themeCode?.trim() || 'THEME-FANTASY',
+          backgroundImageUrl: r.backgroundImageUrl?.trim() || '',
           progressPercent: 0,
           checkpoints: [],
           createdAtUtc: now,

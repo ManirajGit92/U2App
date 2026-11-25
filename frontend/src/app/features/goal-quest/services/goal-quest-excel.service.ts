@@ -64,6 +64,7 @@ export class GoalQuestExcelService {
         targetDate: str(r, 'TargetDate', 'Target Date'),
         status: str(r, 'Status') || 'InProgress',
         themeCode: str(r, 'ThemeCode', 'Theme') || 'THEME-KINGDOM',
+        backgroundImageUrl: str(r, 'BackgroundImageUrl', 'Background Image URL', 'BackgroundImage'),
       })),
 
       checkpoints: readSheet(['Checkpoints']).map((r, i) => ({
@@ -205,8 +206,20 @@ export class GoalQuestExcelService {
         TargetDate: g.targetDate,
         Status: g.status,
         ThemeCode: g.themeCode,
+        BackgroundImageUrl:
+          g.backgroundImageUrl && g.backgroundImageUrl.length <= 32000 ? g.backgroundImageUrl : '',
       })),
-      ['GoalCode', 'Title', 'Description', 'Category', 'Priority', 'TargetDate', 'Status', 'ThemeCode'],
+      [
+        'GoalCode',
+        'Title',
+        'Description',
+        'Category',
+        'Priority',
+        'TargetDate',
+        'Status',
+        'ThemeCode',
+        'BackgroundImageUrl',
+      ],
     );
 
     addSheet(

@@ -30,6 +30,7 @@ import { AvatarRendererComponent } from './components/avatar-renderer/avatar-ren
 import { ExcelImportModalComponent } from './components/excel-import-modal/excel-import-modal.component';
 import { AssessmentModalComponent } from './components/assessment-modal/assessment-modal.component';
 import { OnboardingWalkthroughComponent } from './components/onboarding-walkthrough/onboarding-walkthrough.component';
+import { SnakeLadderBoardComponent } from './components/snake-ladder-board/snake-ladder-board.component';
 
 @Component({
   selector: 'app-goal-quest',
@@ -43,6 +44,7 @@ import { OnboardingWalkthroughComponent } from './components/onboarding-walkthro
     ExcelImportModalComponent,
     AssessmentModalComponent,
     OnboardingWalkthroughComponent,
+    SnakeLadderBoardComponent,
   ],
   templateUrl: './goal-quest.component.html',
   styleUrl: './goal-quest.component.scss',
@@ -54,11 +56,17 @@ export class GoalQuestComponent implements OnInit {
 
   // Navigation & UI state
   readonly activeTab = signal<GoalQuestTab>('roadmap');
+  readonly roadmapMode = signal<'default' | 'snake-ladder'>(this.loadRoadmapMode());
+  readonly showRoadmapModeMenu = signal(false);
   readonly isLoading = signal(true);
+  private readonly roadmapModeKey = 'u2app.goalquest.roadmapMode';
   readonly showExportMenu = signal(false);
   readonly showImportModal = signal(false);
+  readonly showBackgroundModal = signal(false);
   readonly showWalkthrough = signal(false);
   readonly isResettingDemo = signal(false);
+  bgUrlInput = '';
+  bgPreviewUrl = signal<string>('');
   readonly activeAssessmentSession = signal<AssessmentSession | null>(null);
   private readonly tourSeenKey = 'u2app.goalquest.tourSeen';
   readonly shopCategoryFilter = signal<string>('All');
@@ -308,9 +316,30 @@ export class GoalQuestComponent implements OnInit {
     };
   }
 
+  private loadRoadmapMode(): 'default' | 'snake-ladder' {
+    try {
+      const saved = localStorage.getItem('u2app.goalquest.roadmapMode');
+      return saved === 'snake-ladder' ? 'snake-ladder' : 'default';
+    } catch {
+      return 'default';
+    }
+  }
+
+  setRoadmapMode(mode: 'default' | 'snake-ladder'): void {
+    this.roadmapMode.set(mode);
+    this.showRoadmapModeMenu.set(false);
+    this.activeTab.set('roadmap');
+    try {
+      localStorage.setItem(this.roadmapModeKey, mode);
+    } catch {
+      // ignore storage errors
+    }
+  }
+
   async setTab(tab: GoalQuestTab): Promise<void> {
     this.activeTab.set(tab);
     this.showExportMenu.set(false);
+    this.showRoadmapModeMenu.set(false);
 
     if (tab === 'reports') {
       await this.loadReports();
@@ -350,6 +379,93 @@ export class GoalQuestComponent implements OnInit {
     if (this.activeTab() === 'assessment') {
       await this.loadQuestions(cp.id);
     }
+  }
+
+  // ─── Roadmap Background Image (Local Browse + Image URL) ───
+  openBackgroundModal(): void {
+    const goal = this.selectedGoal();
+    if (!goal) {
+      this.toast.show('Select a Goal', 'Create or select a goal first.', 'warning');
+      return;
+    }
+    const existing = goal.backgroundImageUrl ?? '';
+    this.bgUrlInput = existing.startsWith('http') ? existing : '';
+    this.bgPreviewUrl.set(existing);
+    this.showBackgroundModal.set(true);
+  }
+
+  onBgUrlInputChange(val: string): void {
+    this.bgUrlInput = val;
+    const trimmed = val.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      this.bgPreviewUrl.set(trimmed);
+    }
+  }
+
+  onLocalBgFileSelected(event: Event): void {
+    const inputEl = event.target as HTMLInputElement;
+    const file = inputEl.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.toast.show('Invalid File', 'Please select a valid image file (PNG, JPG, WebP, GIF).', 'warning');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      this.toast.show('Image Too Large', 'Please choose an image smaller than 4 MB.', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (dataUrl) {
+        this.bgUrlInput = '';
+        this.bgPreviewUrl.set(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async saveBackgroundImage(): Promise<void> {
+    const goal = this.selectedGoal();
+    if (!goal) return;
+
+    const urlToSave = this.bgUrlInput.trim() || this.bgPreviewUrl().trim();
+    if (urlToSave && !urlToSave.startsWith('http://') && !urlToSave.startsWith('https://') && !urlToSave.startsWith('data:image/')) {
+      this.toast.show('Invalid URL', 'Enter a valid http:// or https:// image URL, or browse a local image.', 'warning');
+      return;
+    }
+
+    try {
+      await this.api.updateGoal(goal.id, {
+        title: goal.title,
+        description: goal.description,
+        category: goal.category,
+        priority: goal.priority,
+        targetDateUtc: goal.targetDateUtc,
+        status: goal.status,
+        themeCode: goal.themeCode,
+        backgroundImageUrl: urlToSave,
+      });
+      this.showBackgroundModal.set(false);
+      this.toast.show(
+        'Background Updated',
+        urlToSave.startsWith('http')
+          ? 'Custom background URL saved and will be included in Excel exports!'
+          : 'Local background image applied to your roadmap!',
+        'success',
+      );
+      await this.refreshAll(goal.id);
+    } catch {
+      this.toast.show('Error', 'Failed to save roadmap background.', 'error');
+    }
+  }
+
+  async resetBackgroundImage(): Promise<void> {
+    this.bgUrlInput = '';
+    this.bgPreviewUrl.set('');
+    await this.saveBackgroundImage();
   }
 
   // ─── Goal CRUD ───
