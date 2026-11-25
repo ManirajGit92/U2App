@@ -101,6 +101,24 @@ DEFAULT_VOICES = [
         "gender": "Female",
     },
     {
+        "name": "en-IN-NeerjaExpressiveNeural",
+        "displayName": "Neerja Expressive (India - Female, Emotional)",
+        "locale": "en-IN",
+        "gender": "Female",
+    },
+    {
+        "name": "en-IN-KavyaNeural",
+        "displayName": "Kavya (India - Female, Warm)",
+        "locale": "en-IN",
+        "gender": "Female",
+    },
+    {
+        "name": "ta-IN-PallaviNeural",
+        "displayName": "Pallavi (Tamil - Female, Natural)",
+        "locale": "ta-IN",
+        "gender": "Female",
+    },
+    {
         "name": "en-IN-PrabhatNeural",
         "displayName": "Prabhat (India - Male, Natural)",
         "locale": "en-IN",
@@ -132,9 +150,78 @@ def clean_markdown_text(text: str) -> str:
 
 class TTSRequest(BaseModel):
     text: str
-    voice: Optional[str] = "en-US-JennyNeural"
+    voice: Optional[str] = "en-IN-NeerjaNeural"
     rate: Optional[str] = None
     pitch: Optional[str] = None
+    volume: Optional[str] = None
+    style: Optional[str] = None
+    style_degree: Optional[float] = 1.1
+
+
+STYLE_TO_AZURE_EXPRESSION = {
+    "cheerful": "cheerful",
+    "soft_happy": "cheerful",
+    "happy": "cheerful",
+    "excited": "excited",
+    "angry": "angry",
+    "sad": "sad",
+    "soft_shy": "gentle",
+    "shy": "gentle",
+    "affectionate": "affectionate",
+    "romantic": "affectionate",
+    "empathetic": "empathetic",
+    "friendly": "friendly",
+    "curious": "friendly",
+    "calm": "calm",
+    "whispering": "whispering",
+}
+
+
+def _escape_xml(text: str) -> str:
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
+
+
+def _build_ssml(
+    text: str,
+    voice_name: str,
+    rate: Optional[str] = None,
+    pitch: Optional[str] = None,
+    volume: Optional[str] = None,
+    style: Optional[str] = None,
+    style_degree: Optional[float] = 1.1,
+) -> str:
+    escaped = _escape_xml(text)
+    locale = "-".join(voice_name.split("-")[:2]) if "-" in voice_name else "en-IN"
+
+    prosody_attrs = []
+    if rate:
+        prosody_attrs.append(f'rate="{_escape_xml(str(rate))}"')
+    if pitch:
+        prosody_attrs.append(f'pitch="{_escape_xml(str(pitch))}"')
+    if volume:
+        prosody_attrs.append(f'volume="{_escape_xml(str(volume))}"')
+
+    inner = escaped
+    if prosody_attrs:
+        inner = f'<prosody {" ".join(prosody_attrs)}>{inner}</prosody>'
+
+    azure_style = STYLE_TO_AZURE_EXPRESSION.get((style or "").lower().strip())
+    if azure_style:
+        deg = max(0.5, min(2.0, float(style_degree or 1.1)))
+        inner = f'<mstts:express-as style="{azure_style}" styledegree="{deg:.2f}">{inner}</mstts:express-as>'
+
+    return (
+        f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
+        f'xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="{locale}">'
+        f'<voice name="{_escape_xml(voice_name)}">{inner}</voice>'
+        f"</speak>"
+    )
 
 
 @router.get("/voices")
@@ -161,9 +248,9 @@ def get_voices():
             curated_names = {v["name"] for v in DEFAULT_VOICES}
             mapped.extend(DEFAULT_VOICES)
 
-            # Add other English voices
+            # Add other English & Tamil voices
             for v in voices_result.voices:
-                if v.short_name not in curated_names and v.locale.startswith("en"):
+                if v.short_name not in curated_names and (v.locale.startswith("en") or v.locale.startswith("ta")):
                     gender_str = "Female" if v.gender == 1 else "Male" if v.gender == 2 else "Unknown"
                     mapped.append(
                         {
@@ -208,7 +295,23 @@ def synthesize_speech(req: TTSRequest):
             speech_config=speech_config, audio_config=None
         )
 
-        result = synthesizer.speak_text_async(clean_text).get()
+        use_ssml = any([req.rate, req.pitch, req.volume, req.style])
+        if use_ssml:
+            ssml = _build_ssml(
+                clean_text,
+                voice_name=voice_name,
+                rate=req.rate,
+                pitch=req.pitch,
+                volume=req.volume,
+                style=req.style,
+                style_degree=req.style_degree,
+            )
+            result = synthesizer.speak_ssml_async(ssml).get()
+            if result.reason != speechsdk.ResultReason.SynthesizingAudioCompleted:
+                # Fallback to plain synthesis if a voice does not support the requested SSML style
+                result = synthesizer.speak_text_async(clean_text).get()
+        else:
+            result = synthesizer.speak_text_async(clean_text).get()
 
         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
             return Response(

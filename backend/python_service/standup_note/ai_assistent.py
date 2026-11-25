@@ -71,6 +71,17 @@ try:
 except Exception as e:
     print(f"Warning: Could not mount rag_service router: {e}")
 
+# Mount AI Interactive Girl Chat endpoints
+if python_service_dir.exists() and str(python_service_dir) not in sys.path:
+    sys.path.append(str(python_service_dir))
+
+try:
+    from girl_chat import girl_chat_service
+    app.include_router(girl_chat_service.router)
+    print("AI Interactive Girl Chat endpoints mounted successfully (/api/girl-chat/*)")
+except Exception as e:
+    print(f"Warning: Could not mount girl_chat_service router: {e}")
+
 
 
 class MessageItem(BaseModel):

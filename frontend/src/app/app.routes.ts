@@ -37,6 +37,14 @@ export const routes: Routes = [
       import('./features/user-admin/admin.component').then((m) => m.AdminComponent),
   },
   {
+    path: 'ai-girl-chat',
+    data: { navLabel: 'AI Interactive Girl Chat', showInNav: true },
+    loadComponent: () =>
+      import('./features/ai-girl-chat/interactive-girl-chat.component').then(
+        (m) => m.InteractiveGirlChatComponent,
+      ),
+  },
+  {
     path: 'ai-document-assistant',
     data: { navLabel: 'AI Document Assistant', showInNav: true },
     loadComponent: () =>

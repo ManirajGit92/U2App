@@ -854,6 +854,16 @@ export class HomeComponent implements OnInit, OnDestroy {
       color: 'linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.2))',
     },
     {
+      id: 'ai-girl-chat',
+      title: 'AI Interactive Girl Chat',
+      description:
+        'Chat with a lifelike virtual AI companion featuring emotion-driven YouTube video reactions, natural Indian English & Tamil female voice, and seamless white-background display.',
+      icon: '✨',
+      route: '/ai-girl-chat',
+      available: true,
+      color: 'linear-gradient(135deg, rgba(124,58,237,0.22), rgba(236,72,153,0.2))',
+    },
+    {
       id: 'billing-templates',
       title: 'Billing Template Designer',
       description:

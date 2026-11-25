@@ -14,7 +14,7 @@ import { filter } from 'rxjs';
     <main class="main-content" [class.full-screen]="isFullScreen">
       <router-outlet />
     </main>
-    <app-ai-character-assistant />
+    <app-ai-character-assistant *ngIf="!hideFloatingAssistant" />
   `,
   styles: [`
     .main-content {
@@ -37,6 +37,7 @@ import { filter } from 'rxjs';
 })
 export class App {
   isFullScreen = false;
+  hideFloatingAssistant = false;
   router = inject(Router);
 
   constructor() {
@@ -49,7 +50,9 @@ export class App {
   }
 
   private checkFullScreen(url: string) {
+    this.hideFloatingAssistant = url.includes('/ai-girl-chat');
     this.isFullScreen =
+      url.includes('/ai-girl-chat') ||
       url.includes('/free-billing') ||
       url.includes('/lodge-booking') ||
       url.includes('/easy-documents') ||

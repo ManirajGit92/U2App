@@ -1,0 +1,147 @@
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #eef0f6;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  i {
+    color: #6d28d9;
+  }
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #334155;
+  font-weight: 500;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 21px;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+
+    &:checked + .slider {
+      background: #6d28d9;
+    }
+
+    &:checked + .slider:before {
+      transform: translateX(17px);
+    }
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: #cbd5e1;
+    transition: 0.2s;
+    border-radius: 999px;
+
+    &:before {
+      position: absolute;
+      content: '';
+      height: 15px;
+      width: 15px;
+      left: 3px;
+      bottom: 3px;
+      background: #ffffff;
+      transition: 0.2s;
+      border-radius: 50%;
+    }
+  }
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  label {
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  select {
+    padding: 7px 9px;
+    border-radius: 9px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    font-size: 0.8rem;
+    color: #0f172a;
+    outline: none;
+
+    &:focus {
+      border-color: #7c3aed;
+      background: #ffffff;
+    }
+  }
+}
+
+.range-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .range-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.73rem;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  input[type='range'] {
+    width: 100%;
+    accent-color: #6d28d9;
+    cursor: pointer;
+  }
+}
+
+.btn-test-voice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd6fe;
+  background: #f5f3ff;
+  color: #6d28d9;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #6d28d9;
+    color: #ffffff;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+}

@@ -1,0 +1,375 @@
+<div class="girl-chat-shell" #rootShell>
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- TOP PURE-WHITE HEADER                                             -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <header class="top-header">
+    <div class="header-left">
+      <button type="button" class="brand-link" (click)="exitTool()" title="Back to U2Tools">
+        <span class="brand-u2">U2</span><span class="brand-tools">Tools</span>
+      </button>
+
+      <span class="header-divider" aria-hidden="true"></span>
+
+      <div class="tool-identity">
+        <img
+          [src]="aiService.characterSettings().avatarImageUrl"
+          alt="Virtual Girl"
+          class="header-avatar"
+        />
+        <h1 class="tool-title">AI Interactive Girl Chat</h1>
+        <span class="beta-pill">Beta</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button
+        type="button"
+        class="hdr-pill-btn"
+        (click)="startNewChat()"
+        title="Start a new conversation"
+      >
+        <i class="pi pi-plus"></i>
+        <span>New Chat</span>
+      </button>
+
+      <button
+        type="button"
+        class="hdr-icon-btn"
+        (click)="clearCurrentChat()"
+        title="Clear current chat"
+        aria-label="Clear current chat"
+      >
+        <i class="pi pi-eraser"></i>
+      </button>
+
+      <button
+        type="button"
+        class="hdr-icon-btn"
+        (click)="toggleFullscreen()"
+        [title]="isFullscreen() ? 'Exit fullscreen' : 'Fullscreen'"
+        aria-label="Toggle fullscreen"
+      >
+        <i [class]="isFullscreen() ? 'pi pi-window-minimize' : 'pi pi-expand'"></i>
+      </button>
+
+      <button
+        type="button"
+        class="hdr-icon-btn"
+        [class.active]="sidebarOpen() && activeTab() === 'settings'"
+        (click)="openTab('settings')"
+        title="Voice & Character Settings"
+        aria-label="Settings"
+      >
+        <i class="pi pi-cog"></i>
+      </button>
+
+      <button
+        type="button"
+        class="hdr-icon-btn close-btn"
+        (click)="exitTool()"
+        title="Exit tool"
+        aria-label="Close"
+      >
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- MAIN 3-COLUMN WORKSPACE (PURE WHITE BACKGROUND #FFFFFF)           -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <div class="workspace-body" [class.sidebar-collapsed]="!sidebarOpen()">
+    <!-- ── LEFT COLUMN: CONVERSATION & INPUT ───────────────────────── -->
+    <section class="chat-column" aria-label="Conversation">
+      @if (aiService.lastBackendError()) {
+        <div class="info-banner">
+          <i class="pi pi-info-circle"></i>
+          <span>{{ aiService.lastBackendError() }}</span>
+        </div>
+      }
+
+      @if (tts.lastError()) {
+        <div class="info-banner warn">
+          <i class="pi pi-exclamation-triangle"></i>
+          <span>{{ tts.lastError() }}</span>
+        </div>
+      }
+
+      <div class="messages-scroll" #chatScrollArea>
+        @for (msg of historyService.activeMessages(); track msg.id) {
+          <app-girl-chat-message
+            [message]="msg"
+            [avatarUrl]="aiService.characterSettings().avatarImageUrl"
+            (replayRequested)="onReplayMessage($event)"
+          />
+        }
+
+        @if (isBusy()) {
+          <div class="typing-row">
+            <img
+              [src]="aiService.characterSettings().avatarImageUrl"
+              alt="Thinking"
+              class="typing-avatar"
+            />
+            <div class="typing-bubble">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Quick Suggestion Chips -->
+      <div class="quick-chips">
+        @for (item of quickPrompts; track item.label) {
+          <button
+            type="button"
+            class="chip-btn"
+            [disabled]="isBusy()"
+            (click)="sendPrompt(item.prompt)"
+          >
+            <i [class]="item.icon"></i>
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      </div>
+
+      <!-- Bottom Chat Input Bar -->
+      <div class="input-dock">
+        <div class="input-pill" [class.listening]="tts.isListening()">
+          <i class="pi pi-comment input-leading-icon" aria-hidden="true"></i>
+
+          <input
+            type="text"
+            class="chat-input"
+            [ngModel]="tts.isListening() && tts.liveTranscript() ? tts.liveTranscript() : userInput()"
+            (ngModelChange)="userInput.set($event)"
+            (keydown)="onInputKeydown($event)"
+            [placeholder]="tts.isListening() ? 'Listening...' : 'Talk to me...'"
+            [disabled]="isBusy()"
+            aria-label="Talk to me"
+          />
+
+          <button
+            type="button"
+            class="mic-btn"
+            [class.active]="tts.isListening()"
+            (click)="toggleVoiceInput()"
+            [title]="tts.isListening() ? 'Stop listening' : 'Speak with microphone'"
+            aria-label="Voice input"
+          >
+            <i [class]="tts.isListening() ? 'pi pi-stop-circle' : 'pi pi-microphone'"></i>
+          </button>
+
+          <button
+            type="button"
+            class="send-btn"
+            [disabled]="isBusy() || (!userInput().trim() && !tts.liveTranscript().trim())"
+            (click)="sendPrompt()"
+            title="Send message"
+            aria-label="Send message"
+          >
+            <i [class]="isBusy() ? 'pi pi-spin pi-spinner' : 'pi pi-send'"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CENTER COLUMN: SEAMLESS WHITE-BG VIRTUAL CHARACTER ──────── -->
+    <section class="character-column" aria-label="Virtual Character Display">
+      <app-girl-video-player
+        [blendWhiteBackground]="aiService.characterSettings().blendWhiteBackground"
+        [showEmotionBadge]="aiService.characterSettings().showEmotionBadge"
+        [fallbackImageUrl]="aiService.characterSettings().fallbackImageUrl"
+        [isThinking]="isBusy()"
+      />
+    </section>
+
+    <!-- ── RIGHT COLLAPSIBLE SIDEBAR (HISTORY / SETTINGS / LIBRARY) ── -->
+    <aside class="right-sidebar" [class.collapsed]="!sidebarOpen()">
+      <button
+        type="button"
+        class="sidebar-collapse-btn"
+        (click)="toggleSidebar()"
+        [title]="sidebarOpen() ? 'Collapse sidebar' : 'Expand sidebar'"
+        aria-label="Toggle sidebar"
+      >
+        <i [class]="sidebarOpen() ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"></i>
+      </button>
+
+      @if (sidebarOpen()) {
+        <div class="sidebar-inner">
+          <!-- Segmented Navigation Pills -->
+          <nav class="sidebar-tabs" aria-label="Sidebar tabs">
+            <button
+              type="button"
+              class="tab-pill"
+              [class.active]="activeTab() === 'history'"
+              (click)="activeTab.set('history')"
+            >
+              <i class="pi pi-comments"></i>
+              <span>History</span>
+            </button>
+            <button
+              type="button"
+              class="tab-pill"
+              [class.active]="activeTab() === 'settings'"
+              (click)="activeTab.set('settings')"
+            >
+              <i class="pi pi-cog"></i>
+              <span>Settings</span>
+            </button>
+            <button
+              type="button"
+              class="tab-pill"
+              [class.active]="activeTab() === 'library'"
+              (click)="activeTab.set('library')"
+            >
+              <i class="pi pi-video"></i>
+              <span>Library</span>
+            </button>
+          </nav>
+
+          <!-- TAB 1: CONVERSATION HISTORY + QUICK SETTINGS -->
+          @if (activeTab() === 'history') {
+            <div class="tab-content history-tab">
+              <div class="card-block history-card">
+                <div class="card-heading">
+                  <h3>Conversation History</h3>
+                </div>
+
+                <div class="search-input-wrap">
+                  <i class="pi pi-search"></i>
+                  <input
+                    type="text"
+                    [ngModel]="historySearch()"
+                    (ngModelChange)="historySearch.set($event)"
+                    placeholder="Search conversations..."
+                  />
+                </div>
+
+                <div class="history-list">
+                  @for (conv of filteredConversations(); track conv.id) {
+                    <div
+                      class="history-item"
+                      [class.active]="conv.id === historyService.activeConversationId()"
+                      (click)="selectConversation(conv.id)"
+                    >
+                      <div class="history-icon">
+                        <i class="pi pi-comment"></i>
+                      </div>
+                      <div class="history-text">
+                        <div class="history-title-row">
+                          <span class="history-title">{{ conv.title }}</span>
+                          <span class="history-time">{{ formatRelativeTime(conv.updatedAt) }}</span>
+                        </div>
+                        <p class="history-preview">{{ conv.preview }}</p>
+                      </div>
+                      <button
+                        type="button"
+                        class="history-del-btn"
+                        (click)="deleteConversation($event, conv.id)"
+                        title="Delete conversation"
+                        aria-label="Delete conversation"
+                      >
+                        <i class="pi pi-trash"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Quick Settings Card (matches mockup bottom-right) -->
+              <div class="card-block quick-settings-card">
+                <div class="card-heading">
+                  <i class="pi pi-cog accent-icon"></i>
+                  <h3>Quick Settings</h3>
+                </div>
+
+                <div class="qs-row">
+                  <span class="qs-label"><i class="pi pi-microphone"></i> AI Voice</span>
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      [ngModel]="tts.settings().enabled"
+                      (ngModelChange)="tts.updateSettings({ enabled: $event })"
+                    />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="qs-row">
+                  <span class="qs-label"><i class="pi pi-video"></i> Video Audio (Original)</span>
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      [ngModel]="aiService.characterSettings().overrideVideoAudio"
+                      (ngModelChange)="aiService.updateCharacterSettings({ overrideVideoAudio: $event })"
+                    />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="qs-row">
+                  <span class="qs-label"><i class="pi pi-sync"></i> Loop Video</span>
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      [ngModel]="aiService.characterSettings().overrideLoopVideo"
+                      (ngModelChange)="aiService.updateCharacterSettings({ overrideLoopVideo: $event })"
+                    />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="qs-row">
+                  <span class="qs-label"><i class="pi pi-gauge"></i> Voice Speed</span>
+                  <select
+                    class="qs-select"
+                    [ngModel]="tts.settings().speed"
+                    (ngModelChange)="onQuickSpeedChange($event)"
+                  >
+                    <option [value]="0.85">Slow</option>
+                    <option [value]="1">Normal</option>
+                    <option [value]="1.15">Fast</option>
+                  </select>
+                </div>
+
+                <div class="qs-row">
+                  <span class="qs-label"><i class="pi pi-sliders-h"></i> Voice Style</span>
+                  <select
+                    class="qs-select"
+                    [ngModel]="tts.settings().voiceStyle"
+                    (ngModelChange)="onQuickStyleChange($event)"
+                  >
+                    <option value="auto">Auto</option>
+                    <option value="natural">Natural</option>
+                    <option value="cheerful">Cheerful</option>
+                    <option value="soft_shy">Soft &amp; Shy</option>
+                    <option value="affectionate">Romantic</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- TAB 2: FULL VOICE & CHARACTER SETTINGS -->
+          @if (activeTab() === 'settings') {
+            <div class="tab-content settings-tab">
+              <app-girl-voice-settings />
+              <app-girl-character-settings />
+            </div>
+          }
+
+          <!-- TAB 3: YOUTUBE VIDEO MAPPING LIBRARY -->
+          @if (activeTab() === 'library') {
+            <div class="tab-content library-tab">
+              <app-girl-video-library />
+            </div>
+          }
+        </div>
+      }
+    </aside>
+  </div>
+</div>
