@@ -2836,7 +2836,7 @@ export class AiCharacterAssistantComponent implements OnInit, OnDestroy {
   private readonly charStorageKey = 'u2_character_image_prefs';
 
   // ── Drag & Drop, Movement & Customization State (Launcher Badge) ──
-  readonly defaultAvatar = 'assets/images/assistant/assistant-avatar-head.png';
+  readonly defaultAvatar = 'assets/images/girl-chat/MayaFace2.png';
   readonly agentX = signal<number>(typeof window !== 'undefined' ? Math.max(16, window.innerWidth - 60 - 28) : 100);
   readonly agentY = signal<number>(typeof window !== 'undefined' ? Math.max(16, window.innerHeight - 60 - 28) : 100);
   readonly agentSize = signal<number>(60);

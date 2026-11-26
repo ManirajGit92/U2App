@@ -159,8 +159,8 @@ export interface ActionMeta {
   label: string;
 }
 
-export const GIRL_CHARACTER_IMAGE = 'assets/images/girl-chat/girl-character.png';
-export const GIRL_AVATAR_IMAGE = 'assets/images/girl-chat/girl-avatar.png';
+export const GIRL_CHARACTER_IMAGE = 'assets/images/girl-chat/AgentGirlMaya.gif';
+export const GIRL_AVATAR_IMAGE = 'assets/images/girl-chat/MayaFace2.png';
 
 export const EMOTION_CATALOG: EmotionMeta[] = [
   { value: 'happy', label: 'Happy', emoji: '😊', color: '#10b981', defaultAction: 'smile_while_talking', defaultVoiceStyle: 'cheerful' },

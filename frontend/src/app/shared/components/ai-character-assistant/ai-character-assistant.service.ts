@@ -284,7 +284,7 @@ export class AiCharacterAssistantService {
     this.isOpen.set(true);
     this.isMinimized.set(false);
     this.unreadCount.set(0);
-    this.triggerAction('assets/images/assistant/HandShake_Hi.gif', 'explaining', 'Here to help 👋');
+    this.triggerAction('assets/images/girl-chat/WelcomeTalk.gif', 'explaining', 'Here to help 👋');
   }
 
   closeChat(): void {
@@ -358,7 +358,7 @@ export class AiCharacterAssistantService {
       return {
         id: 'handshake',
         name: 'Handshake',
-        image: 'assets/images/assistant/HandShake_Hi.gif',
+        image: 'assets/images/girl-chat/WelcomeTalk.gif',
         pose: 'explaining',
         actionLabel: 'Handshake 🤝',
         reply: "🤝 It's a real pleasure to connect with you! Let's get things done together."
@@ -467,7 +467,7 @@ export class AiCharacterAssistantService {
       return {
         id: 'smile-idle',
         name: 'Smile & Stand Idle',
-        image: 'assets/images/assistant/SmileAndStandIdle.gif',
+        image: 'assets/images/girl-chat/AgentGirlMaya.gif',
         pose: 'idle',
         actionLabel: 'Smile & Stand 😊',
         reply: "Standing by with a smile! 😊 Ready whenever you need assistance."
@@ -484,7 +484,7 @@ export class AiCharacterAssistantService {
       return {
         id: 'greeting',
         name: 'Greeting',
-        image: 'assets/images/assistant/HandShake_Hi.gif',
+        image: 'assets/images/girl-chat/WelcomeTalk.gif',
         pose: 'happy',
         actionLabel: 'Hello! 👋',
         reply: "Hello there! 👋 Glad to see you! How can I help you with U2 Tools today?"
@@ -1094,7 +1094,7 @@ Rules:
       if (saved === 'true') {
         this.cloudAgentEnabled.set(true);
         // Sync state from backend on load
-        this.fetchRagStatus().catch(() => {});
+        this.fetchRagStatus().catch(() => { });
       }
     } catch { }
   }

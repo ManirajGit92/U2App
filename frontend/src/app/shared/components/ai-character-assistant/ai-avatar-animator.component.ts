@@ -58,7 +58,7 @@ import { AvatarPose } from './ai-character-assistant.service';
         <!-- Default Base Character (when no action and no custom image) -->
         <img
           *ngIf="!actionImage && !customImage"
-          src="assets/images/assistant/SmileAndStandIdle.gif"
+          src="assets/images/girl-chat/AgentGirlMaya.gif"
           alt="U2 Assistant Character"
           class="character-image base-layer visible"
           draggable="false"
